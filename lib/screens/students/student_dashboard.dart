@@ -103,7 +103,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
        Navigator.push(
   context,
   MaterialPageRoute(
-    builder: (context) => StudentTimeTablePage(academicYear: 2025),
+    builder: (context) => StudentTimeTablePage(academicYear: "2024-2025"),
   ),
 );
    },

@@ -11,7 +11,7 @@ class StudentTimetableProvider extends ChangeNotifier {
 
   List<TimetableDay> get days => _days;
 
-Future<void> load(int academicYear) async {
+Future<void> load(String academicYear) async {
   isLoading = true;
   error = null;
   notifyListeners();

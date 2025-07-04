@@ -11,7 +11,7 @@ import 'student_menu_drawer.dart';
 /// displays periods for the selected weekday.
 class StudentTimeTablePage extends StatefulWidget {
   /// Academic year to fetch (e.g. 2025)
-  final int academicYear;
+  final String academicYear;
 
   const StudentTimeTablePage({super.key, required this.academicYear});
 
