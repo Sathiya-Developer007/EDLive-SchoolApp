@@ -51,7 +51,7 @@ class _TimeTablePageState extends State<TimeTablePage> {
 
   Future<void> fetchTimetable() async {
     final prefs = await SharedPreferences.getInstance();
-final token = prefs.getString('token') ?? '';
+final token = prefs.getString('auth_token') ?? '';
 final userData = prefs.getString('user_data');
 final user = jsonDecode(userData!);
 

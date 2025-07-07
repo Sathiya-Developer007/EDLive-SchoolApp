@@ -19,7 +19,7 @@ class StudentTimetableProvider with ChangeNotifier {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
+      final token = prefs.getString('auth_token') ?? '';
       print('Student timetable token: $token');
 
       final response = await http.get(

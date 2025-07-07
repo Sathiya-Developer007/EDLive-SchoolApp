@@ -90,7 +90,7 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
                                   CircleAvatar(
                                     radius: 60,
                                     backgroundImage: NetworkImage(
-                                        'http://schoolmanagement.canadacentral.cloudapp.azure.com${student!['profile_img'] ?? ''}'),
+                                        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000${student!['profile_img'] ?? ''}'),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
