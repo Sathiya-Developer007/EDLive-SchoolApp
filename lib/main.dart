@@ -9,10 +9,12 @@ import 'screens/teachers/todo_list_screen.dart';
 import 'screens/teachers/class_time_pageview.dart';
 import 'screens/teachers/teacher_profile_page.dart';
 import 'screens/teachers/settings.dart';
+import 'screens/teachers/teacher_student_details_page.dart';
 
 import 'screens/students/student_dashboard.dart';
 import 'screens/students/select_child_page.dart';
 import 'screens/students/student_todo_list_screen.dart';
+import 'package:school_app/screens/students/student_profile_page.dart';
 
 import 'providers/teacher_task_provider.dart'; // For teacher
 import 'providers/student_task_provider.dart'; // For student
@@ -21,8 +23,6 @@ import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
 
 import 'dart:convert';
-
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +51,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => TimetableProvider()),
         ChangeNotifierProvider(create: (_) => StudentTimetableProvider()),
-
       ],
       child: MyApp(
         token: token,
@@ -67,14 +66,14 @@ class MyApp extends StatelessWidget {
   final String? token;
   final String? userType;
   final Map<String, dynamic>? userData;
-   final Map<String, dynamic>? selectedChild;
+  final Map<String, dynamic>? selectedChild;
 
   const MyApp({
     super.key,
     required this.token,
     required this.userType,
     required this.userData,
-    required this.selectedChild, 
+    required this.selectedChild,
   });
 
   @override
@@ -89,24 +88,23 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       onGenerateRoute: (settings) {
-     if (token != null) {
-  if (userType == 'teacher') {
-    return MaterialPageRoute(
-      builder: (_) => const TeacherDashboardPage(),
-    );
-  } else if (userType == 'student' || userType == 'parent') {
-    if (selectedChild != null) {
-      return MaterialPageRoute(
-        builder: (_) => StudentDashboardPage(childData: selectedChild!),
-      );
-    } else {
-      return MaterialPageRoute(
-        builder: (_) => SelectChildPage(studentData: userData ?? {}),
-      );
-    }
-  }
-}
-
+        if (token != null) {
+          if (userType == 'teacher') {
+            return MaterialPageRoute(
+              builder: (_) => const TeacherDashboardPage(),
+            );
+          } else if (userType == 'student' || userType == 'parent') {
+            if (selectedChild != null) {
+              return MaterialPageRoute(
+                builder: (_) => StudentDashboardPage(childData: selectedChild!),
+              );
+            } else {
+              return MaterialPageRoute(
+                builder: (_) => SelectChildPage(studentData: userData ?? {}),
+              );
+            }
+          }
+        }
 
         // Default route: Login
         switch (settings.name) {
@@ -130,16 +128,28 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) => const StudentToDoListPage(),
             );
-           case '/student-dashboard':
-      final args = settings.arguments as Map<String, dynamic>;
-      return MaterialPageRoute(
-        builder: (_) => StudentDashboardPage(childData: args),
-      );
-    case '/select-child':
-      final args = settings.arguments as Map<String, dynamic>;
-      return MaterialPageRoute(
-        builder: (_) => SelectChildPage(studentData: args),
-      );
+          case '/student-dashboard':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => StudentDashboardPage(childData: args),
+            );
+          case '/select-child':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => SelectChildPage(studentData: args),
+            );
+          case '/student-details':
+            final studentId = settings.arguments as int;
+            return MaterialPageRoute(
+              builder: (_) => StudentDetailPage(studentId: studentId),
+            );
+
+          case '/student-profile':
+            final id = settings.arguments as int; // 👈 fetch argument
+            return MaterialPageRoute(
+              builder: (_) => StudentProfilePage(studentId: id),
+            );
+
           default:
             return MaterialPageRoute(builder: (_) => const LoginPage());
         }

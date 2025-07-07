@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/teacher_class_student.dart';
 import '../../services/student_todo_service.dart';
+import 'teacher_student_details_page.dart';
+import 'package:school_app/screens/teachers/teacher_student_details_page.dart';
+
 
 class ClassStudentListPage extends StatefulWidget {
   const ClassStudentListPage({super.key});
@@ -28,23 +31,24 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
     fetchStudentList();
   }
 
- Future<void> fetchStudentList() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-   final token = prefs.getString('auth_token') ?? ''; // ✅ Must match login_page.dart
+  Future<void> fetchStudentList() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token =
+          prefs.getString('auth_token') ?? ''; // ✅ Must match login_page.dart
 
-    print("📌 Token used: $token"); // <-- ADD THIS LINE
+      print("📌 Token used: $token"); // <-- ADD THIS LINE
 
-    final fetchedStudents = await StudentService.fetchStudents(token);
-    setState(() {
-      students = fetchedStudents;
-      isLoading = false;
-    });
-  } catch (e) {
-    setState(() => isLoading = false);
-    debugPrint("Error fetching students: $e");
+      final fetchedStudents = await StudentService.fetchStudents(token);
+      setState(() {
+        students = fetchedStudents;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      debugPrint("Error fetching students: $e");
+    }
   }
-}
 
   List<Student> get filteredStudents {
     final ids = classToStudentIds[selectedClass] ?? [];
@@ -67,7 +71,10 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Select your class", style: TextStyle(fontSize: 16)),
+                      const Text(
+                        "Select your class",
+                        style: TextStyle(fontSize: 16),
+                      ),
                       const SizedBox(height: 4),
                       Container(
                         width: 125,
@@ -87,19 +94,21 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
                             color: Color(0xFF29ABE2),
                             fontWeight: FontWeight.bold,
                           ),
-                          items: ['10A', '10B', '10C'].map(
-                            (e) => DropdownMenuItem(
-                              value: e,
-                              child: Text(
-                                e,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  color: Color(0xFF29ABE2),
-                                  fontWeight: FontWeight.bold,
+                          items: ['10A', '10B', '10C']
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(
+                                    e,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      color: Color(0xFF29ABE2),
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ).toList(),
+                              )
+                              .toList(),
                           onChanged: (value) {
                             setState(() {
                               selectedClass = value!;
@@ -116,12 +125,19 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
                   children: [
                     Text(
                       "${filteredStudents.length} students",
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     const Text(
                       "You are class teacher",
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                      ),
                     ),
                   ],
                 ),
@@ -131,8 +147,18 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
             const Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(text: 'Your subject: ', style: TextStyle(color: Colors.black, fontSize: 16)),
-                  TextSpan(text: 'English1', style: TextStyle(color: Colors.cyan, fontSize: 16, fontWeight: FontWeight.bold)),
+                  TextSpan(
+                    text: 'Your subject: ',
+                    style: TextStyle(color: Colors.black, fontSize: 16),
+                  ),
+                  TextSpan(
+                    text: 'English1',
+                    style: TextStyle(
+                      color: Colors.cyan,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -148,7 +174,20 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
                 children: filteredStudents.asMap().entries.map((entry) {
                   final index = entry.key + 1;
                   final student = entry.value;
-                  return _StudentRow(name: "$index. ${student.studentName}");
+                  // inside the map loop where you build each _StudentRow
+               return _StudentRow(
+  name: "$index. ${student.studentName}",
+  studentId: student.id,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentDetailPage(studentId: student.id),
+      ),
+    );
+  },
+);
+
                 }).toList(),
               ),
           ],
@@ -160,34 +199,45 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
 
 class _StudentRow extends StatelessWidget {
   final String name;
+  final int studentId;
+  final VoidCallback onTap;
   final bool alert;
   final String? imageUrl;
 
   const _StudentRow({
     required this.name,
+    required this.studentId,
+    required this.onTap,
     this.alert = false,
     this.imageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.grey,
-              backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
-              child: imageUrl == null ? const Icon(Icons.person, color: Colors.white) : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Text(name)),
-            if (alert) const Icon(Icons.error_outline, color: Colors.red),
-          ],
-        ),
-        const Divider(color: Colors.grey, thickness: 0.5, height: 16),
-      ],
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.grey,
+                backgroundImage: imageUrl != null
+                    ? NetworkImage(imageUrl!)
+                    : null,
+                child: imageUrl == null
+                    ? const Icon(Icons.person, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(name)),
+              if (alert) const Icon(Icons.error_outline, color: Colors.red),
+            ],
+          ),
+          const Divider(color: Colors.grey, thickness: 0.5, height: 16),
+        ],
+      ),
     );
   }
 }

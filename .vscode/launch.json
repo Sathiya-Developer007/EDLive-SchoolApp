@@ -5,11 +5,27 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "chrome",
+            "name": "Dart: Run all Tests",
+            "type": "dart",
             "request": "launch",
-            "name": "Launch Chrome against localhost",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}"
+            "program": "./test/"
+        },
+        {
+            "name": "school_app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "school_app (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "school_app (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
         }
     ]
 }

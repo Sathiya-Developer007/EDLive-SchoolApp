@@ -15,6 +15,12 @@ class StudentDashboardPage extends StatefulWidget {
 }
 
 class _StudentDashboardPageState extends State<StudentDashboardPage> {
+  String getCurrentAcademicYear() {
+    final now = DateTime.now();
+    final startYear = now.month >= 6 ? now.year : now.year - 1;
+    return '$startYear-${startYear + 1}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final child = widget.childData;
@@ -91,43 +97,45 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 12),
-           Row(
-  children: [
-    Expanded(
-      child: DashboardTile(
-        title: 'Time table',
-        iconPath: 'assets/icons/class_time.svg',
-        color: const Color(0xFFE8B3DE),
-        centerContent: true,
-        onTap: () {
-       Navigator.push(
+                Row(
+                  children: [
+                    Expanded(
+                      child: DashboardTile(
+                        title: 'Time table',
+                        iconPath: 'assets/icons/class_time.svg',
+                        color: const Color(0xFFE8B3DE),
+                        centerContent: true,
+                        onTap: () {
+                          // Wherever you navigate to the timetable page ⬇
+                          Navigator.push(
   context,
   MaterialPageRoute(
-    builder: (context) => StudentTimeTablePage(academicYear: "2024-2025"),
+    builder: (_) => StudentTimeTablePage(academicYear: '2024-2025'),
   ),
 );
-   },
-      ),
-    ),
-    const SizedBox(width: 12),
-    Expanded(
-      child: DashboardTile(
-        title: 'Exams',
-        iconPath: 'assets/icons/exams.svg',
-        color: const Color(0xFFFCDBB1),
-        badgeCount: 2,
-        centerContent: true,
-      ),
-    ),
-  ],
-),
-const SizedBox(height: 12), // ✅ Moved here OUTSIDE the Row
-DashboardTile(
-  title: 'Events & Holidays',
-  subtitle: '16, Jan 2019, Pongal (Govt. Holiday)',
-  iconPath: 'assets/icons/events.svg',
-  color: const Color(0xFFF9AFD2),
-),
+
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DashboardTile(
+                        title: 'Exams',
+                        iconPath: 'assets/icons/exams.svg',
+                        color: const Color(0xFFFCDBB1),
+                        badgeCount: 2,
+                        centerContent: true,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12), // ✅ Moved here OUTSIDE the Row
+                DashboardTile(
+                  title: 'Events & Holidays',
+                  subtitle: '16, Jan 2019, Pongal (Govt. Holiday)',
+                  iconPath: 'assets/icons/events.svg',
+                  color: const Color(0xFFF9AFD2),
+                ),
 
                 const SizedBox(height: 12),
                 DashboardTile(
@@ -174,8 +182,7 @@ DashboardTile(
                     subtitle: 'You can interact with teachers',
                     icon: Icons.person,
                     color: const Color(0xFFFFD399),
-                    onClose: () =>
-                        settings.updateVisibility('Teachers', false),
+                    onClose: () => settings.updateVisibility('Teachers', false),
                   ),
                   const SizedBox(height: 12),
                 ],

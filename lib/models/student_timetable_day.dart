@@ -1,16 +1,22 @@
 class TimetableDay {
-  final String dayOfWeek;
+  final String day;
   final List<String?> periods;
 
   TimetableDay({
-    required this.dayOfWeek,
+    required this.day,
     required this.periods,
   });
 
-  factory TimetableDay.fromJson(Map<String, dynamic> json) {
-    return TimetableDay(
-      dayOfWeek: json['day_of_week'],
-      periods: List.generate(8, (index) => json['period_${index + 1}']),
-    );
-  }
+ factory TimetableDay.fromJson(Map<String, dynamic> json) {
+  return TimetableDay(
+    day: json['day_of_week'] as String,
+    periods: List.generate(8, (i) {
+      final raw = json['period_${i + 1}'];
+      return raw?.toString(); // ✅ converts int, null, etc. safely to String
+    }),
+  );
+}
+
+  factory TimetableDay.empty(String day) =>
+      TimetableDay(day: day, periods: List.filled(8, null));
 }

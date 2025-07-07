@@ -51,16 +51,18 @@ class _TimeTablePageState extends State<TimeTablePage> {
 
   Future<void> fetchTimetable() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+final token = prefs.getString('token') ?? '';
+final userData = prefs.getString('user_data');
+final user = jsonDecode(userData!);
 
     final url = 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/staff/staff/timetable/2024-2025';
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+  final response = await http.get(
+  Uri.parse(url),
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token', // ✅ Add this line
+  },
+);
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

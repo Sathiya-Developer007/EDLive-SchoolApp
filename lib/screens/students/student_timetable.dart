@@ -1,88 +1,92 @@
+// ignore_for_file: constant_identifier_names
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '/providers/student_timetable_provider.dart';
-import 'package:school_app/models/student_timetable_day.dart';
 import '/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
+import '/models/student_timetable_day.dart';
 
-/// Student timetable page that fetches data from the backend and
-/// displays periods for the selected weekday.
 class StudentTimeTablePage extends StatefulWidget {
-  /// Academic year to fetch (e.g. 2025)
   final String academicYear;
-
-  const StudentTimeTablePage({super.key, required this.academicYear});
+  const StudentTimeTablePage({
+    super.key,
+    required this.academicYear,
+  }) : assert(academicYear != '');
 
   @override
   State<StudentTimeTablePage> createState() => _StudentTimeTablePageState();
 }
 
 class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
-  // Selected weekday index (0 = Monday)
-  int selectedIndex = 0;
+  // ── DATE & SCROLL STATE ────────────────────────────────────────────
+  late DateTime _centerDate;
+  late DateTime _startDate;
+  final _scroll = ScrollController();
 
-  // Current month shown in the month navigator
-  DateTime currentDate = DateTime(2019, 8);
+  // ── OTHER STATE ────────────────────────────────────────────────────
+  late final String academicYear;
+  static const _TIMES = [
+    '9 : 45 am',
+    '10 : 30 am',
+    '11 : 25 am',
+    '1 : 00 pm',
+    '1 : 45 pm',
+    '2 : 30 pm',
+    '3 : 15 pm',
+    '4 : 00 pm',
+  ];
+  static const _MONTHS = [
+    '',
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
 
+  // ── INIT ───────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    // Trigger API load once the widget is inserted in the tree
-    Future.microtask(() {
-      context.read<StudentTimetableProvider>().load(widget.academicYear);
+    academicYear = widget.academicYear; // <- use constructor value
+    _centerDate = DateTime.now();
+    _startDate = _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
+
+    // kick off API fetch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StudentTimetableProvider>().load(academicYear);
+      _centerCurrentDate();
     });
   }
 
-  /* ------------------------------ UI helpers ------------------------------ */
-  String _monthName(int month) {
-    const months = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month];
+  // ── DATE HELPERS ───────────────────────────────────────────────────
+  List<DateTime> get _visibleDates =>
+      List.generate(30, (i) => _startDate.add(Duration(days: i)));
+
+  String get _monthLabel => "${_MONTHS[_centerDate.month]}. ${_centerDate.year}";
+
+  void _centerCurrentDate() {
+    final itemWidth = MediaQuery.of(context).size.width / 7;
+    final index = _centerDate.difference(_startDate).inDays;
+    final offset = (index * itemWidth) -
+        (MediaQuery.of(context).size.width / 2) +
+        (itemWidth / 2);
+    _scroll.animateTo(
+      offset.clamp(0.0, _scroll.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
-  String get formattedMonthYear => "${_monthName(currentDate.month)}. ${currentDate.year}";
+  void _onDateTap(DateTime date, int index) {
+    setState(() => _centerDate = date);
+    _centerCurrentDate();
+  }
 
-  static const _times = [
-    '9 : 45 am',
-    '10 : 30 am',
-    '11 : 25 am',
-    '1 : 00 pm',
-    '1 : 45 pm',
-    '2 : 30 pm',
-    '3 : 15 pm',
-    '4 : 00 pm',
-  ];
-
-  static const _shortDays = ['Mon.', 'Tue.', 'Wed.', 'Thu.', 'Fri.', 'Sat.', 'Sun.'];
-  static const _longDays = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday'
-  ];
-
+  // ── BUILD ──────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-   final timetable = context.watch<StudentTimetableProvider>();
-
+    final timetable = context.watch<StudentTimetableProvider>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8B3DE),
@@ -92,17 +96,19 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _header(),
             const SizedBox(height: 8),
-            _buildWhiteCard(timetable),
+            _whiteCard(timetable),
           ],
         ),
       ),
     );
   }
 
-  /* ------------------------------- Widgets ------------------------------- */
-  Widget _buildHeader() {
+  // ── UI PARTS ───────────────────────────────────────────────────────
+  Widget _header() {
+    // … (unchanged – omitted for brevity)
+    // keep exactly what you already have here
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -112,14 +118,11 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
             onTap: () => Navigator.pop(context),
             child: Row(
               children: [
-                SvgPicture.asset(
-                  'assets/icons/back_arrow.svg',
-                  height: 11,
-                  width: 11,
-                  color: Colors.black,
-                ),
+                SvgPicture.asset('assets/icons/back_arrow.svg',
+                    height: 11, width: 11, color: Colors.black),
                 const SizedBox(width: 4),
-                const Text('Back', style: TextStyle(color: Colors.black, fontSize: 16)),
+                const Text('Back',
+                    style: TextStyle(color: Colors.black, fontSize: 16)),
               ],
             ),
           ),
@@ -132,21 +135,16 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
                   color: const Color(0xFF2E3192),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: SvgPicture.asset(
-                  'assets/icons/class_time.svg',
-                  height: 32,
-                  width: 32,
-                  color: Colors.white,
-                ),
+                child: SvgPicture.asset('assets/icons/class_time.svg',
+                    height: 32, width: 32, color: Colors.white),
               ),
               const SizedBox(width: 8),
               const Text(
                 'Time table',
                 style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E3192),
-                ),
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192)),
               ),
             ],
           ),
@@ -155,9 +153,8 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     );
   }
 
-  Widget _buildWhiteCard(StudentTimetableProvider timetable) {
-    return SizedBox(
-      height: 500,
+  Widget _whiteCard(StudentTimetableProvider timetable) {
+    return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(16),
@@ -167,184 +164,213 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
         ),
         child: Column(
           children: [
-            _buildMonthRow(),
+            _monthRow(),
             const SizedBox(height: 12),
-            _buildDaySelector(),
+            _dateScroller(),
             const SizedBox(height: 16),
-            _buildDayTitle(),
+            _dayTitle(),
             const SizedBox(height: 12),
-            Expanded(child: _buildPeriodList(timetable)),
+            Expanded(child: _periodList(timetable)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMonthRow() {
-  return Row(
-    children: [
-      IconButton(
-        icon: const Icon(Icons.arrow_back_ios, size: 22),
-        onPressed: () => setState(() {
-          currentDate = DateTime(currentDate.year, currentDate.month - 1);
-        }),
-      ),
-      Expanded(                      // 👈 makes the text take remaining width
-        child: Center(
-          child: Text(
-            formattedMonthYear,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 19,
-              color: Color(0xFF2E3192),
-            ),
-          ),
-        ),
-      ),
-      IconButton(
-        icon: const Icon(Icons.arrow_forward_ios, size: 22),
-        onPressed: () => setState(() {
-          currentDate = DateTime(currentDate.year, currentDate.month + 1);
-        }),
-      ),
-    ],
-  );
-}
-
-  Widget _buildDaySelector() {
-    return SizedBox(
-      height: 45,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: 7,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final bool isSelected = selectedIndex == index;
-          final double fadeFactor = (1.0 - index * 0.1).clamp(0.4, 1.0);
-
-          final boxColor = isSelected
-              ? const Color(0xFF00AEEF)
-              : Colors.white.withOpacity(fadeFactor);
-          final textColor = isSelected
-              ? Colors.white
-              : Colors.black.withOpacity(fadeFactor);
-
-          return GestureDetector(
-            onTap: () => setState(() => selectedIndex = index),
-            child: Container(
-              width: 37,
-              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-              decoration: BoxDecoration(
-                color: boxColor,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _shortDays[index],
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    (15 + index).toString(), // demo date numbers
-                    style: TextStyle(fontSize: 12, color: textColor),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildDayTitle() {
+  Widget _monthRow() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          _longDays[selectedIndex],
-          style: const TextStyle(
-            fontSize: 20,
-            color: Colors.blue,
-            fontWeight: FontWeight.bold,
+        IconButton(
+          icon: const Icon(Icons.arrow_back_ios, size: 22),
+          onPressed: () => setState(() {
+            _centerDate =
+                DateTime(_centerDate.year, _centerDate.month - 1, _centerDate.day);
+            _startDate =
+                _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
+            _centerCurrentDate();
+          }),
+        ),
+        Expanded(
+          child: Center(
+            child: Text(
+              _monthLabel,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 19, color: Color(0xFF2E3192)),
+            ),
           ),
         ),
-        SvgPicture.asset(
-          'assets/icons/pencil.svg',
-          height: 16,
-          width: 20,
-          color: Colors.black,
+        IconButton(
+          icon: const Icon(Icons.arrow_forward_ios, size: 22),
+          onPressed: () => setState(() {
+            _centerDate =
+                DateTime(_centerDate.year, _centerDate.month + 1, _centerDate.day);
+            _startDate =
+                _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
+            _centerCurrentDate();
+          }),
         ),
       ],
     );
   }
 
- Widget _buildPeriodList(StudentTimetableProvider timetable) {
-  if (timetable.isLoading) {
-    return const Center(child: CircularProgressIndicator());
+  Widget _dateScroller() {
+    final itemWidth = MediaQuery.of(context).size.width / 8.5;
+    return SizedBox(
+      height: 58,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ListView.builder(
+              controller: _scroll,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _visibleDates.length,
+              itemBuilder: (context, index) {
+                final date = _visibleDates[index];
+                final selected = date.day == _centerDate.day &&
+                    date.month == _centerDate.month &&
+                    date.year == _centerDate.year;
+
+                return GestureDetector(
+                  onTap: () => _onDateTap(date, index),
+                  child: SizedBox(
+                    width: itemWidth,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: selected ? Colors.blue : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.grey.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2)),
+                        ],
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            DateFormat('EEE').format(date),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: selected ? Colors.white : Colors.black87,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            date.day.toString(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: selected ? Colors.white : Colors.black87,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // ← / →
+          Positioned(
+            left: -12,
+            top: 0,
+            bottom: 0,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, size: 16),
+              onPressed: () {
+                setState(() => _startDate = _startDate.subtract(const Duration(days: 7)));
+                _centerCurrentDate();
+              },
+            ),
+          ),
+          Positioned(
+            right: -12,
+            top: 0,
+            bottom: 0,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_forward_ios, size: 16),
+              onPressed: () {
+                setState(() => _startDate = _startDate.add(const Duration(days: 7)));
+                _centerCurrentDate();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
-  if (timetable.error != null) {
-    return Center(child: Text(timetable.error!));
+
+  Widget _dayTitle() {
+    final dayName = DateFormat('EEEE').format(_centerDate);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          dayName,
+          style: const TextStyle(
+              fontSize: 20, color: Colors.blue, fontWeight: FontWeight.bold),
+        ),
+        SvgPicture.asset('assets/icons/pencil.svg',
+            height: 16, width: 16, color: Colors.black),
+      ],
+    );
   }
 
-  final TimetableDay? day = timetable.dayByIndex(selectedIndex);
-  if (day == null) return const SizedBox();
+  Widget _periodList(StudentTimetableProvider timetable) {
+    if (timetable.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (timetable.error != null) {
+      return Center(child: Text(timetable.error!));
+    }
+final dayName = DateFormat('EEEE').format(_centerDate).toLowerCase();
+final entries = timetable.entriesForDay(dayName);
 
-  return ListView.builder(
-    itemCount: day.periods.length,
-    itemBuilder: (_, i) => PeriodRow(
-      time: _times[i],
-      subject: day.periods[i] ?? '-',
-    ),
-  );
-}
-}
+if (entries.isEmpty) return const Center(child: Text('No classes today'));
 
-class PeriodRow extends StatelessWidget {
+return ListView.builder(
+  itemCount: entries.length,
+  itemBuilder: (_, i) {
+    final item = entries[i];
+    final time = item.timesByDay[dayName];
+    return ListTile(
+      title: Text('${item.subject} (${item.className})'),
+      subtitle: Text(time ?? '-'),
+      leading: const Icon(Icons.schedule),
+    );
+  },
+);
+  }}
+
+// ── SMALL PERIOD ROW WIDGET ──────────────────────────────────────────
+class _PeriodRow extends StatelessWidget {
   final String time;
   final String subject;
-  final bool highlight;
-
-  const PeriodRow({
-    super.key,
-    required this.time,
-    required this.subject,
-    this.highlight = false,
-  });
+  const _PeriodRow({required this.time, required this.subject});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFCCCCCC), width: 0.7),
-        ),
-      ),
+      decoration:
+          const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFCCCCCC), width: .7))),
       child: Row(
         children: [
           SizedBox(
             width: 100,
-            child: Text(
-              time,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF808080),
-              ),
-            ),
+            child: Text(time,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Color(0xFF808080))),
           ),
           Expanded(
-            child: Text(
-              subject,
-              style: const TextStyle(color: Colors.black),
-            ),
+            child: Text(subject, style: const TextStyle(color: Colors.black)),
           ),
         ],
       ),
