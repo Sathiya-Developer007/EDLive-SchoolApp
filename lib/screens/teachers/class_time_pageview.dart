@@ -183,9 +183,27 @@ class _ClassTimePageViewState extends State<ClassTimePageView> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    'ClassPerformance',
+                                    'Class',
                                     style: TextStyle(
                                       color: _selectedTab == 1 ? Colors.blue : Colors.black87,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              GestureDetector(
+                                onTap: () => _onTabTapped(2),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: _selectedTab == 2 ? Colors.blue.shade50 : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Performance',
+                                    style: TextStyle(
+                                      color: _selectedTab == 2 ? Colors.blue : Colors.black87,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -202,6 +220,7 @@ class _ClassTimePageViewState extends State<ClassTimePageView> {
                               onPageChanged: (index) => setState(() => _selectedTab = index),
                               children: const [
                                 TimeTablePage(),
+                                ClassStudentListPage(),
                                 ClassStudentListPage(),
                               ],
                             ),
