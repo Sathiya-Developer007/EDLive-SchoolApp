@@ -21,11 +21,14 @@ import 'providers/student_task_provider.dart'; // For student
 import 'providers/teacher_settings_provider.dart';
 import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
+import 'package:school_app/utils/notification_service.dart';
+
 
 import 'dart:convert';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeNotifications();
 
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('auth_token');
