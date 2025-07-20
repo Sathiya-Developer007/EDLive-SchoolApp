@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/students/student_profile_page.dart';
-class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+class StudentAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuPressed;
   final VoidCallback? onProfileTap;
   final int? studentId;                         // 👈 add this
 
-  const CustomAppBar({
+  const StudentAppBar({
     super.key,
     this.onMenuPressed,
     this.onProfileTap,

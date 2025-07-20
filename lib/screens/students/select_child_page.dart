@@ -32,7 +32,7 @@ class SelectChildPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const CustomAppBar(),
+      appBar: const StudentAppBar(),
       drawer: const StudentMenuDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 24),

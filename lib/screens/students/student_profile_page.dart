@@ -96,7 +96,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
       length: 3,
       child: Scaffold(
         drawer: StudentMenuDrawer(),
-        appBar: CustomAppBar(
+        appBar: StudentAppBar(
           onProfileTap: () => Navigator.pop(context),
         ),
         body: Column(

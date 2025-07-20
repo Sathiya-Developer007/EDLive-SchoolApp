@@ -10,17 +10,20 @@ import 'screens/teachers/class_time_pageview.dart';
 import 'screens/teachers/teacher_profile_page.dart';
 import 'screens/teachers/settings.dart';
 import 'screens/teachers/teacher_student_details_page.dart';
+import 'screens/teachers/teacher_attendance_page.dart';
 
 import 'screens/students/student_dashboard.dart';
 import 'screens/students/select_child_page.dart';
 import 'screens/students/student_todo_list_screen.dart';
 import 'package:school_app/screens/students/student_profile_page.dart';
+import 'screens/students/student_timetable.dart';
 
 import 'providers/teacher_task_provider.dart'; // For teacher
 import 'providers/student_task_provider.dart'; // For student
 import 'providers/teacher_settings_provider.dart';
 import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
+import 'providers/attendance_provider.dart';
 import 'package:school_app/utils/notification_service.dart';
 
 
@@ -54,6 +57,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => TimetableProvider()),
         ChangeNotifierProvider(create: (_) => StudentTimetableProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
       ],
       child: MyApp(
         token: token,
@@ -152,6 +156,21 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) => StudentProfilePage(studentId: id),
             );
+
+case '/timetable':
+  // ⛳️ Optional: Get academic year dynamically from SharedPreferences
+  final year = '2024-2025'; // Or get from a Provider or SharedPreferences
+  return MaterialPageRoute(
+    builder: (_) => StudentTimeTablePage(academicYear: year),
+  );
+
+
+case '/attendance':
+  return MaterialPageRoute(
+    builder: (_) => const TeacherAttendancePage(), // Or StudentAttendancePage
+  );
+
+            
 
           default:
             return MaterialPageRoute(builder: (_) => const LoginPage());

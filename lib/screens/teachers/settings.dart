@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:school_app/providers/teacher_settings_provider.dart';
-import 'menu_drawer.dart';
+import 'teacher_menu_drawer.dart';
+import 'package:school_app/widgets/teacher_app_bar.dart';
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -47,7 +49,7 @@ class _SettingsPageState extends State<SettingsPage> {
           drawer: const MenuDrawer(), // ✅ Using your new custom drawer
           body: Column(
             children: [
-              _buildAppBar(),
+              const TeacherAppBar(),
               _buildHeader(),
               _buildTabBar(),
               Expanded(
@@ -169,67 +171,67 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildAppBar() {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(70),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(bottom: BorderSide(color: Colors.black, width: 2.0)),
-        ),
-        child: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          toolbarHeight: 70,
-          automaticallyImplyLeading: false,
-          leading: Builder(
-            builder: (context) => _noSplashButton(
-              onPressed: () => Scaffold.of(context).openDrawer(),
-              child: const Icon(Icons.menu, color: Colors.black),
-            ),
-          ),
-          title: Row(
-            children: [
-              const Text(
-                'Ed',
-                style: TextStyle(
-                  color: Colors.indigo,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                ),
-              ),
-              const Text(
-                'Live',
-                style: TextStyle(
-                  color: Colors.lightBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                ),
-              ),
-              const Spacer(),
-              _noSplashButton(
-                onPressed: () {},
-                child: SvgPicture.asset(
-                  'assets/icons/notification.svg',
-                  height: 24,
-                  width: 24,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(width: 16),
-              _noSplashButton(
-                onPressed: () => Navigator.pushNamed(context, '/profile'),
-                child: const CircleAvatar(
-                  backgroundColor: Colors.grey,
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildAppBar() {
+  //   return PreferredSize(
+  //     preferredSize: const Size.fromHeight(70),
+  //     child: Container(
+  //       decoration: const BoxDecoration(
+  //         color: Colors.white,
+  //         border: Border(bottom: BorderSide(color: Colors.black, width: 2.0)),
+  //       ),
+  //       child: AppBar(
+  //         backgroundColor: Colors.transparent,
+  //         elevation: 0,
+  //         toolbarHeight: 70,
+  //         automaticallyImplyLeading: false,
+  //         leading: Builder(
+  //           builder: (context) => _noSplashButton(
+  //             onPressed: () => Scaffold.of(context).openDrawer(),
+  //             child: const Icon(Icons.menu, color: Colors.black),
+  //           ),
+  //         ),
+  //         title: Row(
+  //           children: [
+  //             const Text(
+  //               'Ed',
+  //               style: TextStyle(
+  //                 color: Colors.indigo,
+  //                 fontWeight: FontWeight.bold,
+  //                 fontSize: 24,
+  //               ),
+  //             ),
+  //             const Text(
+  //               'Live',
+  //               style: TextStyle(
+  //                 color: Colors.lightBlue,
+  //                 fontWeight: FontWeight.bold,
+  //                 fontSize: 24,
+  //               ),
+  //             ),
+  //             const Spacer(),
+  //             _noSplashButton(
+  //               onPressed: () {},
+  //               child: SvgPicture.asset(
+  //                 'assets/icons/notification.svg',
+  //                 height: 24,
+  //                 width: 24,
+  //                 color: Colors.black,
+  //               ),
+  //             ),
+  //             const SizedBox(width: 16),
+  //             _noSplashButton(
+  //               onPressed: () => Navigator.pushNamed(context, '/profile'),
+  //               child: const CircleAvatar(
+  //                 backgroundColor: Colors.grey,
+  //                 child: Icon(Icons.person, color: Colors.white),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildHeader() {
     return Padding(

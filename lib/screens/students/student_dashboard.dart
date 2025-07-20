@@ -5,6 +5,8 @@ import 'package:school_app/providers/teacher_settings_provider.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
 import 'student_timetable.dart';
+import 'student_attendance_page.dart';
+import 'student_exams_screen.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -31,7 +33,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         Expanded(
           child: Scaffold(
             backgroundColor: const Color(0xFFF4F4F4),
-            appBar: const CustomAppBar(),
+            appBar: const StudentAppBar(),
             drawer: const StudentMenuDrawer(),
             body: ListView(
               padding: const EdgeInsets.all(12),
@@ -77,13 +79,21 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   children: [
                     Expanded(
                       child: DashboardTile(
-                        title: 'Attendance',
-                        subtitle: 'Absent: 2 days',
-                        iconPath: 'assets/icons/attendance.svg',
-                        color: const Color(0xFFFFAEAE),
-                        centerContent: true,
-                      ),
-                    ),
+  title: 'Attendance',
+  iconPath: 'assets/icons/attendance.svg',
+  color: const Color(0xFFFFCCCC),
+  centerContent: true,
+  onTap: () {
+   Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => StudentAttendancePage(studentId: 18),
+  ),
+);
+
+  },
+),
+ ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: DashboardTile(
@@ -118,16 +128,25 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: DashboardTile(
-                        title: 'Exams',
-                        iconPath: 'assets/icons/exams.svg',
-                        color: const Color(0xFFFCDBB1),
-                        badgeCount: 2,
-                        centerContent: true,
-                      ),
-                    ),
-                  ],
+                Expanded(
+  child: GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StudentExamsScreen(),
+        ),
+      );
+    },
+    child: DashboardTile(
+      title: 'Exams',
+      iconPath: 'assets/icons/exams.svg',
+      color: const Color(0xFFAAE5C8),
+      badgeCount: 2,
+      centerContent: true,
+    ),
+  ),
+),    ],
                 ),
                 const SizedBox(height: 12), // ✅ Moved here OUTSIDE the Row
                 DashboardTile(

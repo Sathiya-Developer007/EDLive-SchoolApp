@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+class TeacherAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuPressed;
   final VoidCallback? onProfileTap;
 
-  const CustomAppBar({
+  const TeacherAppBar({
     Key? key,
     this.onMenuPressed,
     this.onProfileTap,

@@ -6,6 +6,7 @@ import '../models/student_todo_model.dart';
 class StudentTaskProvider with ChangeNotifier {
   List<StudentTodo> _tasks = [];
   String? _authToken;
+  bool _isLoading = false;
 
   final String _baseUrl =
       'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student';
@@ -16,8 +17,12 @@ class StudentTaskProvider with ChangeNotifier {
   }
 
   List<StudentTodo> get tasks => _tasks;
+  bool get isLoading => _isLoading;
 
   Future<void> fetchStudentTodos() async {
+    _isLoading = true;
+    notifyListeners();
+
     try {
       final response = await http.get(
         Uri.parse(_baseUrl),
@@ -34,14 +39,15 @@ class StudentTaskProvider with ChangeNotifier {
         final List<dynamic> data = json.decode(response.body);
 
         _tasks = data.map((json) => StudentTodo.fromJson(json)).toList();
-
-        notifyListeners();
       } else {
         throw Exception('Failed to load student todos');
       }
     } catch (e) {
       print('Error fetching student todos: $e');
-      rethrow;
+      _tasks = []; // Optionally clear on error
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

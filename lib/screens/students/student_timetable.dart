@@ -65,18 +65,20 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
 
   String get _monthLabel => "${_MONTHS[_centerDate.month]}. ${_centerDate.year}";
 
-  void _centerCurrentDate() {
-    final itemWidth = MediaQuery.of(context).size.width / 7;
-    final index = _centerDate.difference(_startDate).inDays;
-    final offset = (index * itemWidth) -
-        (MediaQuery.of(context).size.width / 2) +
-        (itemWidth / 2);
-    _scroll.animateTo(
-      offset.clamp(0.0, _scroll.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
+void _centerCurrentDate() {
+  final itemWidth = MediaQuery.of(context).size.width / 8.5;
+  final index = _centerDate.difference(_startDate).inDays;
+
+  // To make selected day appear in the 4th box (index 3)
+  const targetBoxPosition = 3;
+  final offset = (index - targetBoxPosition) * itemWidth;
+
+  _scroll.animateTo(
+    offset.clamp(0.0, _scroll.position.maxScrollExtent),
+    duration: const Duration(milliseconds: 300),
+    curve: Curves.easeInOut,
+  );
+}
 
   void _onDateTap(DateTime date, int index) {
     setState(() => _centerDate = date);
@@ -91,7 +93,7 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFE8B3DE),
       drawer: const StudentMenuDrawer(),
-      appBar: const CustomAppBar(),
+      appBar: const StudentAppBar(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,21 +309,28 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     );
   }
 
-  Widget _dayTitle() {
-    final dayName = DateFormat('EEEE').format(_centerDate);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          dayName,
-          style: const TextStyle(
-              fontSize: 20, color: Colors.blue, fontWeight: FontWeight.bold),
+Widget _dayTitle() {
+  final dayName = DateFormat('EEEE').format(_centerDate);
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(
+        dayName,
+        style: const TextStyle(
+          fontSize: 20,
+          color: Color(0xFF2E3192), // dark blue
+          fontWeight: FontWeight.bold,
         ),
-        SvgPicture.asset('assets/icons/pencil.svg',
-            height: 16, width: 16, color: Colors.black),
-      ],
-    );
-  }
+      ),
+      SvgPicture.asset(
+        'assets/icons/pencil.svg',
+        height: 16,
+        width: 16,
+        color: Colors.black,
+      ),
+    ],
+  );
+}
 
   Widget _periodList(StudentTimetableProvider timetable) {
     if (timetable.isLoading) {
@@ -340,37 +349,51 @@ return ListView.builder(
   itemBuilder: (_, i) {
     final item = entries[i];
     final time = item.timesByDay[dayName];
-    return ListTile(
-      title: Text('${item.subject} (${item.className})'),
-      subtitle: Text(time ?? '-'),
-      leading: const Icon(Icons.schedule),
+    return _PeriodRow(
+      time: time ?? '-',
+      subject: item.subject,
     );
   },
 );
-  }}
+ }}
 
 // ── SMALL PERIOD ROW WIDGET ──────────────────────────────────────────
 class _PeriodRow extends StatelessWidget {
   final String time;
   final String subject;
+
   const _PeriodRow({required this.time, required this.subject});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration:
-          const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFCCCCCC), width: .7))),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFCCCCCC), width: 1),
+        ),
+      ),
       child: Row(
         children: [
           SizedBox(
-            width: 100,
-            child: Text(time,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Color(0xFF808080))),
+            width: 90,
+            child: Text(
+              time,
+              style: const TextStyle(
+                fontSize: 14,
+                  color: Color(0xFF808080), 
+              ),
+            ),
           ),
           Expanded(
-            child: Text(subject, style: const TextStyle(color: Colors.black)),
+            child: Text(
+              subject,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Colors.black,
+              ),
+            ),
           ),
         ],
       ),

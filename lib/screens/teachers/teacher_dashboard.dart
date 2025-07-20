@@ -4,7 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:school_app/screens/teachers/todo_list_screen.dart';
 import 'package:school_app/providers/teacher_settings_provider.dart'; // Updated import
-import 'menu_drawer.dart';
+import 'teacher_menu_drawer.dart';
+import 'teacher_attendance_page.dart';
+import 'package:school_app/widgets/teacher_app_bar.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -20,39 +22,11 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
 
     return Column(
       children: [
-        Container(height: 30, width: double.infinity, color: Colors.black),
         Expanded(
           child: Scaffold(
             backgroundColor: const Color(0xFFF4F4F4),
             drawer: const MenuDrawer(),
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              toolbarHeight: 70,
-              automaticallyImplyLeading: false,
-              leading: Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.black),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                ),
-              ),
-              title: Row(
-                children: [
-                  Text('Ed', style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold, fontSize: 24)),
-                  Text('Live', style: TextStyle(color: Colors.lightBlue, fontWeight: FontWeight.bold, fontSize: 24)),
-                  const Spacer(),
-                  const Icon(Icons.notifications_none, color: Colors.black),
-                  const SizedBox(width: 16),
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/profile'),
-                    child: const CircleAvatar(
-                      backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            appBar: TeacherAppBar(),
             body: ListView(
               padding: const EdgeInsets.all(1),
               children: [
@@ -108,6 +82,14 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         iconPath: 'assets/icons/attendance.svg',
                         color: const Color(0xFFFFCCCC),
                         centerContent: true,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TeacherAttendancePage(), // Replace with your page
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),

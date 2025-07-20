@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'menu_drawer.dart';
+import 'teacher_menu_drawer.dart';
+import 'package:school_app/widgets/teacher_app_bar.dart';
 
 
 
@@ -434,50 +435,8 @@ Widget build(BuildContext context) {
         child: Scaffold(
           backgroundColor: const Color(0xFF29ABE2), // updated sky blue
           drawer: const MenuDrawer(),
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            toolbarHeight: 70,
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.black),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
-            ),
-            title: Row(
-              children: [
-                const Text(
-                  'Ed',
-                  style: TextStyle(
-                    color: Colors.indigo,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Text(
-                  'Live',
-                  style: TextStyle(
-                    color: Color(0xFF29ABE2), // fixed color
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                const Icon(Icons.notifications_none, color: Colors.black),
-                const SizedBox(width: 46),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pushNamed(context, '/profile');
-                  },
-                  child: const CircleAvatar(
-                    backgroundColor: Colors.grey,
-                    child: Icon(Icons.person, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          body: Column(
+          appBar: TeacherAppBar(),
+              body: Column(
             children: [
               _buildHeaderWithProfile(),
               Expanded(

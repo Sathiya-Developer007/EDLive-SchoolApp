@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
-import 'menu_drawer.dart';
+import 'teacher_menu_drawer.dart';
 
 
 
@@ -55,7 +55,7 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
       length: 3,
       child: Scaffold(
           drawer:const MenuDrawer(), 
-  appBar: const CustomAppBar(),
+  appBar: const TeacherAppBar(),
 // Optional if you have a drawer
         body: isLoading
             ? const Center(child: CircularProgressIndicator())

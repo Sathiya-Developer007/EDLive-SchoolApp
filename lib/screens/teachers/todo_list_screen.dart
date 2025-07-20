@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/teacher_task_provider.dart';
 import '../../models/teacher_todo_model.dart';
-import 'menu_drawer.dart';
+import 'teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
@@ -242,7 +242,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF87CEEB),
       drawer:  MenuDrawer(),
-      appBar: CustomAppBar(),
+      appBar: TeacherAppBar(),
      body: Column(
         children: [
           Column(
