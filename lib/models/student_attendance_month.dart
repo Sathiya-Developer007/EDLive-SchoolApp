@@ -6,6 +6,7 @@ class StudentAttendanceMonth {
   final String absentAfternoon;
   final String totalPresent;
   final String totalAbsent;
+  final Map<String, DailyAttendance> dailyAttendance;
 
   StudentAttendanceMonth({
     required this.totalDays,
@@ -15,17 +16,41 @@ class StudentAttendanceMonth {
     required this.absentAfternoon,
     required this.totalPresent,
     required this.totalAbsent,
+    required this.dailyAttendance,
   });
 
   factory StudentAttendanceMonth.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> attendanceJson = json['daily_attendance'] ?? {};
+    final Map<String, DailyAttendance> attendanceMap = attendanceJson.map(
+      (key, value) => MapEntry(key, DailyAttendance.fromJson(value)),
+    );
+
     return StudentAttendanceMonth(
-      totalDays: json['total_days'],
-      presentMorning: json['present_morning'],
-      absentMorning: json['absent_morning'],
-      presentAfternoon: json['present_afternoon'],
-      absentAfternoon: json['absent_afternoon'],
-      totalPresent: json['total_present'],
-      totalAbsent: json['total_absent'],
+      totalDays: json['total_days'] ?? "0",
+      presentMorning: json['present_morning'] ?? "0",
+      absentMorning: json['absent_morning'] ?? "0",
+      presentAfternoon: json['present_afternoon'] ?? "0",
+      absentAfternoon: json['absent_afternoon'] ?? "0",
+      totalPresent: json['total_present'] ?? "0",
+      totalAbsent: json['total_absent'] ?? "0",
+      dailyAttendance: attendanceMap,
+    );
+  }
+}
+
+class DailyAttendance {
+  final bool morningPresent;
+  final bool afternoonPresent;
+
+  DailyAttendance({
+    required this.morningPresent,
+    required this.afternoonPresent,
+  });
+
+  factory DailyAttendance.fromJson(Map<String, dynamic> json) {
+    return DailyAttendance(
+      morningPresent: json['morning_present'] ?? false,
+      afternoonPresent: json['afternoon_present'] ?? false,
     );
   }
 }

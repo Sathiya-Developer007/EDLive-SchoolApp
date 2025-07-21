@@ -10,23 +10,24 @@ class StudentAttendanceService {
   required String endDate,
 }) async {
   final prefs = await SharedPreferences.getInstance();
-final token = prefs.getString('auth_token');
+  final token = prefs.getString('auth_token');
 
-if (token == null) {
-  throw Exception("Unauthorized: No token found");
-}
+  if (token == null) {
+    throw Exception("Unauthorized: No token found");
+  }
 
-final response = await http.get(
-  Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/studentMonthly?studentId=$studentId&startDate=$startDate&endDate=$endDate'),
-  headers: {
-    'Authorization': 'Bearer $token',
-    'Content-Type': 'application/json',
-  },
-);
+  final response = await http.get(
+    Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/studentMonthly?studentId=$studentId&startDate=$startDate&endDate=$endDate'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+  );
 
   if (response.statusCode == 200) {
-    final List<dynamic> jsonData = json.decode(response.body);
-    return StudentAttendanceMonth.fromJson(jsonData[0]); // ✅ first item
+    final Map<String, dynamic> jsonData = json.decode(response.body);
+    return StudentAttendanceMonth.fromJson(jsonData);
   } else {
     throw Exception('Failed to load attendance');
   }
