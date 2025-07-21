@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/teacher_class_student.dart';
 import '../../services/student_todo_service.dart';
+import '../../services/class_service.dart'; // <-- Import new service
 import 'teacher_student_details_page.dart';
 import 'package:school_app/screens/teachers/teacher_student_details_page.dart';
-
 
 class ClassStudentListPage extends StatefulWidget {
   const ClassStudentListPage({super.key});
@@ -15,6 +15,9 @@ class ClassStudentListPage extends StatefulWidget {
 
 class _ClassStudentListPageState extends State<ClassStudentListPage> {
   List<Student> students = [];
+  List<ClassItem> classList = [];
+  int? selectedClassId;
+  String? selectedClassName;
   String selectedClass = '10A';
   bool isLoading = true;
 
@@ -28,7 +31,27 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
   @override
   void initState() {
     super.initState();
-    fetchStudentList();
+    fetchInitialData();
+  }
+
+  Future<void> fetchInitialData() async {
+    await fetchClassList();
+    await fetchStudentList();
+  }
+
+  Future<void> fetchClassList() async {
+    try {
+      final fetchedClasses = await ClassService.fetchClasses();
+      setState(() {
+        classList = fetchedClasses;
+        if (classList.isNotEmpty) {
+          selectedClassId = classList.first.id;
+          selectedClassName = classList.first.name;
+        }
+      });
+    } catch (e) {
+      debugPrint("Error fetching class list: $e");
+    }
   }
 
   Future<void> fetchStudentList() async {
@@ -84,9 +107,9 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
                           color: const Color(0xFFCCCCCC),
                           borderRadius: BorderRadius.circular(3),
                         ),
-                        child: DropdownButton<String>(
+                        child: DropdownButton<int>(
                           isExpanded: true,
-                          value: selectedClass,
+                          value: selectedClassId,
                           underline: const SizedBox(),
                           icon: const Icon(Icons.arrow_drop_down),
                           style: const TextStyle(
@@ -94,24 +117,25 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
                             color: Color(0xFF29ABE2),
                             fontWeight: FontWeight.bold,
                           ),
-                          items: ['10A', '10B', '10C']
-                              .map(
-                                (e) => DropdownMenuItem(
-                                  value: e,
-                                  child: Text(
-                                    e,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      color: Color(0xFF29ABE2),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                          items: classList.map((classItem) {
+                            return DropdownMenuItem<int>(
+                              value: classItem.id,
+                              child: Text(
+                                classItem.name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  color: Color(0xFF29ABE2),
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              )
-                              .toList(),
+                              ),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
-                              selectedClass = value!;
+                              selectedClassId = value;
+                              selectedClassName = classList
+                                  .firstWhere((item) => item.id == value)
+                                  .name;
                             });
                           },
                         ),
@@ -175,19 +199,19 @@ class _ClassStudentListPageState extends State<ClassStudentListPage> {
                   final index = entry.key + 1;
                   final student = entry.value;
                   // inside the map loop where you build each _StudentRow
-               return _StudentRow(
-  name: "$index. ${student.studentName}",
-  studentId: student.id,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentDetailPage(studentId: student.id),
-      ),
-    );
-  },
-);
-
+                  return _StudentRow(
+                    name: "$index. ${student.studentName}",
+                    studentId: student.id,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              StudentDetailPage(studentId: student.id),
+                        ),
+                      );
+                    },
+                  );
                 }).toList(),
               ),
           ],
