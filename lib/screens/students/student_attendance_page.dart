@@ -24,6 +24,8 @@ class StudentAttendance {
 class StudentAttendancePage extends StatefulWidget {
   final int studentId;
 
+  
+
   const StudentAttendancePage({super.key, required this.studentId});
 
   @override
@@ -403,8 +405,11 @@ class _AttendanceCalendarTabState extends State<AttendanceCalendarTab> {
   final ScrollController _scrollController = ScrollController();
   int _highlightedMonthIndex = 0;
   int selectedYear = DateTime.now().year;
-  Map<String, StudentAttendanceMonth> _yearlyData = {};
+  StudentAttendanceMonth? _yearlyData;
   bool _isLoading = true;
+
+  DateTime _currentDate = DateTime.now();
+  int _currentMonthIndex = DateTime.now().month - 1;
 
   final List<String> _months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -416,30 +421,29 @@ class _AttendanceCalendarTabState extends State<AttendanceCalendarTab> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _fetchYearlyAttendance();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _scrollController.animateTo(
+      _currentMonthIndex * 210.0, // Approximate height of each month
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  });
   }
 
   Future<void> _fetchYearlyAttendance() async {
     setState(() => _isLoading = true);
     try {
-      final Map<String, StudentAttendanceMonth> yearlyData = {};
-      
-      for (int month = 1; month <= 12; month++) {
-        final startDate = DateTime(selectedYear, month, 1);
-        final endDate = DateTime(selectedYear, month + 1, 0);
-        
-        final data = await StudentAttendanceService().fetchMonthlyAttendance(
-          studentId: widget.studentId,
-          startDate: DateFormat('yyyy-MM-dd').format(startDate),
-          endDate: DateFormat('yyyy-MM-dd').format(endDate),
-        );
-        
-        yearlyData[_months[month - 1]] = data;
-      }
+      final startDate = DateFormat('yyyy-MM-dd').format(DateTime(selectedYear, 1, 1));
+      final endDate = DateFormat('yyyy-MM-dd').format(DateTime(selectedYear, 12, 31));
 
-      setState(() {
-        _yearlyData = yearlyData;
-        _isLoading = false;
-      });
+      _yearlyData = await StudentAttendanceService().fetchMonthlyAttendance(
+        studentId: widget.studentId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      setState(() => _isLoading = false);
     } catch (e) {
       print("Error fetching yearly attendance: $e");
       setState(() => _isLoading = false);
@@ -449,15 +453,15 @@ class _AttendanceCalendarTabState extends State<AttendanceCalendarTab> {
   void _goToPreviousYear() {
     setState(() {
       selectedYear--;
+      _fetchYearlyAttendance();
     });
-    _fetchYearlyAttendance();
   }
 
   void _goToNextYear() {
     setState(() {
       selectedYear++;
+      _fetchYearlyAttendance();
     });
-    _fetchYearlyAttendance();
   }
 
   void _onScroll() {
@@ -471,29 +475,29 @@ class _AttendanceCalendarTabState extends State<AttendanceCalendarTab> {
     }
   }
 
-  // Calculate yearly summary
-  Map<String, int> get _yearlySummary {
-    int totalPresent = 0;
-    int totalAbsent = 0;
-    int totalDays = 0;
-
-    _yearlyData.forEach((month, data) {
-      totalPresent += int.parse(data.totalPresent);
-      totalAbsent += int.parse(data.totalAbsent);
-      totalDays += int.parse(data.totalDays);
-    });
+  Map<String, int> _calculateYearlySummary() {
+    if (_yearlyData == null) {
+      return {
+        'totalPresent': 0,
+        'totalAbsent': 0,
+        'totalDays': 0,
+        'percentage': 0,
+      };
+    }
 
     return {
-      'totalPresent': totalPresent,
-      'totalAbsent': totalAbsent,
-      'totalDays': totalDays,
-      'percentage': totalDays > 0 ? ((totalPresent / totalDays) * 100).round() : 0,
+      'totalPresent': int.parse(_yearlyData!.totalPresent),
+      'totalAbsent': int.parse(_yearlyData!.totalAbsent),
+      'totalDays': int.parse(_yearlyData!.totalDays),
+      'percentage': int.parse(_yearlyData!.totalDays) > 0 
+          ? ((int.parse(_yearlyData!.totalPresent) / int.parse(_yearlyData!.totalDays)) * 100).round() 
+          : 0,
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    final summary = _yearlySummary;
+    final summary = _calculateYearlySummary();
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -559,116 +563,32 @@ class _AttendanceCalendarTabState extends State<AttendanceCalendarTab> {
                 ],
               ),
             ),
-            Container(
-              color: const Color(0xFFE6E6E6),
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: Row(
-                children: const [
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Sun.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF808080),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Mon.',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Tue.',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Wed.',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Thu.',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Fri.',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        'Sat.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF808080),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: RawScrollbar(
-                        controller: _scrollController,
-                        thumbVisibility: true,
-                        thickness: 6,
-                        radius: const Radius.circular(5),
-                        thumbColor: const Color(0xFF999999),
-                        child: ListView.builder(
+                  : _yearlyData == null
+                      ? const Center(child: Text("No attendance data available"))
+                      : RawScrollbar(
                           controller: _scrollController,
-                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 300),
-                          itemCount: _months.length,
-                          itemBuilder: (context, index) {
-                            final monthName = _months[index];
-                            final monthData = _yearlyData[monthName];
-                            final isHighlighted = index == _highlightedMonthIndex;
-                            
-                            // Get absent days from the API data
-                            final absentDays = _getAbsentDaysForMonth(monthName);
-                            
-                            return buildMonthGrid(
-                              monthName: monthName,
-                              isHighlighted: isHighlighted,
-                              monthData: monthData,
-                              absentDays: absentDays,
-                            );
-                          },
+                          thumbVisibility: true,
+                          thickness: 6,
+                          radius: const Radius.circular(5),
+                          thumbColor: const Color(0xFF999999),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(0, 8, 0, 300),
+                            itemCount: _months.length,
+                            itemBuilder: (context, index) {
+                              final monthName = _months[index];
+                              final isHighlighted = index == _highlightedMonthIndex;
+                              
+                              return _buildMonthCalendar(
+                                monthName: monthName,
+                                isHighlighted: isHighlighted,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ),
             ),
           ],
         ),
@@ -676,88 +596,71 @@ class _AttendanceCalendarTabState extends State<AttendanceCalendarTab> {
     );
   }
 
-  List<int> _getAbsentDaysForMonth(String monthName) {
-    final monthData = _yearlyData[monthName];
-    if (monthData == null) return [];
-
-    final absentDays = <int>[];
-    final monthIndex = _months.indexOf(monthName) + 1;
-    final daysInMonth = DateTime(selectedYear, monthIndex + 1, 0).day;
+  Widget _buildMonthCalendar({
+    required String monthName,
+    required bool isHighlighted,
+  }) {
+    int monthIndex = _months.indexOf(monthName) + 1;
+     bool isCurrentMonth = monthIndex - 1 == _currentMonthIndex && selectedYear == _currentDate.year;
+    int totalDays = DateTime(selectedYear, monthIndex + 1, 0).day;
+    int startWeekday = DateTime(selectedYear, monthIndex, 1).weekday % 7;
+    int totalBoxes = totalDays + startWeekday;
     final formatter = DateFormat('yyyy-MM-dd');
 
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(selectedYear, monthIndex, day);
-      final dateKey = formatter.format(date);
-      final attendance = monthData.dailyAttendance[dateKey];
-
-      if (attendance != null && 
-          (!attendance.morningPresent || !attendance.afternoonPresent)) {
-        absentDays.add(day);
-      }
-    }
-
-    return absentDays;
-  }
-
-Widget buildMonthGrid({
-  required String monthName,
-  required bool isHighlighted,
-  required StudentAttendanceMonth? monthData,
-  required List<int> absentDays,
-}) {
-  int monthIndex = _months.indexOf(monthName) + 1;
-  int totalDays = DateTime(selectedYear, monthIndex + 1, 0).day;
-  int startWeekday = DateTime(selectedYear, monthIndex, 1).weekday % 7;
-  int totalBoxes = totalDays + startWeekday;
-  final formatter = DateFormat('yyyy-MM-dd');
-
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Column(
-      children: [
-        Center(
-          child: Text(
-            monthName,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isHighlighted ? Color(0xFF2E3192) : Color(0xFFCCCCCC),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        children: [
+          Center(
+            child: Text(
+              monthName,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isHighlighted ? Color(0xFF2E3192) : Colors.black,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: totalBoxes,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            childAspectRatio: 1.2,
-          ),
-          itemBuilder: (context, index) {
-            if (index < startWeekday) {
+          const SizedBox(height: 4),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const BouncingScrollPhysics(),
+            itemCount: totalBoxes,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              childAspectRatio: 1.2,
+            ),
+            itemBuilder: (context, index) {
+              if (index < startWeekday) {
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Color(0xFFCCCCCC), width: 0.8),
+                  ),
+                );
+              }
+
+              int day = index - startWeekday + 1;
+              int weekDay = (index % 7);
+              bool isSunday = weekDay == 0;
+              
+              final date = DateTime(selectedYear, monthIndex, day);
+              final dateKey = formatter.format(date);
+              final attendance = _yearlyData?.dailyAttendance[dateKey];
+              final bool? morningPresent = attendance?.morningPresent;
+              final bool? afternoonPresent = attendance?.afternoonPresent;
+              bool isAbsent = (morningPresent == false || afternoonPresent == false);
+
+              bool isCurrentDate = date.year == _currentDate.year && 
+                                date.month == _currentDate.month && 
+                                date.day == _currentDate.day;
+
               return Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Color(0xFFCCCCCC), width: 0.8),
-                ),
-              );
-            }
-
-            int day = index - startWeekday + 1;
-            int weekDay = (index % 7);
-            bool isSunday = weekDay == 0;
-            
-            final date = DateTime(selectedYear, monthIndex, day);
-            final dateKey = formatter.format(date);
-            final attendance = monthData?.dailyAttendance[dateKey];
-            final bool? morningPresent = attendance?.morningPresent;
-            final bool? afternoonPresent = attendance?.afternoonPresent;
-            bool isAbsent = absentDays.contains(day);
-
-            return Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border.all(color: const Color(0xFFCCCCCC), width: 0.8),
+                border: Border.all(
+                  color: isCurrentDate ? Color(0xFF29ABE2) : const Color(0xFFCCCCCC),
+                  width: isCurrentDate ? 1.5 : 0.8,
+                ),
               ),
               child: Column(
                 children: [
@@ -768,52 +671,56 @@ Widget buildMonthGrid({
                               day.toString(),
                               style: const TextStyle(
                                 fontSize: 11, 
-                                color: Color(0xFFCCCCCC)
-                              ),
+                                color: Color(0xFFCCCCCC)),
                             ),
                           )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        : Stack(
                             children: [
-                              // Morning attendance (left side)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: [
-                                  const SizedBox(width: 2),
-                                  if (morningPresent != null)
-                                    Icon(
-                                      morningPresent ? Icons.check : Icons.close,
-                                      size: 10,
-                                      color: morningPresent
-                                        ? Colors.green
-                                        : Colors.red,
-                                    ),
-                                ],
-                              ),
-                              // Day number
-                              Text(
-                                day.toString(),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isHighlighted 
-                                    ? Colors.black 
-                                    : const Color(0xFFCCCCCC),
+                              // Day number - centered
+                              Center(
+                                child: Text(
+                                  day.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black,
+                                  ),
                                 ),
                               ),
-                              // Afternoon attendance (right side)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  if (afternoonPresent != null)
-                                    Icon(
-                                      afternoonPresent ? Icons.check : Icons.close,
-                                      size: 10,
-                                      color: afternoonPresent
-                                        ? Colors.green
-                                        : Colors.red,
-                                    ),
-                                  const SizedBox(width: 2),
-                                ],
+                              // Morning attendance - left middle
+                              Positioned(
+                                left: 8,
+                                top: 0,
+                                bottom: 0,
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: morningPresent != null
+                                      ? Icon(
+                                          morningPresent ? Icons.check : Icons.close,
+                                          size: 12,
+                                          color: morningPresent
+                                            ? Colors.green
+                                            : Colors.red,
+                                        )
+                                      : const SizedBox(width: 12),
+                                ),
+                              ),
+                              // Afternoon attendance - right middle
+                              Positioned(
+                                right: 8,
+                                top: 0,
+                                bottom: 0,
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: afternoonPresent != null
+                                      ? Icon(
+                                          afternoonPresent ? Icons.check : Icons.close,
+                                          size: 12,
+                                          color: afternoonPresent
+                                            ? Colors.green
+                                            : Colors.red,
+                                        )
+                                      : const SizedBox(width: 12),
+                                ),
                               ),
                             ],
                           ),
@@ -833,10 +740,10 @@ Widget buildMonthGrid({
                 ],
               ),
             );
-          },
-        ),
-      ],
-    ),
-  );
-}
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
