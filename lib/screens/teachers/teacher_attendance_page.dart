@@ -12,12 +12,13 @@ import 'package:school_app/widgets/teacher_app_bar.dart';
 // Attendance Month
 import 'package:school_app/models/teacher_attendance_year.dart';
 import 'package:school_app/providers/teacher_attendance_provider.dart';
+
 // import 'package:school_app/services/attendance_service.dart';
-import 'package:school_app/models/teacher_student_classsection.dart';
+
 
 // Attendance Day
 import 'package:school_app/services/teacher_student_classsection.dart';
-// import 'package:school_app/models/teacher_student_classsection.dart';
+import 'package:school_app/models/teacher_student_classsection.dart';
 
 final DateTime now = DateTime.now();
 final String formattedDate = DateFormat(
@@ -31,7 +32,7 @@ class TeacherAttendancePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: const Color(0xFFFFAEAE),
         drawer: const MenuDrawer(),
@@ -95,21 +96,25 @@ class TeacherAttendancePage extends StatelessWidget {
                   child: Column(
                     children: const [
                       TabBar(
-                        indicatorColor: Color(0xFF29ABE2),
-                        labelColor: Color(0xFF29ABE2),
-                        unselectedLabelColor: Colors.black,
-                        tabs: [
-                          Tab(text: 'Day'),
-                          Tab(text: 'MonthYear'),
-                        ],
-                      ),
+  indicatorColor: Color(0xFF29ABE2),
+  labelColor: Color(0xFF29ABE2),
+  unselectedLabelColor: Colors.black,
+  tabs: [
+    Tab(text: 'Day'),
+    Tab(text: 'Month'),
+    Tab(text: 'Year'),
+  ],
+),
+
                       Expanded(
                         child: TabBarView(
-                          children: [
-                            TeacherAttendanceDayTab(),
-                            TeacherAttendanceMonthTab(),
-                          ],
-                        ),
+  children: [
+    TeacherAttendanceDayTab(),
+    TeacherAttendanceMonthTab(),
+    TeacherAttendanceYearTab(), // ← NEW
+  ],
+),
+
                       ),
                     ],
                   ),
@@ -545,21 +550,47 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
   }
 }
 
+
+class StudentMonthlyAttendance {
+  final int studentId;
+  final String fullName;
+  final int totalDays;
+  final int totalPresent;
+  final int totalAbsent;
+
+  StudentMonthlyAttendance({
+    required this.studentId,
+    required this.fullName,
+    required this.totalDays,
+    required this.totalPresent,
+    required this.totalAbsent,
+  });
+
+  factory StudentMonthlyAttendance.fromJson(Map<String, dynamic> json) {
+    return StudentMonthlyAttendance(
+      studentId: json['student_id'],
+      fullName: json['full_name'],
+      totalDays: int.tryParse(json['total_days'] ?? '0') ?? 0,
+      totalPresent: int.tryParse(json['total_present'] ?? '0') ?? 0,
+      totalAbsent: int.tryParse(json['total_absent'] ?? '0') ?? 0,
+    );
+  }
+}
+
 class TeacherAttendanceMonthTab extends StatefulWidget {
   const TeacherAttendanceMonthTab({super.key});
 
   @override
-  State<TeacherAttendanceMonthTab> createState() =>
-      _TeacherAttendanceMonthTabState();
+  State<TeacherAttendanceMonthTab> createState() => _TeacherAttendanceMonthTabState();
 }
 
 class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
   String selectedClass = "10A";
-  bool viewAbsentOnly = false;
-
   final Map<String, int> classIdMap = {'10A': 1, '10B': 2, '10C': 3};
-
-  List<StudentClassSection> students = [];
+  bool viewAbsentOnly = false;
+  bool isLoading = true;
+  List<StudentMonthlyAttendance> students = [];
+  DateTime currentMonth = DateTime.now(); // ✅ Track current month
 
   @override
   void initState() {
@@ -568,79 +599,70 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
   }
 
   Future<void> fetch() async {
-    final provider = Provider.of<AttendanceProvider>(context, listen: false);
-
+    setState(() => isLoading = true);
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
       final classId = classIdMap[selectedClass]!;
-      final now = DateTime.now();
-      final firstDay = DateFormat(
-        'yyyy-MM-dd',
-      ).format(DateTime(now.year, now.month, 1));
-      final lastDay = DateFormat(
-        'yyyy-MM-dd',
-      ).format(DateTime(now.year, now.month + 1, 0));
+      final startDate = DateFormat('yyyy-MM-dd').format(DateTime(currentMonth.year, currentMonth.month, 1));
+      final endDate = DateFormat('yyyy-MM-dd').format(DateTime(currentMonth.year, currentMonth.month + 1, 0));
 
-      final studentsResponse = await http.get(
+      final response = await http.get(
         Uri.parse(
-          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/staff/staff/students/list',
-        ),
-        headers: {'Authorization': 'Bearer $token', 'accept': '*/*'},
+            'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/monthly?classId=$classId&startDate=$startDate&endDate=$endDate'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'accept': '*/*',
+        },
       );
 
-      if (studentsResponse.statusCode == 200) {
-        final List<dynamic> jsonData = jsonDecode(studentsResponse.body);
-
-        final List<StudentClassSection> allStudents = jsonData
-            .map((data) => StudentClassSection.fromJson(data))
-            .toList();
-
-        final filteredStudents = allStudents
-            .where((s) => s.classId == classId)
-            .toList();
-
-        await provider.fetchMonthlyStudentAttendance(
-          classId: classId,
-          students: filteredStudents,
-          startDate: firstDay,
-          endDate: lastDay,
-        );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final fetchedStudents = data.map((e) => StudentMonthlyAttendance.fromJson(e)).toList();
 
         setState(() {
-          students = filteredStudents;
+          students = fetchedStudents;
+          isLoading = false;
         });
       } else {
-        print("Failed to fetch students: ${studentsResponse.statusCode}");
+        print("Failed to fetch: ${response.statusCode}");
+        setState(() => isLoading = false);
       }
     } catch (e) {
-      print("Error fetching data: $e");
+      print("Error: $e");
+      setState(() => isLoading = false);
     }
+  }
+
+  void goToPreviousMonth() {
+    setState(() {
+      currentMonth = DateTime(currentMonth.year, currentMonth.month - 1);
+    });
+    fetch();
+  }
+
+  void goToNextMonth() {
+    setState(() {
+      currentMonth = DateTime(currentMonth.year, currentMonth.month + 1);
+    });
+    fetch();
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<AttendanceProvider>(context);
-
-    final List<StudentClassSection> filteredList = viewAbsentOnly
-        ? students
-              .where(
-                (s) =>
-                    provider.attendanceList
-                        .firstWhere(
-                          (a) => a.studentId == s.id,
-                          orElse: () => StudentAttendance(
-                            studentId: s.id,
-                            name: s.name,
-                            absent: 0,
-                          ),
-                        )
-                        .absent >
-                    0,
-              )
-              .toList()
+    final filteredList = viewAbsentOnly
+        ? students.where((s) => s.totalAbsent > 0).toList()
         : students;
+
+    final totalAbsences = students.fold<int>(0, (sum, s) => sum + s.totalAbsent);
+    final totalWorkingDays = students.isNotEmpty ? students.first.totalDays : 0;
+final totalPossibleAttendances = totalWorkingDays * students.length;
+
+final absencePercentage = totalPossibleAttendances > 0
+    ? (totalAbsences / totalPossibleAttendances) * 100
+    : 0;
+
 
     return Column(
       children: [
@@ -648,15 +670,32 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              Text(
-                DateFormat('MMMM yyyy').format(DateTime.now()),
-                style: const TextStyle(fontSize: 18, color: Color(0xFF2E3192)),
+              // ✅ Month navigation row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_left, color: Colors.black),
+                    onPressed: goToPreviousMonth,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    DateFormat('MMMM yyyy').format(currentMonth),
+                    style: const TextStyle(fontSize: 18, color: Color(0xFF2E3192)),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_right, color: Colors.grey),
+                    onPressed: goToNextMonth,
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
-              Text(
-                "${provider.attendanceList.fold<int>(0, (sum, s) => sum + s.absent)} total absences",
-                style: const TextStyle(color: Colors.red),
-              ),
+             Text(
+  "Total absences: $totalAbsences (${absencePercentage.toStringAsFixed(1)}%)",
+  style: const TextStyle(color: Colors.red),
+),
+
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -668,10 +707,7 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedClass,
-                        icon: const Icon(
-                          Icons.arrow_drop_down,
-                          color: Color(0xFF2E3192),
-                        ),
+                        icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF2E3192)),
                         style: const TextStyle(
                           color: Color(0xFF29ABE2),
                           fontWeight: FontWeight.bold,
@@ -706,10 +742,7 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
                           },
                         ),
                       ),
-                      const Text(
-                        "View absence only",
-                        style: TextStyle(fontSize: 12),
-                      ),
+                      const Text("View absence only", style: TextStyle(fontSize: 12)),
                     ],
                   ),
                 ],
@@ -719,59 +752,253 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
         ),
         const Divider(height: 1),
         Expanded(
-          child: provider.isLoading
+          child: isLoading
               ? const Center(child: CircularProgressIndicator())
               : filteredList.isEmpty
-              ? const Center(
-                  child: Text(
-                    "No attendance data available.",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ? const Center(
+                      child: Text("No attendance data available.",
+                          style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    )
+                  : ListView.builder(
+                      itemCount: filteredList.length,
+                      itemBuilder: (context, index) {
+                        final student = filteredList[index];
+                        final isFullyPresent = student.totalAbsent == 0;
+
+                        return ListTile(
+                          title: Text(
+                            student.fullName,
+                            style: const TextStyle(color: Colors.black),
+                          ),
+                          subtitle: Text(
+                            "Present: ${student.totalPresent}, Absent: ${student.totalAbsent}",
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          trailing: isFullyPresent
+                              ? const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.check, color: Colors.green),
+                                    SizedBox(width: 4),
+                                    Text("Present", style: TextStyle(color: Colors.green)),
+                                  ],
+                                )
+                              : Text("✘ ${student.totalAbsent} absences",
+                                  style: const TextStyle(color: Colors.red)),
+                        );
+                      },
+                    ),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+class TeacherAttendanceYearTab extends StatefulWidget {
+  const TeacherAttendanceYearTab({super.key});
+
+  @override
+  State<TeacherAttendanceYearTab> createState() => _TeacherAttendanceYearTabState();
+}
+
+class _TeacherAttendanceYearTabState extends State<TeacherAttendanceYearTab> {
+  String selectedClass = "10A";
+  int selectedYear = DateTime.now().year;
+
+  final Map<String, int> classIdMap = {'10A': 1, '10B': 2, '10C': 3};
+  bool viewAbsentOnly = false;
+  bool isLoading = true;
+  List<StudentMonthlyAttendance> students = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetch();
+  }
+
+  Future<void> fetch() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+
+      final classId = classIdMap[selectedClass]!;
+      final startDate = "$selectedYear-01-01";
+      final endDate = "$selectedYear-12-31";
+
+      final response = await http.get(
+        Uri.parse(
+          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/monthly?classId=$classId&startDate=$startDate&endDate=$endDate',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'accept': '*/*',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final fetchedStudents = data.map((e) => StudentMonthlyAttendance.fromJson(e)).toList();
+
+        setState(() {
+          students = fetchedStudents;
+          isLoading = false;
+        });
+      } else {
+        print("Failed to fetch: ${response.statusCode}");
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      print("Error: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _changeYear(int offset) {
+    setState(() {
+      selectedYear += offset;
+      isLoading = true;
+    });
+    fetch();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredList = viewAbsentOnly
+        ? students.where((s) => s.totalAbsent > 0).toList()
+        : students;
+
+    final totalAbsences = students.fold<int>(0, (sum, s) => sum + s.totalAbsent);
+    final totalWorkingDays = students.isNotEmpty ? students.first.totalDays : 0;
+    final totalPossibleAttendances = totalWorkingDays * students.length;
+    final absencePercentage = totalPossibleAttendances > 0
+        ? (totalAbsences / totalPossibleAttendances) * 100
+        : 0;
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_left, size: 28, color: Colors.black),
+                    onPressed: () => _changeYear(-1),
                   ),
-                )
-              : ListView.builder(
-                  itemCount: filteredList.length,
-                  itemBuilder: (context, index) {
-                    final student = filteredList[index];
-
-                    final attendance = provider.attendanceList.firstWhere(
-                      (a) => a.studentId == student.id,
-                      orElse: () => StudentAttendance(
-                        studentId: student.id,
-                        name: student.name,
-                        absent: 0,
+                  const SizedBox(width: 8),
+                  Text(
+                    "$selectedYear",
+                    style: const TextStyle(fontSize: 18, color: Color(0xFF2E3192)),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_right, size: 28, color: Colors.grey),
+                    onPressed: () => _changeYear(1),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Total absences: $totalAbsences (${absencePercentage.toStringAsFixed(1)}%)",
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    height: 38,
+                    width: 100,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: const BoxDecoration(color: Color(0xFFCCCCCC)),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedClass,
+                        icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF2E3192)),
+                        style: const TextStyle(
+                          color: Color(0xFF29ABE2),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedClass = newValue!;
+                          });
+                          fetch();
+                        },
+                        items: classIdMap.keys.map((String val) {
+                          return DropdownMenuItem<String>(
+                            value: val,
+                            child: Text(val),
+                          );
+                        }).toList(),
                       ),
-                    );
-
-                    return ListTile(
-                      title: Text(
-                        student.name.isNotEmpty ? student.name : 'No Name',
-                        style: const TextStyle(color: Colors.black),
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Transform.scale(
+                        scale: 0.8,
+                        child: Checkbox(
+                          value: viewAbsentOnly,
+                          onChanged: (value) {
+                            setState(() {
+                              viewAbsentOnly = value!;
+                            });
+                          },
+                        ),
                       ),
-                      trailing: attendance.absent > 0
-                          ? Text(
-                              "✘ ${attendance.absent} absences",
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 13,
-                              ),
-                            )
-                          : const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.check, color: Colors.green),
-                                SizedBox(width: 4),
-                                Text(
-                                  "0 absences",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    );
-                  },
-                ),
+                      const Text("View absence only", style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filteredList.isEmpty
+                  ? const Center(
+                      child: Text("No attendance data available.",
+                          style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    )
+                  : ListView.builder(
+                      itemCount: filteredList.length,
+                      itemBuilder: (context, index) {
+                        final student = filteredList[index];
+                        final isFullyPresent = student.totalAbsent == 0;
+
+                        return ListTile(
+                          title: Text(
+                            student.fullName,
+                            style: const TextStyle(color: Colors.black),
+                          ),
+                          subtitle: Text(
+                            "Present: ${student.totalPresent}, Absent: ${student.totalAbsent}",
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          trailing: isFullyPresent
+                              ? const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.check, color: Colors.green),
+                                    SizedBox(width: 4),
+                                    Text("Present", style: TextStyle(color: Colors.green)),
+                                  ],
+                                )
+                              : Text("✘ ${student.totalAbsent} absences",
+                                  style: const TextStyle(color: Colors.red)),
+                        );
+                      },
+                    ),
         ),
       ],
     );

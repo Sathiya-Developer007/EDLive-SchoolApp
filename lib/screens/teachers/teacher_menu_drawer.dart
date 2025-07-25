@@ -78,36 +78,36 @@ class _MenuDrawerState extends State<MenuDrawer> {
                   final item = _menuItems[index];
                   final isSelected = _selectedIndex == index;
 
-        return Container(
-  margin: const EdgeInsets.symmetric(vertical: 4),
-  decoration: BoxDecoration(
-    color: isSelected
-        ? const Color(0xFF29ABE2)
-        : Colors.transparent,
-    borderRadius: BorderRadius.circular(8),
-  ),
-  child: Theme(
-    data: Theme.of(context).copyWith(
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
-      hoverColor: Colors.transparent,
-      splashFactory: NoSplash.splashFactory,
-    ),
-    child: ListTile(
-      leading: SvgPicture.asset(
-        'assets/icons/${item['icon']}',
-        height: 24,
-        width: 24,
-        colorFilter: const ColorFilter.mode(
-          Colors.white,
-          BlendMode.srcIn,
-        ),
-      ),
-      title: Text(
-        item['label'],
-        style: const TextStyle(color: Colors.white),
-      ),
-     onTap: () async {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF29ABE2)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        splashFactory: NoSplash.splashFactory,
+                      ),
+                      child: ListTile(
+                        leading: SvgPicture.asset(
+                          'assets/icons/${item['icon']}',
+                          height: 24,
+                          width: 24,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                        title: Text(
+                          item['label'],
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      onTap: () async {
   setState(() => _selectedIndex = index);
 
   if (item['label'] == 'Logout') {
@@ -118,11 +118,15 @@ class _MenuDrawerState extends State<MenuDrawer> {
       '/',
       (route) => false,
     );
-  } else if (item['route'] == '/todo' || item['route'] == '/classtime' || item['route'] == '/settings' || item['route'] == '/attendance') {
+  } else if ([
+    '/todo',
+    '/classtime',
+    '/settings',
+    '/attendance',
+    '/exams'
+  ].contains(item['route'])) {
     Navigator.pushNamed(context, item['route']);
   } else {
-    // Page not implemented yet — do nothing (just keep highlight)
-    // Optionally show a snackbar:
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${item['label']} page coming soon.'),
@@ -132,9 +136,9 @@ class _MenuDrawerState extends State<MenuDrawer> {
   }
 },
   ),
-  ),
-);
-       },
+                    ),
+                  );
+                },
               ),
             ),
           ],

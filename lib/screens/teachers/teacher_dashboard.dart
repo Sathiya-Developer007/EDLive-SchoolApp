@@ -4,9 +4,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:school_app/screens/teachers/todo_list_screen.dart';
 import 'package:school_app/providers/teacher_settings_provider.dart'; // Updated import
+
+
 import 'teacher_menu_drawer.dart';
 import 'teacher_attendance_page.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
+import 'teacher_exam_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -119,15 +122,24 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: DashboardTile(
-                        title: 'Exams',
-                        iconPath: 'assets/icons/exams.svg',
-                        color: const Color(0xFFAAE5C8),
-                        badgeCount: 2,
-                        centerContent: true,
-                      ),
-                    ),
+                   Expanded(
+  child: GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TeacherExamPage()),
+      );
+    },
+    child: DashboardTile(
+      title: 'Exams',
+      iconPath: 'assets/icons/exams.svg',
+      color: const Color(0xFFAAE5C8),
+      badgeCount: 2,
+      centerContent: true,
+    ),
+  ),
+),
+
                   ],
                 ),
                 const SizedBox(height: 12),

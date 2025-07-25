@@ -1,19 +1,28 @@
-class StudentAttendance {
+class TeacherDailyAttendance {
   final int studentId;
-  final String name;
-  final int absent;
+  final String fullName;
+  final int classId;
+  final String date;
+  final bool isPresentMorning;
+  final bool isPresentAfternoon;
 
-  StudentAttendance({
+  TeacherDailyAttendance({
     required this.studentId,
-    required this.name,
-    required this.absent,
+    required this.fullName,
+    required this.classId,
+    required this.date,
+    required this.isPresentMorning,
+    required this.isPresentAfternoon,
   });
 
-  factory StudentAttendance.fromJson(Map<String, dynamic> json) {
-    return StudentAttendance(
-      studentId: json['student_id'],
-      name: json['student_name'],
-      absent: json['absent_days'] ?? 0,
+  factory TeacherDailyAttendance.fromJson(Map<String, dynamic> json) {
+    return TeacherDailyAttendance(
+      studentId: json['student_id'] ?? 0,
+      fullName: json['full_name'] ?? '',
+      classId: json['class_id'] ?? 0,
+      date: json['date'] ?? '',
+      isPresentMorning: json['is_present_morning'] ?? false,
+      isPresentAfternoon: json['is_present_afternoon'] ?? false,
     );
   }
 }

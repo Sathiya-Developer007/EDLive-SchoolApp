@@ -11,6 +11,7 @@ import 'screens/teachers/teacher_profile_page.dart';
 import 'screens/teachers/settings.dart';
 import 'screens/teachers/class_teacher_student_details_page.dart';
 import 'screens/teachers/teacher_attendance_page.dart';
+import 'screens/teachers/teacher_exam_page.dart';
 
 import 'screens/students/student_dashboard.dart';
 import 'screens/students/select_child_page.dart';
@@ -24,6 +25,7 @@ import 'providers/teacher_settings_provider.dart';
 import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
 import 'providers/teacher_attendance_provider.dart';
+
 
 import 'dart:convert';
 
@@ -164,6 +166,10 @@ case '/attendance':
   return MaterialPageRoute(
     builder: (_) => const TeacherAttendancePage(), // Or StudentAttendancePage
   );
+
+  case '/exams':
+  return MaterialPageRoute(builder: (_) => const TeacherExamPage());
+
 
             
 
