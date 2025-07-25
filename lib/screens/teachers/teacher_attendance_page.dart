@@ -484,8 +484,8 @@ class StudentMonthlyAttendance {
   final int studentId;
   final String fullName;
   final int totalDays;
-  final int totalPresent;
-  final int totalAbsent;
+  final double  totalPresent;
+  final double  totalAbsent;
 
   StudentMonthlyAttendance({
     required this.studentId,
@@ -500,8 +500,8 @@ class StudentMonthlyAttendance {
       studentId: json['student_id'],
       fullName: json['full_name'],
       totalDays: int.tryParse(json['total_days'] ?? '0') ?? 0,
-      totalPresent: int.tryParse(json['total_present'] ?? '0') ?? 0,
-      totalAbsent: int.tryParse(json['total_absent'] ?? '0') ?? 0,
+      totalPresent: double.tryParse(json['total_present'] ?? '0.00') ?? 0.00,
+      totalAbsent: double.tryParse(json['total_absent'] ?? '0.00') ?? 0.00,
     );
   }
 }
@@ -613,7 +613,7 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
         ? students.where((s) => s.totalAbsent > 0).toList()
         : students;
 
-    final totalAbsences = students.fold<int>(0, (sum, s) => sum + s.totalAbsent);
+    final totalAbsences = students.fold<double>(0, (sum, s) => sum + s.totalAbsent);
     final totalWorkingDays = students.isNotEmpty ? students.first.totalDays : 0;
     final totalPossibleAttendances = totalWorkingDays * students.length;
     final absencePercentage = totalPossibleAttendances > 0
@@ -855,7 +855,7 @@ if (classId == null) return;
         ? students.where((s) => s.totalAbsent > 0).toList()
         : students;
 
-    final totalAbsences = students.fold<int>(0, (sum, s) => sum + s.totalAbsent);
+    final totalAbsences = students.fold<double>(0, (sum, s) => sum + s.totalAbsent);
     final totalWorkingDays = students.isNotEmpty ? students.first.totalDays : 0;
     final totalPossibleAttendances = totalWorkingDays * students.length;
     final absencePercentage = totalPossibleAttendances > 0
