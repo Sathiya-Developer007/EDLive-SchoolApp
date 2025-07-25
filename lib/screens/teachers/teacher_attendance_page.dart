@@ -9,6 +9,8 @@ import 'dart:convert';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 
+import 'package:school_app/models/class_section.dart';
+
 // Attendance Month
 import 'package:school_app/models/teacher_attendance_year.dart';
 import 'package:school_app/providers/teacher_attendance_provider.dart';
@@ -139,54 +141,72 @@ class TeacherAttendanceDayTab extends StatefulWidget {
 class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
   int totalAbsentees = 0;
 
-  String selectedClass = '10A';
+  String? selectedClass;
+  int? selectedClassId;
+  List<ClassSection> classSections = [];
+
   List<StudentClassSection> students = [];
   bool isLoading = true;
-
   DateTime selectedDate = DateTime.now();
 
-  List<int> morningTaps = []; // ✅ Step 1
-  List<int> afternoonTaps = []; // ✅ Step 1
+  List<int> morningTaps = [];
+  List<int> afternoonTaps = [];
 
-  final Map<String, int> classIdMap = {'10A': 1, '10B': 2, '10C': 3};
-  Future<void> refetchSingleStudentAttendance(int index) async {
-    final student = students[index];
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+  @override
+  void initState() {
+    super.initState();
+    loadClassSections();
+  }
 
+  Future<void> loadClassSections() async {
     try {
-      final response = await http.get(
-        Uri.parse(
-          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/student?studentId=${student.id}&date=${DateFormat('yyyy-MM-dd').format(selectedDate)}',
-        ),
-        headers: {'Authorization': 'Bearer $token', 'accept': '*/*'},
-      );
+      final response = await http.get(Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes',
+      ));
 
       if (response.statusCode == 200) {
-        final List<dynamic> dataList = jsonDecode(response.body);
+        final List<dynamic> data = jsonDecode(response.body);
+        final loadedSections = data.map((e) => ClassSection.fromJson(e)).toList();
 
-        if (dataList.isNotEmpty) {
-          final Map<String, dynamic> data = dataList[0];
+        setState(() {
+          classSections = loadedSections;
+          if (classSections.isNotEmpty) {
+            selectedClass = classSections.first.fullName;
+            selectedClassId = classSections.first.id;
+          }
+        });
 
-          setState(() {
-            morningTaps[index] = data['is_present_morning'] == true ? 1 : 2;
-            afternoonTaps[index] = data['is_present_afternoon'] == true ? 1 : 2;
-          });
-        }
-      } else {
-        print("No attendance found for ${student.name}");
+        await fetchStudents();
       }
     } catch (e) {
-      print("Error refetching attendance for ${student.name}: $e");
+      print("Failed to load class sections: $e");
+    }
+  }
+
+  Future<void> fetchStudents() async {
+    try {
+      final studentList = await StudentService().fetchStudents();
+      setState(() {
+        students = studentList;
+        morningTaps = List.filled(studentList.length, 0);
+        afternoonTaps = List.filled(studentList.length, 0);
+      });
+
+      await fetchAttendanceStatus();
+      setState(() => isLoading = false);
+    } catch (e) {
+      print("Error: $e");
+      setState(() => isLoading = false);
     }
   }
 
   Future<void> fetchAttendanceStatus() async {
+    if (selectedClassId == null) return;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
-      // Reset taps and absentee count before loading new ones
       morningTaps = List.filled(students.length, 0);
       afternoonTaps = List.filled(students.length, 0);
       totalAbsentees = 0;
@@ -202,10 +222,8 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
         );
 
         final List<dynamic> dataList = jsonDecode(response.body);
-
         if (dataList.isNotEmpty) {
           final Map<String, dynamic> data = dataList[0];
-
           setState(() {
             morningTaps[i] = data['is_present_morning'] == true ? 1 : 2;
             afternoonTaps[i] = data['is_present_afternoon'] == true ? 1 : 2;
@@ -223,16 +241,43 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
       });
     } catch (e) {
       print("Error fetching attendance: $e");
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> refetchSingleStudentAttendance(int index) async {
+    final student = students[index];
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? '';
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/student?studentId=${student.id}&date=${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+        ),
+        headers: {'Authorization': 'Bearer $token', 'accept': '*/*'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> dataList = jsonDecode(response.body);
+        if (dataList.isNotEmpty) {
+          final Map<String, dynamic> data = dataList[0];
+
+          setState(() {
+            morningTaps[index] = data['is_present_morning'] == true ? 1 : 2;
+            afternoonTaps[index] = data['is_present_afternoon'] == true ? 1 : 2;
+          });
+        }
+      }
+    } catch (e) {
+      print("Error refetching attendance: $e");
     }
   }
 
   Future<void> toggleAttendance({
     required int studentId,
     required int classId,
-    required String session, // "morning" or "afternoon"
+    required String session,
     required bool isPresent,
   }) async {
     try {
@@ -267,46 +312,6 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchStudents();
-  }
-
-  Widget getAttendanceIcon(int state) {
-    switch (state) {
-      case 1:
-        return Icon(Icons.check, color: Colors.green, size: 24);
-      case 2:
-        return Icon(Icons.close, color: Colors.red, size: 24);
-      default:
-        return Icon(
-          Icons.check_box_outline_blank,
-          color: Colors.grey.shade400,
-          size: 20,
-        );
-    }
-  }
-
-  void fetchStudents() async {
-    try {
-      final studentList = await StudentService().fetchStudents();
-      setState(() {
-        students = studentList;
-        morningTaps = List.filled(studentList.length, 0);
-        afternoonTaps = List.filled(studentList.length, 0);
-      });
-
-      // ✅ Call attendance fetch AFTER students are loaded
-      await fetchAttendanceStatus(); // Refetch and update UI based on backend
-
-      setState(() => isLoading = false);
-    } catch (e) {
-      print("Error: $e");
-      setState(() => isLoading = false);
-    }
-  }
-
   void _goToPreviousDay() async {
     setState(() {
       selectedDate = selectedDate.subtract(const Duration(days: 1));
@@ -314,10 +319,7 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
     });
 
     await fetchAttendanceStatus();
-
-    setState(() {
-      isLoading = false;
-    });
+    setState(() => isLoading = false);
   }
 
   void _goToNextDay() async {
@@ -327,10 +329,18 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
     });
 
     await fetchAttendanceStatus();
+    setState(() => isLoading = false);
+  }
 
-    setState(() {
-      isLoading = false;
-    });
+  Widget getAttendanceIcon(int state) {
+    switch (state) {
+      case 1:
+        return Icon(Icons.check, color: Colors.green, size: 24);
+      case 2:
+        return Icon(Icons.close, color: Colors.red, size: 24);
+      default:
+        return Icon(Icons.check_box_outline_blank, color: Colors.grey.shade400, size: 20);
+    }
   }
 
   @override
@@ -351,42 +361,18 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    onPressed: _goToPreviousDay,
-                    icon: const Icon(
-                      Icons.arrow_left,
-                      size: 28,
-                      color: Colors.black,
-                    ),
-                  ),
+                  IconButton(onPressed: _goToPreviousDay, icon: const Icon(Icons.arrow_left, size: 28, color: Colors.black)),
                   const SizedBox(width: 12),
-                  Text(
-                    formattedDate,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF2E3192),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text(formattedDate, style: const TextStyle(fontSize: 18, color: Color(0xFF2E3192), fontWeight: FontWeight.bold)),
                   const SizedBox(width: 12),
-                  IconButton(
-                    onPressed: _goToNextDay,
-                    icon: const Icon(
-                      Icons.arrow_right,
-                      size: 28,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  IconButton(onPressed: _goToNextDay, icon: const Icon(Icons.arrow_right, size: 28, color: Colors.grey)),
                 ],
               ),
               Text(dayName, style: const TextStyle(fontSize: 14)),
               Text(
-                totalAbsentees == 0
-                    ? "No absentees"
-                    : "$totalAbsentees absentee${totalAbsentees > 1 ? 's' : ''}",
+                totalAbsentees == 0 ? "No absentees" : "$totalAbsentees absentee${totalAbsentees > 1 ? 's' : ''}",
                 style: const TextStyle(color: Colors.red, fontSize: 14),
               ),
-
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
@@ -398,33 +384,24 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: selectedClass,
-                      icon: const Icon(
-                        Icons.arrow_drop_down,
-                        color: Color(0xFF2E3192),
-                      ),
+                      icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF2E3192)),
                       dropdownColor: Colors.white,
-                      style: const TextStyle(
-                        color: Color(0xFF29ABE2),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                      style: const TextStyle(color: Color(0xFF29ABE2), fontWeight: FontWeight.bold, fontSize: 15),
                       onChanged: (String? newValue) async {
+                        final selected = classSections.firstWhere((c) => c.fullName == newValue);
                         setState(() {
-                          selectedClass = newValue!;
+                          selectedClass = selected.fullName;
+                          selectedClassId = selected.id;
                           isLoading = true;
                         });
 
-                        await fetchAttendanceStatus();
-
-                        setState(() {
-                          isLoading = false;
-                        });
+                        await fetchStudents();
+                        setState(() => isLoading = false);
                       },
-
-                      items: <String>['10A', '10B', '10C'].map((String value) {
+                      items: classSections.map((section) {
                         return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
+                          value: section.fullName,
+                          child: Text(section.fullName),
                         );
                       }).toList(),
                     ),
@@ -435,22 +412,8 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
               Row(
                 children: const [
                   Expanded(flex: 3, child: SizedBox()),
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      "M",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Text(
-                      "AN",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  Expanded(flex: 1, child: Text("M", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(flex: 1, child: Text("AN", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
                 ],
               ),
             ],
@@ -465,78 +428,45 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
               return Container(
                 height: 55,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade300),
-                  ),
-                ),
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade300))),
                 child: Row(
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text("${index + 1}. ${student.name}"),
-                    ),
-
-                    // ✅ Step 3: Morning attendance toggle
+                    Expanded(flex: 3, child: Text("${index + 1}. ${student.name}")),
                     Expanded(
                       flex: 1,
                       child: GestureDetector(
                         onTap: () async {
-                          setState(() {
-                            morningTaps[index] = (morningTaps[index] + 1) % 3;
-                          });
-
+                          setState(() => morningTaps[index] = (morningTaps[index] + 1) % 3);
                           if (morningTaps[index] != 0) {
                             await toggleAttendance(
                               studentId: student.id,
-                              classId: classIdMap[selectedClass]!,
+                              classId: selectedClassId!,
                               session: "morning",
                               isPresent: morningTaps[index] == 1,
                             );
-
-                            // 🔁 Refetch just this student's attendance from backend
                             await refetchSingleStudentAttendance(index);
                           }
                         },
-
-                        child: Center(
-                          child: getAttendanceIcon(morningTaps[index]),
-                        ),
+                        child: Center(child: getAttendanceIcon(morningTaps[index])),
                       ),
                     ),
-
-                    Container(
-                      width: 12,
-                      height: double.infinity,
-                      color: const Color(0xFFE6E6E6),
-                    ),
-
-                    // ✅ Step 3: Afternoon attendance toggle
+                    Container(width: 12, height: double.infinity, color: const Color(0xFFE6E6E6)),
                     Expanded(
                       flex: 1,
                       child: GestureDetector(
                         onTap: () async {
-                          setState(() {
-                            afternoonTaps[index] =
-                                (afternoonTaps[index] + 1) % 3;
-                          });
-
+                          setState(() => afternoonTaps[index] = (afternoonTaps[index] + 1) % 3);
                           if (afternoonTaps[index] != 0) {
                             await toggleAttendance(
                               studentId: student.id,
-                              classId: classIdMap[selectedClass]!,
+                              classId: selectedClassId!,
                               session: "afternoon",
                               isPresent: afternoonTaps[index] == 1,
                             );
-
-                            // 🔁 Refetch updated attendance
                             await refetchSingleStudentAttendance(index);
                           }
                         },
-
-                        child: Center(
-                          child: getAttendanceIcon(afternoonTaps[index]),
-                        ),
+                        child: Center(child: getAttendanceIcon(afternoonTaps[index])),
                       ),
                     ),
                   ],
@@ -549,7 +479,6 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
     );
   }
 }
-
 
 class StudentMonthlyAttendance {
   final int studentId;
@@ -585,8 +514,10 @@ class TeacherAttendanceMonthTab extends StatefulWidget {
 }
 
 class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
-  String selectedClass = "10A";
-  final Map<String, int> classIdMap = {'10A': 1, '10B': 2, '10C': 3};
+  String? selectedClass;
+  int? selectedClassId;
+  List<ClassSection> classSections = [];
+
   bool viewAbsentOnly = false;
   bool isLoading = true;
   List<StudentMonthlyAttendance> students = [];
@@ -595,7 +526,32 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
   @override
   void initState() {
     super.initState();
-    fetch();
+    loadClassSections();
+  }
+
+  Future<void> loadClassSections() async {
+    try {
+      final response = await http.get(Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes',
+      ));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        final loadedSections = data.map((e) => ClassSection.fromJson(e)).toList();
+
+        setState(() {
+          classSections = loadedSections;
+          if (classSections.isNotEmpty) {
+            selectedClass = classSections.first.fullName;
+            selectedClassId = classSections.first.id;
+          }
+        });
+
+        fetch(); // Fetch attendance after loading classes
+      }
+    } catch (e) {
+      print('Failed to load class sections: $e');
+    }
   }
 
   Future<void> fetch() async {
@@ -604,7 +560,9 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
-      final classId = classIdMap[selectedClass]!;
+      final classId = selectedClassId;
+      if (classId == null) return;
+
       final startDate = DateFormat('yyyy-MM-dd').format(DateTime(currentMonth.year, currentMonth.month, 1));
       final endDate = DateFormat('yyyy-MM-dd').format(DateTime(currentMonth.year, currentMonth.month + 1, 0));
 
@@ -657,12 +615,10 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
 
     final totalAbsences = students.fold<int>(0, (sum, s) => sum + s.totalAbsent);
     final totalWorkingDays = students.isNotEmpty ? students.first.totalDays : 0;
-final totalPossibleAttendances = totalWorkingDays * students.length;
-
-final absencePercentage = totalPossibleAttendances > 0
-    ? (totalAbsences / totalPossibleAttendances) * 100
-    : 0;
-
+    final totalPossibleAttendances = totalWorkingDays * students.length;
+    final absencePercentage = totalPossibleAttendances > 0
+        ? (totalAbsences / totalPossibleAttendances) * 100
+        : 0;
 
     return Column(
       children: [
@@ -670,7 +626,6 @@ final absencePercentage = totalPossibleAttendances > 0
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // ✅ Month navigation row
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -691,11 +646,10 @@ final absencePercentage = totalPossibleAttendances > 0
                 ],
               ),
               const SizedBox(height: 4),
-             Text(
-  "Total absences: $totalAbsences (${absencePercentage.toStringAsFixed(1)}%)",
-  style: const TextStyle(color: Colors.red),
-),
-
+              Text(
+                "Total absences: $totalAbsences (${absencePercentage.toStringAsFixed(1)}%)",
+                style: const TextStyle(color: Colors.red),
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -714,15 +668,17 @@ final absencePercentage = totalPossibleAttendances > 0
                           fontSize: 15,
                         ),
                         onChanged: (String? newValue) {
+                          final selected = classSections.firstWhere((c) => c.fullName == newValue);
                           setState(() {
-                            selectedClass = newValue!;
+                            selectedClass = selected.fullName;
+                            selectedClassId = selected.id;
                           });
                           fetch();
                         },
-                        items: classIdMap.keys.map((String val) {
+                        items: classSections.map((section) {
                           return DropdownMenuItem<String>(
-                            value: val,
-                            child: Text(val),
+                            value: section.fullName,
+                            child: Text(section.fullName),
                           );
                         }).toList(),
                       ),
@@ -794,8 +750,6 @@ final absencePercentage = totalPossibleAttendances > 0
   }
 }
 
-
-
 class TeacherAttendanceYearTab extends StatefulWidget {
   const TeacherAttendanceYearTab({super.key});
 
@@ -804,19 +758,48 @@ class TeacherAttendanceYearTab extends StatefulWidget {
 }
 
 class _TeacherAttendanceYearTabState extends State<TeacherAttendanceYearTab> {
-  String selectedClass = "10A";
+ 
   int selectedYear = DateTime.now().year;
 
-  final Map<String, int> classIdMap = {'10A': 1, '10B': 2, '10C': 3};
+  String? selectedClass;
+int? selectedClassId;
+List<ClassSection> classSections = [];
+
   bool viewAbsentOnly = false;
   bool isLoading = true;
   List<StudentMonthlyAttendance> students = [];
 
-  @override
-  void initState() {
-    super.initState();
-    fetch();
+@override
+void initState() {
+  super.initState();
+  loadClassSections();
+}
+
+Future<void> loadClassSections() async {
+  try {
+    final response = await http.get(Uri.parse(
+      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes',
+    ));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      final loadedSections = data.map((e) => ClassSection.fromJson(e)).toList();
+
+      setState(() {
+        classSections = loadedSections;
+        if (classSections.isNotEmpty) {
+          selectedClass = classSections.first.fullName;
+          selectedClassId = classSections.first.id;
+        }
+      });
+
+      fetch(); // Call fetch() after classSections are loaded
+    }
+  } catch (e) {
+    print('Failed to load class sections: $e');
   }
+}
+
 
   Future<void> fetch() async {
     setState(() => isLoading = true);
@@ -824,7 +807,9 @@ class _TeacherAttendanceYearTabState extends State<TeacherAttendanceYearTab> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
-      final classId = classIdMap[selectedClass]!;
+     final classId = selectedClassId;
+if (classId == null) return;
+
       final startDate = "$selectedYear-01-01";
       final endDate = "$selectedYear-12-31";
 
@@ -925,16 +910,21 @@ class _TeacherAttendanceYearTabState extends State<TeacherAttendanceYearTab> {
                           fontSize: 15,
                         ),
                         onChanged: (String? newValue) {
-                          setState(() {
-                            selectedClass = newValue!;
-                          });
-                          fetch();
-                        },
-                        items: classIdMap.keys.map((String val) {
-                          return DropdownMenuItem<String>(
-                            value: val,
-                            child: Text(val),
-                          );
+  final selected = classSections.firstWhere((c) => c.fullName == newValue);
+  setState(() {
+    selectedClass = selected.fullName;
+    selectedClassId = selected.id;
+  });
+  fetch();
+},
+
+                       items: classSections.map((section) {
+  return DropdownMenuItem<String>(
+    value: section.fullName,
+    child: Text(section.fullName),
+  );
+
+
                         }).toList(),
                       ),
                     ),
