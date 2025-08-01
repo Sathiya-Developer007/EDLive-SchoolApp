@@ -25,19 +25,19 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
 @override
 void initState() {
   super.initState();
-  _loadStudentTodos();
+  // _loadStudentTodos();
 }
 
-Future<void> _loadStudentTodos() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('auth_token');
+// Future<void> _loadStudentTodos() async {
+//   final prefs = await SharedPreferences.getInstance();
+//   final token = prefs.getString('auth_token');
 
-  if (token != null) {
-    final provider = Provider.of<StudentTaskProvider>(context, listen: false);
-    provider.setAuthToken(token);
-    await provider.fetchStudentTodos(); // ✅ Fetch ToDos from backend
-  }
-}
+//   if (token != null) {
+//     final provider = Provider.of<StudentTaskProvider>(context, listen: false);
+//     provider.setAuthToken(token);
+//     await provider.fetchStudentTodos(); // ✅ Fetch ToDos from backend
+//   }
+// }
 
 
   String getCurrentAcademicYear() {
