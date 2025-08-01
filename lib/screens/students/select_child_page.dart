@@ -46,6 +46,11 @@ class SelectChildPage extends StatelessWidget {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   await prefs.setString('selected_child', jsonEncode(child)); // Save selected child
 
+if (child['id'] != null) {
+  await prefs.setInt('student_id', int.parse(child['id'].toString()));
+}
+
+
   Navigator.pushReplacement(
     context,
     MaterialPageRoute(
