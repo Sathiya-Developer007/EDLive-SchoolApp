@@ -255,7 +255,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
                   child: Row(
                     children: [
                       SvgPicture.asset(
-                        'assets/icons/back_arrow.svg',
+                        'assets/icons/arrow_back.svg',
                         height: 11,
                         width: 11,
                       ),

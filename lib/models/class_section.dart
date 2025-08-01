@@ -12,10 +12,10 @@ class ClassSection {
   factory ClassSection.fromJson(Map<String, dynamic> json) {
     return ClassSection(
       id: json['id'],
-      className: json['class'],   // "10", "9"
-      section: json['section'],   // "A", "B"
+      className: json['class'],
+      section: json['section'],
     );
   }
 
-  String get fullName => "$className$section"; // e.g. "10A"
+  String get fullName => "$className${section.toUpperCase()}";
 }

@@ -42,30 +42,33 @@ class _LoginPageState extends State<LoginPage> {
         final user = data['user'];
         final userType = user['usertype']?.toString().toLowerCase();
 
-       if (token != null && userType != null) {
+     if (token != null && userType != null) {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('auth_token', token);
   await prefs.setString('user_type', userType);
   await prefs.setString('user_data', jsonEncode(user)); // ✅ store complete user info
 
-  // ✅ Add this line to store studentId
-  await prefs.setInt('student_id', user['id']); // 🔁 OR use 'student_id' key based on your API
+  // ✅ Correct: store the real student ID if available
+if (userType == 'student' && user['student_id'] != null) {
+  print("Saving student_id: ${user['student_id']}"); // ✅ Debug
+ await prefs.setInt('student_id', int.parse(user['student_id'].toString()));
 
-          // ✅ Navigate based on user type
-          if (userType == 'teacher') {
-            Navigator.pushReplacementNamed(context, '/dashboard');
-          } else if (userType == 'student' || userType == 'parent') {
-            Navigator.pushReplacementNamed(
-              context,
-              '/select-child',
-              arguments: user,
-            );
-          } else {
-            _showError('Unknown user type: $userType');
-          }
-        } else {
+}
+
+
+  // ✅ Navigate based on user type
+  if (userType == 'teacher') {
+    Navigator.pushReplacementNamed(context, '/dashboard');
+  } else if (userType == 'student' || userType == 'parent') {
+    Navigator.pushReplacementNamed(
+      context,
+      '/select-child',
+      arguments: user,
+    );
+ 
+  } else {
           _showError('Missing token or user type.');
-        }
+        }}
       } else {
         final errorData = json.decode(response.body);
         final errorMessage = errorData['message'] ?? 'Login failed';

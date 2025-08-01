@@ -120,7 +120,7 @@ void _centerCurrentDate() {
             onTap: () => Navigator.pop(context),
             child: Row(
               children: [
-                SvgPicture.asset('assets/icons/back_arrow.svg',
+                SvgPicture.asset('assets/icons/arrow_back.svg',
                     height: 11, width: 11, color: Colors.black),
                 const SizedBox(width: 4),
                 const Text('Back',

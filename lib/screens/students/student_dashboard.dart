@@ -10,6 +10,8 @@ import 'student_exams_screen.dart';
 import 'student_attendance_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:school_app/providers/student_task_provider.dart';
+
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
   const StudentDashboardPage({super.key, required this.childData});
@@ -19,6 +21,25 @@ class StudentDashboardPage extends StatefulWidget {
 }
 
 class _StudentDashboardPageState extends State<StudentDashboardPage> {
+
+@override
+void initState() {
+  super.initState();
+  _loadStudentTodos();
+}
+
+Future<void> _loadStudentTodos() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+
+  if (token != null) {
+    final provider = Provider.of<StudentTaskProvider>(context, listen: false);
+    provider.setAuthToken(token);
+    await provider.fetchStudentTodos(); // ✅ Fetch ToDos from backend
+  }
+}
+
+
   String getCurrentAcademicYear() {
     final now = DateTime.now();
     final startYear = now.month >= 6 ? now.year : now.year - 1;
@@ -67,7 +88,12 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       subtitle: 'Check your tasks',
                       iconPath: 'assets/icons/todo.svg',
                       color: const Color(0xFF8FD8E5),
-                      badgeCount: 2,
+              badgeCount: context.watch<StudentTaskProvider>().newTaskCount,
+
+
+
+
+
                       onTap: () => Navigator.pushNamed(
                         context,
                         '/student-todo',
@@ -142,26 +168,41 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => StudentExamsScreen(),
-                            ),
-                          );
-                        },
-                        child: DashboardTile(
-                          title: 'Exams',
-                          iconPath: 'assets/icons/exams.svg',
-                          color: const Color(0xFFAAE5C8),
-                          badgeCount: 2,
-                          centerContent: true,
-                        ),
-                      ),
-                    ),
-                  ],
+              Expanded(
+  child: GestureDetector(
+    onTap: () async {
+      final prefs = await SharedPreferences.getInstance();
+
+      // ✅ Safely retrieve the stored student ID
+      final studentIdInt = prefs.getInt('student_id');
+
+      if (studentIdInt == null) {
+        // ✅ Show error if student_id not found
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student ID not found')),
+        );
+        return;
+      }
+
+      final studentId = studentIdInt.toString(); // ✅ Convert to String
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentExamsScreen(studentId: studentId), // ✅ Pass studentId
+        ),
+      );
+    },
+    child: DashboardTile(
+      title: 'Exams',
+      iconPath: 'assets/icons/exams.svg',
+      color: const Color(0xFFAAE5C8),
+      badgeCount: 2,
+      centerContent: true,
+    ),
+  ),
+),
+  ],
                 ),
                 const SizedBox(height: 12), // ✅ Moved here OUTSIDE the Row
                 DashboardTile(

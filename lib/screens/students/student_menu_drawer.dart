@@ -108,16 +108,32 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
   } else if (item['label'] == 'My to do list') {
     Navigator.pushNamed(context, '/student-todo');
   } else if (item['label'] == 'Exams') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentExamsScreen(),
-      ),
-    );
-  }
-},
- ),
-                  );
+ onTap: () async {
+      final prefs = await SharedPreferences.getInstance();
+
+      // ✅ Safely retrieve the stored student ID
+      final studentIdInt = prefs.getInt('student_id');
+
+      if (studentIdInt == null) {
+        // ✅ Show error if student_id not found
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student ID not found')),
+        );
+        return;
+      }
+
+      final studentId = studentIdInt.toString(); // ✅ Convert to String
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentExamsScreen(studentId: studentId), // ✅ Pass studentId
+        ),
+      );
+    };
+  };
+            }
+                  ));
                 },
               ),
             ),

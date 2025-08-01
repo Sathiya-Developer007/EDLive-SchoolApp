@@ -21,27 +21,37 @@ class _StudentToDoListPage extends State<StudentToDoListPage> {
   Map<int, String> _classDisplayNames = {};
   List<Map<String, dynamic>> _classList = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadTokenAndData();
+@override
+void initState() {
+  super.initState();
+  _loadTokenAndData();
+}
+
+Future<void> _loadTokenAndData() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+
+  if (token != null) {
+    final provider = Provider.of<StudentTaskProvider>(context, listen: false);
+    provider.setAuthToken(token);
+
+    // ✅ 1. Fetch tasks
+    await provider.fetchStudentTodos();
+
+    // ✅ 2. Mark unseen tasks as seen
+    final newTasks = provider.tasks.where(
+      (task) => !provider.seenTaskIds.contains(task.id),
+    );
+    await provider.markTasksAsSeen(newTasks.map((e) => e.id!).toList());
+  } else {
+    print("⚠️ Token is null");
   }
 
-  Future<void> _loadTokenAndData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+  // Your optional class list load logic here...
+}
 
-    if (token != null) {
-      Provider.of<StudentTaskProvider>(context, listen: false).setAuthToken(token);
-      await Provider.of<StudentTaskProvider>(context, listen: false).fetchStudentTodos();
-    } else {
-      print("⚠️ Token is null");
-    }
 
-    _fetchClassList();
-  }
-
-  Future<void> _fetchClassList() async {
+Future<void> _fetchClassList() async {
     final url = Uri.parse(
       'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes',
     );
@@ -80,6 +90,16 @@ class _StudentToDoListPage extends State<StudentToDoListPage> {
     final provider = Provider.of<StudentTaskProvider>(context);
     final tasks = provider.tasks;
 
+    // ✅ Mark new tasks as seen only once after build
+    Future.microtask(() {
+      final newTasks = provider.tasks.where(
+        (task) => !provider.seenTaskIds.contains(task.id),
+      );
+      if (newTasks.isNotEmpty) {
+        provider.markTasksAsSeen(newTasks.map((e) => e.id!).toList());
+      }
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFF87CEEB),
       appBar: const StudentAppBar(),
@@ -93,7 +113,7 @@ class _StudentToDoListPage extends State<StudentToDoListPage> {
               child: Row(
                 children: [
                   SvgPicture.asset(
-                    'assets/icons/back_arrow.svg',
+                    'assets/icons/arrow_back.svg',
                     height: 11,
                     width: 11,
                   ),

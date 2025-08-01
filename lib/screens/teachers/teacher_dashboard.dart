@@ -10,6 +10,8 @@ import 'teacher_menu_drawer.dart';
 import 'teacher_attendance_page.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'teacher_exam_page.dart';
+import 'teacher_transport.dart';
+import 'teacher_syllabus_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -145,14 +147,23 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(
-                      child: DashboardTile(
-                        title: 'Transport',
-                        iconPath: 'assets/icons/transport.svg',
-                        color: const Color(0xFFCCCCFF),
-                        centerContent: true,
-                      ),
-                    ),
+                   Expanded(
+  child: GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TransportPage()),
+      );
+    },
+    child: DashboardTile(
+      title: 'Transport',
+      iconPath: 'assets/icons/transport.svg',
+      color: const Color(0xFFCCCCFF),
+      centerContent: true,
+    ),
+  ),
+),
+
                     const SizedBox(width: 12),
                     Expanded(
                       child: DashboardTile(
@@ -193,13 +204,22 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         onClose: () => settings.updateVisibility('Library', false),
                       ),
                     if (settings.showSyllabus)
-                      DashboardTile(
-                        title: 'Syllabus',
-                        subtitle: 'Lessons to be completed',
-                        iconPath: 'assets/icons/syllabus.svg',
-                        color: const Color(0xFFA3D3A7),
-                        onClose: () => settings.updateVisibility('Syllabus', false),
-                      ),
+                     GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TeacherSyllabusPage()),
+    );
+  },
+  child: DashboardTile(
+    title: 'Syllabus',
+    subtitle: 'Lessons to be completed',
+    iconPath: 'assets/icons/syllabus.svg',
+    color: const Color(0xFFA3D3A7),
+    onClose: () => settings.updateVisibility('Syllabus', false),
+  ),
+),
+
                     if (settings.showSpecialCare)
                       DashboardTile(
                         title: 'Special care',

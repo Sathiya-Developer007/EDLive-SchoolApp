@@ -245,34 +245,37 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
     }
   }
 
-  Future<void> refetchSingleStudentAttendance(int index) async {
-    final student = students[index];
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+  Future<void> refetchSingleStudentAttendance(int index, String session) async {
+  final student = students[index];
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? '';
 
-    try {
-      final response = await http.get(
-        Uri.parse(
-          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/student?studentId=${student.id}&date=${DateFormat('yyyy-MM-dd').format(selectedDate)}',
-        ),
-        headers: {'Authorization': 'Bearer $token', 'accept': '*/*'},
-      );
+  try {
+    final response = await http.get(
+      Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/student?studentId=${student.id}&date=${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+      ),
+      headers: {'Authorization': 'Bearer $token', 'accept': '*/*'},
+    );
 
-      if (response.statusCode == 200) {
-        final List<dynamic> dataList = jsonDecode(response.body);
-        if (dataList.isNotEmpty) {
-          final Map<String, dynamic> data = dataList[0];
+    if (response.statusCode == 200) {
+      final List<dynamic> dataList = jsonDecode(response.body);
+      if (dataList.isNotEmpty) {
+        final Map<String, dynamic> data = dataList[0];
 
-          setState(() {
+        setState(() {
+          if (session == "morning") {
             morningTaps[index] = data['is_present_morning'] == true ? 1 : 2;
+          } else if (session == "afternoon") {
             afternoonTaps[index] = data['is_present_afternoon'] == true ? 1 : 2;
-          });
-        }
+          }
+        });
       }
-    } catch (e) {
-      print("Error refetching attendance: $e");
     }
+  } catch (e) {
+    print("Error refetching attendance: $e");
   }
+}
 
   Future<void> toggleAttendance({
     required int studentId,
@@ -435,38 +438,38 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
                     Expanded(
                       flex: 1,
                       child: GestureDetector(
-                        onTap: () async {
-                          setState(() => morningTaps[index] = (morningTaps[index] + 1) % 3);
-                          if (morningTaps[index] != 0) {
-                            await toggleAttendance(
-                              studentId: student.id,
-                              classId: selectedClassId!,
-                              session: "morning",
-                              isPresent: morningTaps[index] == 1,
-                            );
-                            await refetchSingleStudentAttendance(index);
-                          }
-                        },
-                        child: Center(child: getAttendanceIcon(morningTaps[index])),
+                      onTap: () async {
+  setState(() => morningTaps[index] = (morningTaps[index] + 1) % 3);
+  if (morningTaps[index] != 0) {
+    await toggleAttendance(
+      studentId: student.id,
+      classId: selectedClassId!,
+      session: "morning",
+      isPresent: morningTaps[index] == 1,
+    );
+    await refetchSingleStudentAttendance(index, "morning");
+  }
+},
+  child: Center(child: getAttendanceIcon(morningTaps[index])),
                       ),
                     ),
                     Container(width: 12, height: double.infinity, color: const Color(0xFFE6E6E6)),
                     Expanded(
                       flex: 1,
                       child: GestureDetector(
-                        onTap: () async {
-                          setState(() => afternoonTaps[index] = (afternoonTaps[index] + 1) % 3);
-                          if (afternoonTaps[index] != 0) {
-                            await toggleAttendance(
-                              studentId: student.id,
-                              classId: selectedClassId!,
-                              session: "afternoon",
-                              isPresent: afternoonTaps[index] == 1,
-                            );
-                            await refetchSingleStudentAttendance(index);
-                          }
-                        },
-                        child: Center(child: getAttendanceIcon(afternoonTaps[index])),
+                  onTap: () async {
+  setState(() => afternoonTaps[index] = (afternoonTaps[index] + 1) % 3);
+  if (afternoonTaps[index] != 0) {
+    await toggleAttendance(
+      studentId: student.id,
+      classId: selectedClassId!,
+      session: "afternoon",
+      isPresent: afternoonTaps[index] == 1,
+    );
+    await refetchSingleStudentAttendance(index, "afternoon");
+  }
+},
+        child: Center(child: getAttendanceIcon(afternoonTaps[index])),
                       ),
                     ),
                   ],
