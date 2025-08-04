@@ -118,15 +118,17 @@ class _MenuDrawerState extends State<MenuDrawer> {
       '/',
       (route) => false,
     );
-  } else if ([
-    '/todo',
-    '/classtime',
-    '/settings',
-    '/attendance',
-    '/exams'
-  ].contains(item['route'])) {
-    Navigator.pushNamed(context, item['route']);
-  } else {
+ } else if ([
+  '/todo',
+  '/classtime',
+  '/settings',
+  '/attendance',
+  '/exams',
+  '/syllabus', // ✅ Add this
+].contains(item['route'])) {
+  Navigator.pushNamed(context, item['route']);
+}
+ else {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${item['label']} page coming soon.'),

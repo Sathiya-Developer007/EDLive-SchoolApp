@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:school_app/widgets/teacher_app_bar.dart';
+import 'teacher_menu_drawer.dart';
+
+import 'teacher_syllabus_detail_page.dart';
 
 class TeacherSyllabusPage extends StatefulWidget {
   const TeacherSyllabusPage({super.key});
@@ -25,6 +28,7 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFA7D7A7),
+      drawer: MenuDrawer(),
       appBar: TeacherAppBar(),
         body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,14 +161,14 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
             // ⭕ Rounded + icon (larger)
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFF29ABE2),
-                shape: BoxShape.circle,
-              ),
+              // decoration: const BoxDecoration(
+              //   color: Color(0xFF29ABE2),
+              //   shape: BoxShape.circle,
+              // ),
               child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 13,
+                Icons.add_circle_outline,
+                color: Color(0xFF29ABE2),
+                size: 22,
               ),
             ),
 
@@ -187,9 +191,21 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
         const Divider(height: 1),
 
         // 🔹 Subject List
-       Column(
-  children: subjects.map((subject) {
-    return Container(
+      Column(
+ children: subjects.map((subject) {
+  return InkWell(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SyllabusDetailPage(
+            selectedClass: selectedClass,
+            subject: subject,
+          ),
+        ),
+      );
+    },
+    child: Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: const BoxDecoration(
         border: Border(
@@ -217,8 +233,9 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
           ),
         ],
       ),
-    );
-  }).toList(),
+    ),
+  );
+}).toList(),
 ),
 
 

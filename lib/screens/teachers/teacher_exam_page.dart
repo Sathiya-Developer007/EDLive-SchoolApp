@@ -316,7 +316,10 @@ class _TeacherExamPageState extends State<TeacherExamPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AnnounceClassTestPage(),
+                  builder: (context) => AnnounceClassTestPage(
+  className: selectedClass?.fullName ?? '',
+),
+
                   ),
                 );
               },
@@ -417,7 +420,11 @@ Widget _buildTestSection({
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => AnnounceClassTestPage(examId: exam.id),
+               builder: (context) => AnnounceClassTestPage(
+  examId: exam.id,
+  className: selectedClass?.fullName ?? '',
+),
+
               ),
             );
           },

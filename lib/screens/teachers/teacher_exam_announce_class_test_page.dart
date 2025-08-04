@@ -11,9 +11,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 
 class AnnounceClassTestPage extends StatefulWidget {
-  final int? examId;
+ final int? examId;
+final String className;
 
-  const AnnounceClassTestPage({Key? key, this.examId}) : super(key: key);
+const AnnounceClassTestPage({
+  Key? key,
+  this.examId,
+  required this.className,
+}) : super(key: key);
 
   @override
   State<AnnounceClassTestPage> createState() => _AnnounceClassTestPageState();
@@ -129,21 +134,26 @@ void initState() {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  RichText(
-                    text: const TextSpan(
-                      style: TextStyle(fontSize: 13, fontFamily: 'Arial'),
-                      children: [
-                        TextSpan(
-                          text: 'Exams > 10 A ',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                        TextSpan(
-                          text: '> Class tests',
-                          style: TextStyle(color: Color(0xFFB3B3B3)),
-                        ),
-                      ],
-                    ),
-                  ),
+                RichText(
+  text: TextSpan(
+    style: const TextStyle(fontSize: 13, fontFamily: 'Arial'),
+    children: [
+      const TextSpan(
+        text: 'Exams > ',
+        style: TextStyle(color: Colors.black),
+      ),
+      TextSpan(
+        text: '${widget.className} ',
+        style: const TextStyle(color: Colors.black),
+      ),
+      const TextSpan(
+        text: '> Class tests',
+        style: TextStyle(color: Color(0xFFB3B3B3)),
+      ),
+    ],
+  ),
+),
+
 
                   IconButton(
                     icon: const Icon(Icons.close),

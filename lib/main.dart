@@ -12,6 +12,7 @@ import 'screens/teachers/settings.dart';
 import 'screens/teachers/class_teacher_student_details_page.dart';
 import 'screens/teachers/teacher_attendance_page.dart';
 import 'screens/teachers/teacher_exam_page.dart';
+import 'screens/teachers/teacher_syllabus_page.dart';
 
 import 'screens/students/student_dashboard.dart';
 import 'screens/students/select_child_page.dart';
@@ -25,7 +26,6 @@ import 'providers/teacher_settings_provider.dart';
 import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
 import 'providers/teacher_attendance_provider.dart';
-
 
 import 'dart:convert';
 
@@ -57,7 +57,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TimetableProvider()),
         ChangeNotifierProvider(create: (_) => StudentTimetableProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
-        
       ],
       child: MyApp(
         token: token,
@@ -95,23 +94,28 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       onGenerateRoute: (settings) {
-      switch (settings.name) {
-  case '/':
-    if (token != null) {
-      if (userType == 'teacher') {
-        return MaterialPageRoute(builder: (_) => const TeacherDashboardPage());
-      } else if (userType == 'student' || userType == 'parent') {
-        if (selectedChild != null) {
-          return MaterialPageRoute(builder: (_) => StudentDashboardPage(childData: selectedChild!));
-        }else {
-  return MaterialPageRoute(builder: (_) => const SelectChildPage());
-}
-
-      }
-    }
-    return MaterialPageRoute(builder: (_) => const LoginPage());
-
-        }// Default route: Login
+        switch (settings.name) {
+          case '/':
+            if (token != null) {
+              if (userType == 'teacher') {
+                return MaterialPageRoute(
+                  builder: (_) => const TeacherDashboardPage(),
+                );
+              } else if (userType == 'student' || userType == 'parent') {
+                if (selectedChild != null) {
+                  return MaterialPageRoute(
+                    builder: (_) =>
+                        StudentDashboardPage(childData: selectedChild!),
+                  );
+                } else {
+                  return MaterialPageRoute(
+                    builder: (_) => const SelectChildPage(),
+                  );
+                }
+              }
+            }
+            return MaterialPageRoute(builder: (_) => const LoginPage());
+        } // Default route: Login
         switch (settings.name) {
           case '/':
             return MaterialPageRoute(builder: (_) => const LoginPage());
@@ -138,10 +142,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) => StudentDashboardPage(childData: args),
             );
-         case '/select-child':
-  return MaterialPageRoute(
-    builder: (_) => const SelectChildPage(),
-  );
+          case '/select-child':
+            return MaterialPageRoute(builder: (_) => const SelectChildPage());
 
           case '/student-details':
             final studentId = settings.arguments as int;
@@ -155,29 +157,33 @@ class MyApp extends StatelessWidget {
               builder: (_) => StudentProfilePage(studentId: id),
             );
 
-case '/timetable':
-  // ⛳️ Optional: Get academic year dynamically from SharedPreferences
-  final year = '2024-2025'; // Or get from a Provider or SharedPreferences
-  return MaterialPageRoute(
-    builder: (_) => StudentTimeTablePage(academicYear: year),
-  );
+          case '/timetable':
+            // ⛳️ Optional: Get academic year dynamically from SharedPreferences
+            final year =
+                '2024-2025'; // Or get from a Provider or SharedPreferences
+            return MaterialPageRoute(
+              builder: (_) => StudentTimeTablePage(academicYear: year),
+            );
+
+          case '/attendance':
+            return MaterialPageRoute(
+              builder: (_) =>
+                  const TeacherAttendancePage(), // Or StudentAttendancePage
+            );
+
+            case '/syllabus':
+  return MaterialPageRoute(builder: (_) => const TeacherSyllabusPage());
 
 
-case '/attendance':
-  return MaterialPageRoute(
-    builder: (_) => const TeacherAttendancePage(), // Or StudentAttendancePage
-  );
-
-  case '/exams':
-  return MaterialPageRoute(builder: (_) => const TeacherExamPage());
-
-
-            
+          case '/exams':
+            return MaterialPageRoute(builder: (_) => const TeacherExamPage());
 
           default:
             return MaterialPageRoute(builder: (_) => const LoginPage());
         }
       },
     );
+
+    
   }
 }
