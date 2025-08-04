@@ -295,139 +295,23 @@ class _TeacherExamPageState extends State<TeacherExamPage>
     );
   }
 
-  Widget _buildClassTestsTab() {
-    if (isExamLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: ListView(
-        children: [
-          Center(
-            child: SizedBox(
-              width: 220,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AnnounceClassTestPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[600],
-                  minimumSize: const Size(double.infinity, 45),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                child: const Text(
-                  'Announce a class test',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ...exams.map((exam) {
-            return Column(
-              children: [
-                _buildTestSection(
-                  title: exam.examType,
-                  dateTime: exam.examDate.split('T').first,
-                  subject: exam.subject,
-                  description: exam.description,
-                ),
-                const Divider(color: Color(0xFFB3B3B3), thickness: 1),
-              ],
-            );
-          }).toList(),
-        ],
-      ),
-    );
+ Widget _buildClassTestsTab() {
+  if (isExamLoading) {
+    return const Center(child: CircularProgressIndicator());
   }
 
-  Widget _buildTestSection({
-    required String title,
-    String? dateTime,
-    required String subject,
-    required String description,
-    bool showTitle = true, // ✅ optional flag, default is true
-  }) {
-    {
-      return Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              top: 0,
-              left: 12,
-              right: 12,
-              bottom: 12,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (showTitle)
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFF29ABE2),
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-                if (dateTime != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      dateTime,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                const SizedBox(height: 6),
-                Text(
-                  subject,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text(
-                    description,
-                    style: const TextStyle(fontSize: 13),
-                    textAlign: TextAlign.left,
-                  ),
-                ),
-              ],
-            ),
-          ),
+  // ✅ Sort exams by date here first
+ final sortedExams = List<TeacherExam>.from(exams)
+  ..sort((a, b) => DateTime.parse(b.examDate).compareTo(DateTime.parse(a.examDate)));
 
-          // ✅ Pencil Icon top right
-          Positioned(
-            top: 0,
-            right: 0,
-            child: IconButton(
-              icon: SvgPicture.asset(
-                'assets/icons/pencil.svg',
-                height: 20,
-                width: 20,
-                color: Colors.black,
-              ),
+  return Padding(
+    padding: const EdgeInsets.all(12),
+    child: ListView(
+      children: [
+        Center(
+          child: SizedBox(
+            width: 220,
+            child: ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
@@ -436,10 +320,110 @@ class _TeacherExamPageState extends State<TeacherExamPage>
                   ),
                 );
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                minimumSize: const Size(double.infinity, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              child: const Text(
+                'Announce a class test',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
-        ],
-      );
-    }
-  }
+        ),
+        const SizedBox(height: 20),
+
+        // ✅ Map the sorted list to widgets
+        ...sortedExams.map((exam) {
+          return Column(
+            children: [
+              _buildTestSection(exam: exam),
+              const Divider(color: Color(0xFFB3B3B3), thickness: 1),
+            ],
+          );
+        }).toList(),
+      ],
+    ),
+  );
+}
+Widget _buildTestSection({
+  required TeacherExam exam,
+  bool showTitle = true,
+}) {
+  return Stack(
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (showTitle)
+              Align(
+                alignment: Alignment.center,
+                child: Text(
+                  exam.examType,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFF29ABE2),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                exam.examDate.split('T').first,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              exam.subject,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                exam.description,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+      Positioned(
+        top: 0,
+        right: 0,
+        child: IconButton(
+          icon: SvgPicture.asset(
+            'assets/icons/pencil.svg',
+            height: 20,
+            width: 20,
+            color: Colors.black,
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AnnounceClassTestPage(examId: exam.id),
+              ),
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
 }

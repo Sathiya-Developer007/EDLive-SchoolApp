@@ -12,6 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:school_app/providers/student_task_provider.dart';
 
+import 'student_syllabus_page.dart';
+import 'select_child_page.dart';
+
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
   const StudentDashboardPage({super.key, required this.childData});
@@ -58,9 +61,33 @@ void initState() {
             backgroundColor: const Color(0xFFF4F4F4),
             appBar: const StudentAppBar(),
             drawer: const StudentMenuDrawer(),
-            body: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
+           body: ListView(
+  padding: const EdgeInsets.all(12),
+  children: [
+    GestureDetector(
+      onTap: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SelectChildPage()),
+        );
+      },
+      child: Row(
+        children: const [
+          // Icon(Icons.arrow_back, size: 20, color: Colors.blue),
+          SizedBox(width: 4),
+          Text(
+            '< Back',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.black,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    ),
+    const SizedBox(height: 12),
+
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
@@ -244,12 +271,19 @@ void initState() {
                   ],
                 ),
                 const SizedBox(height: 12),
-                DashboardTile(
-                  title: 'Syllabus',
-                  subtitle: 'Updated on 1 Jan 2019',
-                  iconPath: 'assets/icons/syllabus.svg',
-                  color: const Color(0xFFA3D3A7),
-                ),
+              DashboardTile(
+  title: 'Syllabus',
+  subtitle: 'Updated on 1 Jan 2019',
+  iconPath: 'assets/icons/syllabus.svg',
+  color: const Color(0xFF91C1BC),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const StudentSyllabusPage()),
+    );
+  },
+),
+
                 const SizedBox(height: 12),
                 if (settings.showResources) ...[
                   DashboardTile(

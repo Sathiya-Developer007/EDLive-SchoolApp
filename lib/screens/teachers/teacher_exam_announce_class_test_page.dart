@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/svg.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 import 'package:school_app/services/announce_exam_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
+
 class AnnounceClassTestPage extends StatefulWidget {
-  const AnnounceClassTestPage({super.key});
+  final int? examId;
+
+  const AnnounceClassTestPage({Key? key, this.examId}) : super(key: key);
 
   @override
   State<AnnounceClassTestPage> createState() => _AnnounceClassTestPageState();
 }
+
 
 class _AnnounceClassTestPageState extends State<AnnounceClassTestPage> {
   final TextEditingController dateController = TextEditingController();
@@ -25,6 +33,54 @@ class _AnnounceClassTestPageState extends State<AnnounceClassTestPage> {
   bool whatsapp = true;
   bool email = true;
 
+  bool _isEditMode = false;
+
+@override
+void initState() {
+  super.initState();
+  if (widget.examId != null) {
+    _isEditMode = true; // ✅ Set edit mode
+    fetchExamDetails(widget.examId!); // ✅ Fetch existing data
+  }
+}
+
+
+
+
+  Future<void> fetchExamDetails(int id) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? '';
+
+  final url = Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/exams/$id');
+
+  try {
+    final response = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body)['data'];
+
+      setState(() {
+        examTypeController.text = data['title'] ?? '';
+        subjectController.text = data['subject'] ?? '';
+        descriptionController.text = data['description'] ?? '';
+
+        DateTime dt = DateTime.parse(data['exam_date']);
+        dateController.text = DateFormat('d, MMM. yyyy').format(dt);
+        timeController.text = DateFormat('h:mm a').format(dt);
+      });
+    } else {
+      print("Failed to load exam details");
+    }
+  } catch (e) {
+    print("Error fetching exam: $e");
+  }
+}
+
+
+
   @override
   void dispose() {
     dateController.dispose();
@@ -34,6 +90,8 @@ class _AnnounceClassTestPageState extends State<AnnounceClassTestPage> {
     examTypeController.dispose();
     super.dispose();
   }
+
+  
 
   Future<void> pickDate() async {
     DateTime? picked = await showDatePicker(
@@ -95,8 +153,9 @@ class _AnnounceClassTestPageState extends State<AnnounceClassTestPage> {
               ),
               const SizedBox(height: 16),
 
-              const Text(
-                'Announce class test',
+             Text(
+  _isEditMode ? 'Edit class test' : 'Announce class test',
+
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -251,66 +310,80 @@ class _AnnounceClassTestPageState extends State<AnnounceClassTestPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                        if (subjectController.text.isEmpty ||
-                            descriptionController.text.isEmpty ||
-                            dateController.text.isEmpty ||
-                            timeController.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please fill all fields"),
-                            ),
-                          );
-                          return;
-                        }
+                     onPressed: () async {
+  if (subjectController.text.isEmpty ||
+      descriptionController.text.isEmpty ||
+      dateController.text.isEmpty ||
+      timeController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please fill all fields")),
+    );
+    return;
+  }
 
-                        final date = dateController.text;
-                        final time = timeController.text;
+  final date = dateController.text;
+  final time = timeController.text;
 
-                        final combined = DateFormat(
-                          'd, MMM. yyyy h:mm a',
-                        ).parse('$date $time');
-                        final isoString = combined.toIso8601String();
+  final combined = DateFormat('d, MMM. yyyy h:mm a').parse('$date $time');
+  final isoString = combined.toIso8601String();
 
-                        final prefs = await SharedPreferences.getInstance();
-                        final classId = prefs.getString('classId') ?? '';
+  final prefs = await SharedPreferences.getInstance();
+  final classId = prefs.getString('classId') ?? '';
+  final token = prefs.getString('auth_token') ?? '';
 
-                        final success = await AnnounceExamService.createExam(
-                          title: examTypeController.text, // ✅ use the entered exam type here
-                          subject: subjectController.text,
-                          dateTimeISO: isoString,
-                          classId: classId,
-                          description: descriptionController.text,
-                          examTypeId: 1, // 1 means class test
-                        );
+  final examData = {
+    "title": examTypeController.text,
+    "subject": subjectController.text,
+    "exam_date": isoString,
+    "class_id": classId,
+    "description": descriptionController.text,
+    "exam_type_id": 1,
+  };
 
-                        if (success) {
-                          if (context.mounted) {
-                            Navigator.pop(context); // Close page
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Class test announced successfully",
-                                ),
-                              ),
-                            );
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Failed to announce class test"),
-                            ),
-                          );
-                        }
-                      },
+final url = _isEditMode
+    ? Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/exams/${widget.examId}')
+    : Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/exams');
 
-                      style: ElevatedButton.styleFrom(
+
+  final headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
+ final response = _isEditMode
+    ? await http.put(url, headers: headers, body: jsonEncode(examData))
+    : await http.post(url, headers: headers, body: jsonEncode(examData));
+
+  if (response.statusCode == 200 || response.statusCode == 201) {
+    if (context.mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEditMode
+              ? "Class test updated successfully"
+              : "Class test announced successfully"),
+        ),
+      );
+    }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isEditMode
+            ? "Failed to update class test"
+            : "Failed to announce class test"),
+      ),
+    );
+  }
+},
+        style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.lightBlue,
                       ),
-                      child: const Text(
-                        'Send',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                  child: Text(
+  _isEditMode ? 'Update' : 'Send',
+  style: TextStyle(color: Colors.white),
+),
+
+
                     ),
                   ),
                 ],

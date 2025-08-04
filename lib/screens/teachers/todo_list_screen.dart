@@ -394,7 +394,9 @@ class _ToDoListPageState extends State<ToDoListPage> {
                               backgroundColor: Colors.grey,
                               minimumSize: const Size.fromHeight(50),
                             ),
-                            child: const Text('Cancel'),
+                            child: const Text('Cancel',style: TextStyle(color: Colors.white),)
+                            ,
+                          
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -405,7 +407,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
                               backgroundColor: Colors.blue,
                               minimumSize: const Size.fromHeight(50),
                             ),
-                            child: const Text('Send'),
+                            child: const Text('Send',style: TextStyle(color: Colors.white),),
                           ),
                         ),
                       ],

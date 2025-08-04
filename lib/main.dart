@@ -103,9 +103,10 @@ class MyApp extends StatelessWidget {
       } else if (userType == 'student' || userType == 'parent') {
         if (selectedChild != null) {
           return MaterialPageRoute(builder: (_) => StudentDashboardPage(childData: selectedChild!));
-        } else {
-          return MaterialPageRoute(builder: (_) => SelectChildPage(studentData: userData ?? {}));
-        }
+        }else {
+  return MaterialPageRoute(builder: (_) => const SelectChildPage());
+}
+
       }
     }
     return MaterialPageRoute(builder: (_) => const LoginPage());
@@ -137,11 +138,11 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) => StudentDashboardPage(childData: args),
             );
-          case '/select-child':
-            final args = settings.arguments as Map<String, dynamic>;
-            return MaterialPageRoute(
-              builder: (_) => SelectChildPage(studentData: args),
-            );
+         case '/select-child':
+  return MaterialPageRoute(
+    builder: (_) => const SelectChildPage(),
+  );
+
           case '/student-details':
             final studentId = settings.arguments as int;
             return MaterialPageRoute(

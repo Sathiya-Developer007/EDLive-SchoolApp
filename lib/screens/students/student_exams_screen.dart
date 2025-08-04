@@ -109,47 +109,72 @@ Future<void> loadExams() async {
                         itemCount: examList.length,
                         itemBuilder: (context, index) {
                           final exam = examList[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Center(
-                                  child: Text(
-                                    exam.title,
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF2E3192),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-  ' ${DateFormat('d, MMM yyyy, h:mm a').format(exam.examDate.toLocal())}',
-  style: const TextStyle(
-    fontSize: 14,
-    color: Colors.black87,
+                        return Container(
+  margin: const EdgeInsets.only(bottom: 16),
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(12),
   ),
-),
-const SizedBox(height: 4),
-Text(
-  'Subject: ${exam.subject}',
-  style: const TextStyle(
-    fontSize: 14,
-    color: Color(0xFF2E3192),
-  ),
-),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // 🔹 Centered Exam Type on Top
+      Center(
+        child: Text(
+          exam.examType,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+             color: Color(0xFF2E3192),
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
 
-                              ],
-                            ),
-                          );
-                        },
+      // 🔹 Title (Left aligned)
+      Text(
+        exam.title,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+      ),
+      const SizedBox(height: 6),
+
+      // 🔹 Date
+      Text(
+        DateFormat('d, MMM yyyy, h:mm a').format(exam.examDate.toLocal()),
+        style: const TextStyle(
+          fontSize: 14,
+          color: Colors.black87,
+        ),
+      ),
+      const SizedBox(height: 4),
+
+      // 🔹 Subject
+      Text(
+        'Subject: ${exam.subject}',
+        style: const TextStyle(
+          fontSize: 14,
+          color: Color(0xFF2E3192),
+        ),
+      ),
+      const SizedBox(height: 4),
+
+      // 🔹 Description
+      Text(
+        'Description: ${exam.description}',
+        style: const TextStyle(
+          fontSize: 14,
+          color: Colors.black87,
+        ),
+      ),
+    ],
+  ),
+);
+  },
                       ),
               ),
             ],

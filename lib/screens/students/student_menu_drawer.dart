@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'student_timetable.dart';
 import 'student_attendance_page.dart';
 import 'student_exams_screen.dart';
-
+import 'student_syllabus_page.dart'; // ✅ Adjust the path if needed
 
 class StudentMenuDrawer extends StatefulWidget {
   const StudentMenuDrawer({super.key});
@@ -26,7 +26,11 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
     {'icon': 'syllabus.svg', 'label': 'Syllabus', 'route': '/syllabus'},
     {'icon': 'events.svg', 'label': 'Events & Holidays', 'route': '/events'},
     {'icon': 'reports.svg', 'label': 'Reports', 'route': '/reports'},
-    {'icon': 'achievements.svg', 'label': 'Achievements', 'route': '/achievements'},
+    {
+      'icon': 'achievements.svg',
+      'label': 'Achievements',
+      'route': '/achievements',
+    },
     {'icon': 'school.svg', 'label': 'My School', 'route': '/school'},
     {'icon': 'calendar.svg', 'label': 'Calendar', 'route': '/calendar'},
     {'icon': 'settings.svg', 'label': 'Settings', 'route': '/settings'},
@@ -59,7 +63,9 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF29ABE2) : Colors.transparent,
+                      color: isSelected
+                          ? const Color(0xFF29ABE2)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: ListTile(
@@ -76,64 +82,96 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
                         item['label'] ?? '',
                         style: const TextStyle(color: Colors.white),
                       ),
-            onTap: () async {
-  setState(() {
-    selectedIndex = index;
-  });
+                      onTap: () async {
+                        setState(() {
+                          selectedIndex = index;
+                        });
 
-  if (item['label'] == 'Logout') {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/',
-      (route) => false,
-    );
-  } else if (item['label'] == 'Timetable') {
-    final prefs = await SharedPreferences.getInstance();
-    final year = prefs.getString('academic_year') ?? '2024-2025';
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentTimeTablePage(academicYear: year),
-      ),
-    );
-  } else if (item['label'] == 'Attendance') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentAttendancePage(studentId: 18),
-      ),
-    );
-  } else if (item['label'] == 'My to do list') {
-    Navigator.pushNamed(context, '/student-todo');
-  } else if (item['label'] == 'Exams') {
- onTap: () async {
-      final prefs = await SharedPreferences.getInstance();
+                        if (item['label'] == 'Logout') {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.remove('auth_token');
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/',
+                            (route) => false,
+                          );
+                        } else if (item['label'] == 'Timetable') {
+                          final prefs = await SharedPreferences.getInstance();
+                          final year =
+                              prefs.getString('academic_year') ?? '2024-2025';
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  StudentTimeTablePage(academicYear: year),
+                            ),
+                          );
+                        } else if (item['label'] == 'Attendance') {
+                          final prefs = await SharedPreferences.getInstance();
+                          final studentId = prefs.getInt('student_id');
 
-      // ✅ Safely retrieve the stored student ID
-      final studentIdInt = prefs.getInt('student_id');
+                          if (studentId != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    StudentAttendancePage(studentId: studentId),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Student ID not found. Please login again.",
+                                ),
+                              ),
+                            );
+                          }
+                        } else if (item['label'] == 'My to do list') {
+                          Navigator.pushNamed(context, '/student-todo');
+                        } else if (item['label'] == 'Exams') {
+                          onTap:
+                          () async {
+                            final prefs = await SharedPreferences.getInstance();
 
-      if (studentIdInt == null) {
-        // ✅ Show error if student_id not found
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Student ID not found')),
-        );
-        return;
-      }
+                            // ✅ Safely retrieve the stored student ID
+                            final studentIdInt = prefs.getInt('student_id');
 
-      final studentId = studentIdInt.toString(); // ✅ Convert to String
+                            if (studentIdInt == null) {
+                              // ✅ Show error if student_id not found
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Student ID not found'),
+                                ),
+                              );
+                              return;
+                            }
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StudentExamsScreen(studentId: studentId), // ✅ Pass studentId
-        ),
-      );
-    };
-  };
-            }
-                  ));
+                            final studentId = studentIdInt
+                                .toString(); // ✅ Convert to String
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StudentExamsScreen(
+                                  studentId: studentId,
+                                ), // ✅ Pass studentId
+                              ),
+                            );
+                          };
+                        } else if (item['label'] == 'Syllabus') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const StudentSyllabusPage(),
+                            ),
+                          );
+                        }
+
+                        ;
+                      },
+                    ),
+                  );
                 },
               ),
             ),
