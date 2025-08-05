@@ -15,83 +15,96 @@ class _EventsHolidaysPageState extends State<EventsHolidaysPage> {
   int selectedYear = 2019;
   bool isMonthSelected = false;
 
+  String currentMonth = '';
+int currentMonthIndex = 0;
+
+
+
+
   bool isHolidayChecked = true;
 bool isEventChecked = true;
 
-  final Map<String, List<Map<String, String>>> yearlyEvents = {
-    'January': [
-      {
-        'day': '26',
-        'weekday': 'Sat.',
-        'type': 'Holiday',
-        'label': 'Republic day',
-      },
-      {'day': '31', 'weekday': 'Thu.', 'type': 'Event', 'label': 'School fest'},
-    ],
-    'February': [
-      {'day': '8', 'weekday': 'Fri.', 'type': 'Event', 'label': 'Art day'},
-      {
-        'day': '18',
-        'weekday': 'Mon.',
-        'type': 'Holiday',
-        'label': 'School holiday',
-      },
-      {
-        'day': '19',
-        'weekday': 'Mon.',
-        'type': 'Holiday',
-        'label': 'School holiday',
-      },
-      {
-        'day': '20',
-        'weekday': 'Mon.',
-        'type': 'Holiday',
-        'label': 'School holiday',
-      },
-      {
-        'day': '21',
-        'weekday': 'Mon.',
-        'type': 'Holiday',
-        'label': 'School holiday',
-      },
-      {
-        'day': '22',
-        'weekday': 'Mon.',
-        'type': 'Holiday',
-        'label': 'School holiday',
-      },
-      {
-        'day': '23',
-        'weekday': 'Mon.',
-        'type': 'Holiday',
-        'label': 'School holiday',
-      },
-    ],
-    'March': [
-      {
-        'day': '5',
-        'weekday': 'Tue.',
-        'type': 'Holiday',
-        'label': 'Spring Break',
-      },
-      {
-        'day': '15',
-        'weekday': 'Fri.',
-        'type': 'Event',
-        'label': 'Science Fair',
-      },
-    ],
-    'April': [
-      {
-        'day': '14',
-        'weekday': 'Sun.',
-        'type': 'Holiday',
-        'label': 'Ambedkar Jayanti',
-      },
-      {'day': '22', 'weekday': 'Mon.', 'type': 'Event', 'label': 'Earth Day'},
-    ],
-    // Add more months similarly...
-  };
+
+final List<String> months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+
+final Map<String, List<Map<String, String>>> yearlyEvents = {
+  'January': [
+    {'day': '1', 'weekday': 'Tue.', 'type': 'Holiday', 'label': 'New Year'},
+    {'day': '14', 'weekday': 'Mon.', 'type': 'Holiday', 'label': 'Pongal'},
+    {'day': '26', 'weekday': 'Sat.', 'type': 'Holiday', 'label': 'Republic Day'},
+    {'day': '31', 'weekday': 'Thu.', 'type': 'Event', 'label': 'School Fest'},
+  ],
+  'February': [
+    {'day': '8', 'weekday': 'Fri.', 'type': 'Event', 'label': 'Art Day'},
+    {'day': '14', 'weekday': 'Thu.', 'type': 'Event', 'label': 'Valentines Program'},
+    {'day': '18', 'weekday': 'Mon.', 'type': 'Holiday', 'label': 'School Holiday'},
+    {'day': '19', 'weekday': 'Tue.', 'type': 'Holiday', 'label': 'School Holiday'},
+  ],
+  'March': [
+    {'day': '5', 'weekday': 'Tue.', 'type': 'Holiday', 'label': 'Spring Break'},
+    {'day': '15', 'weekday': 'Fri.', 'type': 'Event', 'label': 'Science Fair'},
+    {'day': '22', 'weekday': 'Fri.', 'type': 'Holiday', 'label': 'Holi'},
+  ],
+  'April': [
+    {'day': '14', 'weekday': 'Sun.', 'type': 'Holiday', 'label': 'Ambedkar Jayanti'},
+    {'day': '22', 'weekday': 'Mon.', 'type': 'Event', 'label': 'Earth Day'},
+  ],
+  'May': [
+    {'day': '1', 'weekday': 'Wed.', 'type': 'Holiday', 'label': 'Labor Day'},
+    {'day': '10', 'weekday': 'Fri.', 'type': 'Event', 'label': 'Summer Camp Starts'},
+    {'day': '25', 'weekday': 'Sat.', 'type': 'Holiday', 'label': 'Summer Vacation'},
+  ],
+  'June': [
+    {'day': '5', 'weekday': 'Wed.', 'type': 'Holiday', 'label': 'Ramzan'},
+    {'day': '15', 'weekday': 'Sat.', 'type': 'Event', 'label': 'School Reopens'},
+  ],
+  'July': [
+    {'day': '4', 'weekday': 'Thu.', 'type': 'Event', 'label': 'PTA Meeting'},
+    {'day': '20', 'weekday': 'Sat.', 'type': 'Holiday', 'label': 'Mid Term Break'},
+  ],
+  'August': [
+    {'day': '15', 'weekday': 'Thu.', 'type': 'Holiday', 'label': 'Independence Day'},
+    {'day': '29', 'weekday': 'Thu.', 'type': 'Event', 'label': 'Sports Day'},
+  ],
+  'September': [
+    {'day': '5', 'weekday': 'Thu.', 'type': 'Event', 'label': 'Teacher\'s Day'},
+    {'day': '10', 'weekday': 'Tue.', 'type': 'Holiday', 'label': 'Ganesh Chaturthi'},
+  ],
+  'October': [
+    {'day': '2', 'weekday': 'Wed.', 'type': 'Holiday', 'label': 'Gandhi Jayanti'},
+    {'day': '27', 'weekday': 'Sun.', 'type': 'Event', 'label': 'Diwali Celebration'},
+  ],
+  'November': [
+    {'day': '1', 'weekday': 'Fri.', 'type': 'Holiday', 'label': 'Kannada Rajyotsava'},
+    {'day': '14', 'weekday': 'Thu.', 'type': 'Event', 'label': 'Children\'s Day'},
+  ],
+  'December': [
+    {'day': '25', 'weekday': 'Wed.', 'type': 'Holiday', 'label': 'Christmas'},
+    {'day': '31', 'weekday': 'Tue.', 'type': 'Event', 'label': 'New Year Eve Program'},
+  ],
+};
+
+
+@override
+void initState() {
+  super.initState();
+  final now = DateTime.now();
+  currentMonthIndex = now.month - 1;
+  currentMonth = months[currentMonthIndex];
+}
+
+// String _getMonthName(int monthNumber) {
+//   const months = [
+//     'January', 'February', 'March', 'April', 'May', 'June',
+//     'July', 'August', 'September', 'October', 'November', 'December'
+//   ];
+//   return months[monthNumber - 1];
+// }
+
 
   @override
   Widget build(BuildContext context) {
@@ -156,17 +169,22 @@ bool isEventChecked = true;
             const SizedBox(height: 12),
 
             // Year Navigation
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: [
+        Expanded(
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16), // ← Horizontal space outside the white box
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16), // ← Inner space
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                   // Toggle (Month | Year)
-                Row(
+              Row(
   mainAxisAlignment: MainAxisAlignment.spaceAround,
   children: [
     GestureDetector(
@@ -175,14 +193,24 @@ bool isEventChecked = true;
           isMonthSelected = true;
         });
       },
-      child: Text(
-        'Month',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: isMonthSelected ? FontWeight.bold : FontWeight.normal,
-          color: isMonthSelected ? Colors.blue : Colors.grey[600],
-          decoration: isMonthSelected ? TextDecoration.underline : TextDecoration.none,
-        ),
+      child: Column(
+        children: [
+          Text(
+            'Month',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: isMonthSelected ? FontWeight.bold : FontWeight.normal,
+              color: isMonthSelected ? Color(0xFF29ABE2) : Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (isMonthSelected)
+            Container(
+              height: 3, // ← underline thickness
+              width: 40,
+              color: Color(0xFF29ABE2),
+            ),
+        ],
       ),
     ),
     GestureDetector(
@@ -191,56 +219,86 @@ bool isEventChecked = true;
           isMonthSelected = false;
         });
       },
-      child: Text(
-        'Year',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: !isMonthSelected ? FontWeight.bold : FontWeight.normal,
-          color: !isMonthSelected ? Colors.blue : Colors.grey[600],
-          decoration: !isMonthSelected ? TextDecoration.underline : TextDecoration.none,
-        ),
+      child: Column(
+        children: [
+          Text(
+            'Year',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: !isMonthSelected ? FontWeight.bold : FontWeight.normal,
+              color: !isMonthSelected ? Color(0xFF29ABE2) : Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (!isMonthSelected)
+            Container(
+              height: 3, // ← underline thickness
+              width: 40,
+              color: Color(0xFF29ABE2),
+            ),
+        ],
       ),
     ),
   ],
 ),
-                  const SizedBox(height: 8),
+       const SizedBox(height: 8),
 
                   // Year selector
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.chevron_left),
-                        onPressed: () {
-                          setState(() {
-                            selectedYear--;
-                          });
-                        },
-                      ),
-                      Text(
-                        '$selectedYear',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.chevron_right),
-                        onPressed: () {
-                          setState(() {
-                            selectedYear++;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
+            Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    // Left Arrow (Black)
+    IconButton(
+      icon: const Icon(Icons.chevron_left),
+      color: Colors.black, // ← Black color
+      onPressed: () {
+        setState(() {
+          if (isMonthSelected) {
+            currentMonthIndex = (currentMonthIndex - 1 + 12) % 12;
+            currentMonth = months[currentMonthIndex];
+          } else {
+            selectedYear--;
+          }
+        });
+      },
+    ),
 
-                  const Divider(),
+    // Month or Year Text
+    Text(
+      isMonthSelected ? currentMonth : '$selectedYear',
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+
+    // Right Arrow (#E6E6E6)
+    IconButton(
+      icon: const Icon(Icons.chevron_right),
+      color: Color(0xFFE6E6E6), // ← Light gray color
+      onPressed: () {
+        setState(() {
+          if (isMonthSelected) {
+            currentMonthIndex = (currentMonthIndex + 1) % 12;
+            currentMonth = months[currentMonthIndex];
+          } else {
+            selectedYear++;
+          }
+        });
+      },
+    ),
+  ],
+),
+  const Divider(),
 
                   // Legend
                 Row(
   mainAxisAlignment: MainAxisAlignment.center,
   children: [
+  Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    // Holiday
     Row(
       children: [
         Checkbox(
@@ -252,12 +310,17 @@ bool isEventChecked = true;
           },
           visualDensity: VisualDensity.compact,
         ),
-        const CircleAvatar(radius: 6, backgroundColor: Colors.red),
+        const CircleAvatar(
+          radius: 6,
+          backgroundColor: Colors.red,
+        ),
         const SizedBox(width: 4),
         const Text('Holiday'),
       ],
     ),
     const SizedBox(width: 16),
+
+    // Event
     Row(
       children: [
         Checkbox(
@@ -269,81 +332,139 @@ bool isEventChecked = true;
           },
           visualDensity: VisualDensity.compact,
         ),
-        const CircleAvatar(radius: 6, backgroundColor: Colors.orange),
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: Colors.orange,
+            borderRadius: BorderRadius.circular(3), // Rounded box shape
+          ),
+        ),
         const SizedBox(width: 4),
         const Text('Event'),
       ],
     ),
   ],
 ),
+  ],
+),
                   const SizedBox(height: 16),
 
                   // Month-wise Events
-                  for (var month in yearlyEvents.keys)
+               for (var month in (isMonthSelected
+    ? [currentMonth] // Only current month if 'Month' tab is selected
+    : yearlyEvents.keys)) // All months if 'Year' tab is selected
+
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          month,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Colors.deepPurple,
-                          ),
-                        ),
+                       Center(
+  child: Text(
+    month,
+    style: const TextStyle(
+      fontWeight: FontWeight.bold,
+      fontSize: 18,
+      color: Color(0xFF2E3192), // converted #2E3192
+    ),
+  ),
+),
+
                         const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 16,
-                          runSpacing: 16,
-                          children: yearlyEvents[month]!.map((event) {
-                            Color color = event['type'] == 'Holiday'
-                                ? Colors.red
-                                : Colors.orange;
-                            return Column(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: color,
-                                  radius: 28,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        event['day']!,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      Text(
-                                        event['weekday']!,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  event['label']!,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 24),
+                      Wrap(
+  spacing: 16,
+  runSpacing: 16,
+  children: yearlyEvents[month]!
+      .where((event) {
+        if (event['type'] == 'Holiday' && !isHolidayChecked) return false;
+        if (event['type'] == 'Event' && !isEventChecked) return false;
+        return true;
+      })
+      .map((event) {
+        final isHoliday = event['type'] == 'Holiday';
+        final color = isHoliday ? Colors.red : Colors.orange;
+
+        return Column(
+  children: [
+    isHoliday
+        ? CircleAvatar(
+            backgroundColor: color,
+            radius: 28,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  event['day']!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  event['weekday']!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  event['day']!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  event['weekday']!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+    const SizedBox(height: 4),
+
+    // ✅ Match label width with icon width & wrap text
+    SizedBox(
+      width: 56, // Match with circle/box width
+      child: Text(
+        event['label']!,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 12),
+        overflow: TextOverflow.visible,
+        softWrap: true,
+        maxLines: 2, // optional: allow 2 lines
+      ),
+    ),
+  ],
+);
+      }).toList(),
+),
+    const SizedBox(height: 24),
                       ],
                     ),
                 ],
               ),
             ),
-          ],
         ),
-      ),
-    );
+        ),
+       ) ] ),
+    ));
   }
 }
