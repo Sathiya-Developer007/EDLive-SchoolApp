@@ -239,11 +239,14 @@ void initState() {
   iconPath: 'assets/icons/events.svg',
   color: const Color(0xFFF9AFD2),
   onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const EventsHolidaysPage()),
-    );
-  },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const EventsHolidaysPage(startInMonthView: true),
+    ),
+  );
+},
+
 ),
 
 

@@ -5,18 +5,31 @@ import 'package:school_app/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
 
 class EventsHolidaysPage extends StatefulWidget {
-  const EventsHolidaysPage({Key? key}) : super(key: key);
+  final bool startInMonthView;
+
+  const EventsHolidaysPage({Key? key, this.startInMonthView = false}) : super(key: key);
 
   @override
   State<EventsHolidaysPage> createState() => _EventsHolidaysPageState();
 }
 
+
 class _EventsHolidaysPageState extends State<EventsHolidaysPage> {
   int selectedYear = 2019;
   bool isMonthSelected = false;
-
+  int currentMonthIndex = 0;
   String currentMonth = '';
-int currentMonthIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    currentMonthIndex = now.month - 1;
+    currentMonth = months[currentMonthIndex];
+
+    isMonthSelected = widget.startInMonthView; // ✅ set based on constructor param
+  }
+
 
 
 
@@ -89,13 +102,13 @@ final Map<String, List<Map<String, String>>> yearlyEvents = {
 };
 
 
-@override
-void initState() {
-  super.initState();
-  final now = DateTime.now();
-  currentMonthIndex = now.month - 1;
-  currentMonth = months[currentMonthIndex];
-}
+// @override
+// void initState() {
+//   super.initState();
+//   final now = DateTime.now();
+//   currentMonthIndex = now.month - 1;
+//   currentMonth = months[currentMonthIndex];
+// }
 
 // String _getMonthName(int monthNumber) {
 //   const months = [
