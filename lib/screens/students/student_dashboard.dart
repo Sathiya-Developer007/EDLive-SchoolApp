@@ -14,6 +14,7 @@ import 'package:school_app/providers/student_task_provider.dart';
 
 import 'student_syllabus_page.dart';
 import 'select_child_page.dart';
+import 'events_holidays_page.dart'; 
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -232,12 +233,19 @@ void initState() {
   ],
                 ),
                 const SizedBox(height: 12), // ✅ Moved here OUTSIDE the Row
-                DashboardTile(
-                  title: 'Events & Holidays',
-                  subtitle: '16, Jan 2019, Pongal (Govt. Holiday)',
-                  iconPath: 'assets/icons/events.svg',
-                  color: const Color(0xFFF9AFD2),
-                ),
+               DashboardTile(
+  title: 'Events & Holidays',
+  subtitle: '16, Jan 2019, Pongal (Govt. Holiday)',
+  iconPath: 'assets/icons/events.svg',
+  color: const Color(0xFFF9AFD2),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EventsHolidaysPage()),
+    );
+  },
+),
+
 
                 const SizedBox(height: 12),
                 DashboardTile(
