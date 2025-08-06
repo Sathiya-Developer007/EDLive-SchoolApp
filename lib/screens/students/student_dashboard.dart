@@ -13,9 +13,10 @@ import 'package:school_app/providers/student_task_provider.dart';
 
 import 'student_syllabus_page.dart';
 import 'select_child_page.dart';
-import 'student_events_holidays_page.dart'; 
+import 'student_events_holidays_page.dart';
 import 'student_school_bus_page.dart';
 import 'teacher_list_page.dart';
+import 'student_payments_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -26,24 +27,22 @@ class StudentDashboardPage extends StatefulWidget {
 }
 
 class _StudentDashboardPageState extends State<StudentDashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    // _loadStudentTodos();
+  }
 
-@override
-void initState() {
-  super.initState();
-  // _loadStudentTodos();
-}
+  // Future<void> _loadStudentTodos() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString('auth_token');
 
-// Future<void> _loadStudentTodos() async {
-//   final prefs = await SharedPreferences.getInstance();
-//   final token = prefs.getString('auth_token');
-
-//   if (token != null) {
-//     final provider = Provider.of<StudentTaskProvider>(context, listen: false);
-//     provider.setAuthToken(token);
-//     await provider.fetchStudentTodos(); // ✅ Fetch ToDos from backend
-//   }
-// }
-
+  //   if (token != null) {
+  //     final provider = Provider.of<StudentTaskProvider>(context, listen: false);
+  //     provider.setAuthToken(token);
+  //     await provider.fetchStudentTodos(); // ✅ Fetch ToDos from backend
+  //   }
+  // }
 
   String getCurrentAcademicYear() {
     final now = DateTime.now();
@@ -63,32 +62,34 @@ void initState() {
             backgroundColor: const Color(0xFFF4F4F4),
             appBar: const StudentAppBar(),
             drawer: const StudentMenuDrawer(),
-           body: ListView(
-  padding: const EdgeInsets.all(12),
-  children: [
-    GestureDetector(
-      onTap: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const SelectChildPage()),
-        );
-      },
-      child: Row(
-        children: const [
-          // Icon(Icons.arrow_back, size: 20, color: Colors.blue),
-          SizedBox(width: 4),
-          Text(
-            '< Back',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.black,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    ),
-    const SizedBox(height: 12),
+            body: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SelectChildPage(),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    children: const [
+                      // Icon(Icons.arrow_back, size: 20, color: Colors.blue),
+                      SizedBox(width: 4),
+                      Text(
+                        '< Back',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 Wrap(
                   spacing: 12,
@@ -117,11 +118,9 @@ void initState() {
                       subtitle: 'Check your tasks',
                       iconPath: 'assets/icons/todo.svg',
                       color: const Color(0xFF8FD8E5),
-              badgeCount: context.watch<StudentTaskProvider>().newTaskCount,
-
-
-
-
+                      badgeCount: context
+                          .watch<StudentTaskProvider>()
+                          .newTaskCount,
 
                       onTap: () => Navigator.pushNamed(
                         context,
@@ -140,36 +139,51 @@ void initState() {
                         iconPath: 'assets/icons/attendance.svg',
                         color: const Color(0xFFFFCCCC),
                         centerContent: true,
-                onTap: () async {
-  final prefs = await SharedPreferences.getInstance();
-  final studentId = prefs.getInt('student_id'); // Make sure you saved it during login
+                        onTap: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          final studentId = prefs.getInt(
+                            'student_id',
+                          ); // Make sure you saved it during login
 
-  if (studentId != null) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentAttendancePage(studentId: studentId),
-      ),
-    );
-  } else {
-    // Optional: handle error if ID is not found
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Student ID not found. Please login again.")),
-    );
-  }
-},
-
-
+                          if (studentId != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    StudentAttendancePage(studentId: studentId),
+                              ),
+                            );
+                          } else {
+                            // Optional: handle error if ID is not found
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  "Student ID not found. Please login again.",
+                                ),
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DashboardTile(
-                        title: 'Payments',
-                        subtitle: 'Fee Rs. 2500\nDue on Mar. 2018',
-                        iconPath: 'assets/icons/payments.svg',
-                        color: const Color(0xFFC0DD94),
-                        centerContent: true,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const StudentPaymentsPage(),
+                            ),
+                          );
+                        },
+                        child: DashboardTile(
+                          title: 'Payments',
+                          subtitle: 'Fee Rs. 2500\nDue on Mar. 2018',
+                          iconPath: 'assets/icons/payments.svg',
+                          color: const Color(0xFFC0DD94),
+                          centerContent: true,
+                        ),
                       ),
                     ),
                   ],
@@ -197,59 +211,63 @@ void initState() {
                       ),
                     ),
                     const SizedBox(width: 12),
-              Expanded(
-  child: GestureDetector(
-    onTap: () async {
-      final prefs = await SharedPreferences.getInstance();
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final prefs = await SharedPreferences.getInstance();
 
-      // ✅ Safely retrieve the stored student ID
-      final studentIdInt = prefs.getInt('student_id');
+                          // ✅ Safely retrieve the stored student ID
+                          final studentIdInt = prefs.getInt('student_id');
 
-      if (studentIdInt == null) {
-        // ✅ Show error if student_id not found
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Student ID not found')),
-        );
-        return;
-      }
+                          if (studentIdInt == null) {
+                            // ✅ Show error if student_id not found
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Student ID not found'),
+                              ),
+                            );
+                            return;
+                          }
 
-      final studentId = studentIdInt.toString(); // ✅ Convert to String
+                          final studentId = studentIdInt
+                              .toString(); // ✅ Convert to String
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StudentExamsScreen(studentId: studentId), // ✅ Pass studentId
-        ),
-      );
-    },
-    child: DashboardTile(
-      title: 'Exams',
-      iconPath: 'assets/icons/exams.svg',
-      color: const Color(0xFFAAE5C8),
-      badgeCount: 2,
-      centerContent: true,
-    ),
-  ),
-),
-  ],
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentExamsScreen(
+                                studentId: studentId,
+                              ), // ✅ Pass studentId
+                            ),
+                          );
+                        },
+                        child: DashboardTile(
+                          title: 'Exams',
+                          iconPath: 'assets/icons/exams.svg',
+                          color: const Color(0xFFAAE5C8),
+                          badgeCount: 2,
+                          centerContent: true,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12), // ✅ Moved here OUTSIDE the Row
-               DashboardTile(
-  title: 'Events & Holidays',
-  subtitle: '16, Jan 2019, Pongal (Govt. Holiday)',
-  iconPath: 'assets/icons/events.svg',
-  color: const Color(0xFFF9AFD2),
-  onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const EventsHolidaysPage(startInMonthView: true),
-    ),
-  );
-},
-
-),
-
+                DashboardTile(
+                  title: 'Events & Holidays',
+                  subtitle: '16, Jan 2019, Pongal (Govt. Holiday)',
+                  iconPath: 'assets/icons/events.svg',
+                  color: const Color(0xFFF9AFD2),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const EventsHolidaysPage(startInMonthView: true),
+                      ),
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 12),
                 DashboardTile(
@@ -263,22 +281,24 @@ void initState() {
                 Row(
                   children: [
                     Expanded(
-                      child:GestureDetector(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const StudentSchoolBusPage()),
-    );
-  },
-  child: DashboardTile(
-    title: 'School bus',
-    subtitle: '7:45 AM',
-    iconPath: 'assets/icons/transport.svg',
-    color: const Color(0xFFCCCCFF),
-    centerContent: true,
-  ),
-),
-
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const StudentSchoolBusPage(),
+                            ),
+                          );
+                        },
+                        child: DashboardTile(
+                          title: 'School bus',
+                          subtitle: '7:45 AM',
+                          iconPath: 'assets/icons/transport.svg',
+                          color: const Color(0xFFCCCCFF),
+                          centerContent: true,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -292,34 +312,38 @@ void initState() {
                   ],
                 ),
                 const SizedBox(height: 12),
-              DashboardTile(
-  title: 'Syllabus',
-  subtitle: 'Updated on 1 Jan 2019',
-  iconPath: 'assets/icons/syllabus.svg',
-  color: const Color(0xFF91C1BC),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const StudentSyllabusPage()),
-    );
-  },
-),
+                DashboardTile(
+                  title: 'Syllabus',
+                  subtitle: 'Updated on 1 Jan 2019',
+                  iconPath: 'assets/icons/syllabus.svg',
+                  color: const Color(0xFF91C1BC),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudentSyllabusPage(),
+                      ),
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 12),
                 if (settings.showResources) ...[
-                 DashboardTile(
-  title: 'Teachers',
-  subtitle: 'You can interact with teachers',
-  icon: Icons.person,
-  color: const Color(0xFFFFD399),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const StudentTeacherPage()),
-    );
-  },
-  onClose: () => settings.updateVisibility('Teachers', false),
-),
+                  DashboardTile(
+                    title: 'Teachers',
+                    subtitle: 'You can interact with teachers',
+                    icon: Icons.person,
+                    color: const Color(0xFFFFD399),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const StudentTeacherPage(),
+                        ),
+                      );
+                    },
+                    onClose: () => settings.updateVisibility('Teachers', false),
+                  ),
 
                   const SizedBox(height: 12),
                 ],
