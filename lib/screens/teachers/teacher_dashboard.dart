@@ -12,6 +12,7 @@ import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'teacher_exam_page.dart';
 import 'teacher_transport.dart';
 import 'teacher_syllabus_page.dart';
+import 'teacher_events_holidays_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -180,12 +181,23 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    DashboardTile(
-                      title: 'Events & Holidays',
-                      subtitle: '16 Jan 2019, Pongal',
-                      iconPath: 'assets/icons/events.svg',
-                      color: const Color(0xFFF9AFD2),
-                    ),
+                   GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const TeacherEventsHolidaysPage(startInMonthView: true),
+      ),
+    );
+  },
+  child: DashboardTile(
+    title: 'Events & Holidays',
+    subtitle: '16 Jan 2019, Pongal',
+    iconPath: 'assets/icons/events.svg',
+    color: const Color(0xFFF9AFD2),
+  ),
+),
+
                     if (settings.showPTA)
                       DashboardTile(
                         title: 'PTA',

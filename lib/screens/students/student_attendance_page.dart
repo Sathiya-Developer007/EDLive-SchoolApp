@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -37,7 +36,7 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> {
       length: 2,
       child: Scaffold(
         backgroundColor: const Color(0xFFFFAEAE),
-        drawer: MenuDrawer(),
+        drawer: StudentMenuDrawer(),
         appBar: StudentAppBar(),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

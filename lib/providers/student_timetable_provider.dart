@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/student_timetable_day.dart';
 import '../models/StudentTimetableEntry.dart';
 
 class StudentTimetableProvider with ChangeNotifier {

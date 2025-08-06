@@ -125,6 +125,7 @@ class _MenuDrawerState extends State<MenuDrawer> {
   '/attendance',
   '/exams',
   '/syllabus', // ✅ Add this
+  '/events',
 ].contains(item['route'])) {
   Navigator.pushNamed(context, item['route']);
 }

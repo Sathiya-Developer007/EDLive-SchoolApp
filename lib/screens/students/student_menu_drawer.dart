@@ -5,6 +5,8 @@ import 'student_timetable.dart';
 import 'student_attendance_page.dart';
 import 'student_exams_screen.dart';
 import 'student_syllabus_page.dart'; // ✅ Adjust the path if needed
+import 'student_events_holidays_page.dart'; // Adjust the path as needed
+import 'student_school_bus_page.dart';
 
 class StudentMenuDrawer extends StatefulWidget {
   const StudentMenuDrawer({super.key});
@@ -129,44 +131,55 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
                           }
                         } else if (item['label'] == 'My to do list') {
                           Navigator.pushNamed(context, '/student-todo');
-                        } else if (item['label'] == 'Exams') {
-                          onTap:
-                          () async {
-                            final prefs = await SharedPreferences.getInstance();
+                      } else if (item['label'] == 'Exams') {
+  final prefs = await SharedPreferences.getInstance();
 
-                            // ✅ Safely retrieve the stored student ID
-                            final studentIdInt = prefs.getInt('student_id');
+  // ✅ Safely retrieve the stored student ID
+  final studentIdInt = prefs.getInt('student_id');
 
-                            if (studentIdInt == null) {
-                              // ✅ Show error if student_id not found
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Student ID not found'),
-                                ),
-                              );
-                              return;
-                            }
+  if (studentIdInt == null) {
+    // ✅ Show error if student_id not found
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Student ID not found')),
+    );
+    return;
+  }
 
-                            final studentId = studentIdInt
-                                .toString(); // ✅ Convert to String
+  final studentId = studentIdInt.toString(); // ✅ Convert to String
 
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StudentExamsScreen(
-                                  studentId: studentId,
-                                ), // ✅ Pass studentId
-                              ),
-                            );
-                          };
-                        } else if (item['label'] == 'Syllabus') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => StudentExamsScreen(studentId: studentId), // ✅ Pass studentId
+    ),
+  );
+}
+ else if (item['label'] == 'Syllabus') {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => const StudentSyllabusPage(),
                             ),
                           );
+                        } else if (item['label'] == 'Events & Holidays') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const EventsHolidaysPage(
+                                startInMonthView: true,
+                              ),
+                            ),
+                          );
                         }
+                        else if (item['label'] == 'School bus') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const StudentSchoolBusPage(),
+    ),
+  );
+}
+
 
                         ;
                       },

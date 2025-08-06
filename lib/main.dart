@@ -13,6 +13,7 @@ import 'screens/teachers/class_teacher_student_details_page.dart';
 import 'screens/teachers/teacher_attendance_page.dart';
 import 'screens/teachers/teacher_exam_page.dart';
 import 'screens/teachers/teacher_syllabus_page.dart';
+import 'screens/teachers/teacher_events_holidays_page.dart';
 
 import 'screens/students/student_dashboard.dart';
 import 'screens/students/select_child_page.dart';
@@ -133,6 +134,8 @@ class MyApp extends StatelessWidget {
             );
           case '/settings':
             return MaterialPageRoute(builder: (_) => const SettingsPage());
+
+          // Student
           case '/student-todo':
             return MaterialPageRoute(
               builder: (_) => const StudentToDoListPage(),
@@ -165,25 +168,30 @@ class MyApp extends StatelessWidget {
               builder: (_) => StudentTimeTablePage(academicYear: year),
             );
 
+          // Teachers Menu
+
           case '/attendance':
             return MaterialPageRoute(
               builder: (_) =>
                   const TeacherAttendancePage(), // Or StudentAttendancePage
             );
 
-            case '/syllabus':
-  return MaterialPageRoute(builder: (_) => const TeacherSyllabusPage());
-
+          case '/syllabus':
+            return MaterialPageRoute(
+              builder: (_) => const TeacherSyllabusPage(),
+            );
 
           case '/exams':
             return MaterialPageRoute(builder: (_) => const TeacherExamPage());
 
+          case '/events':
+            return MaterialPageRoute(
+              builder: (_) => const TeacherEventsHolidaysPage(),
+            );
           default:
             return MaterialPageRoute(builder: (_) => const LoginPage());
         }
       },
     );
-
-    
   }
 }

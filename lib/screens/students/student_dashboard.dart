@@ -7,14 +7,14 @@ import 'student_menu_drawer.dart';
 import 'student_timetable.dart';
 import 'student_attendance_page.dart';
 import 'student_exams_screen.dart';
-import 'student_attendance_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:school_app/providers/student_task_provider.dart';
 
 import 'student_syllabus_page.dart';
 import 'select_child_page.dart';
-import 'events_holidays_page.dart'; 
+import 'student_events_holidays_page.dart'; 
+import 'student_school_bus_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -262,13 +262,22 @@ void initState() {
                 Row(
                   children: [
                     Expanded(
-                      child: DashboardTile(
-                        title: 'School bus',
-                        subtitle: '7:45 AM',
-                        iconPath: 'assets/icons/transport.svg',
-                        color: const Color(0xFFCCCCFF),
-                        centerContent: true,
-                      ),
+                      child:GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const StudentSchoolBusPage()),
+    );
+  },
+  child: DashboardTile(
+    title: 'School bus',
+    subtitle: '7:45 AM',
+    iconPath: 'assets/icons/transport.svg',
+    color: const Color(0xFFCCCCFF),
+    centerContent: true,
+  ),
+),
+
                     ),
                     const SizedBox(width: 12),
                     Expanded(

@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:school_app/widgets/student_app_bar.dart';
-import 'student_menu_drawer.dart';
+import 'package:school_app/widgets/teacher_app_bar.dart';
+import 'teacher_menu_drawer.dart';
 
-class EventsHolidaysPage extends StatefulWidget {
+class TeacherEventsHolidaysPage extends StatefulWidget {
   final bool startInMonthView;
 
-  const EventsHolidaysPage({Key? key, this.startInMonthView = false}) : super(key: key);
+  const TeacherEventsHolidaysPage({Key? key, this.startInMonthView = false}) : super(key: key);
 
   @override
-  State<EventsHolidaysPage> createState() => _EventsHolidaysPageState();
+  State<TeacherEventsHolidaysPage> createState() => _EventsHolidaysPageState();
 }
 
 
-class _EventsHolidaysPageState extends State<EventsHolidaysPage> {
+class _EventsHolidaysPageState extends State<TeacherEventsHolidaysPage> {
   int selectedYear = 2019;
   bool isMonthSelected = false;
   int currentMonthIndex = 0;
@@ -102,29 +102,14 @@ final Map<String, List<Map<String, String>>> yearlyEvents = {
 };
 
 
-// @override
-// void initState() {
-//   super.initState();
-//   final now = DateTime.now();
-//   currentMonthIndex = now.month - 1;
-//   currentMonth = months[currentMonthIndex];
-// }
-
-// String _getMonthName(int monthNumber) {
-//   const months = [
-//     'January', 'February', 'March', 'April', 'May', 'June',
-//     'July', 'August', 'September', 'October', 'November', 'December'
-//   ];
-//   return months[monthNumber - 1];
-// }
 
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.pink[100],
-      appBar: StudentAppBar(),
-      drawer: StudentMenuDrawer(),
+      appBar: TeacherAppBar(),
+      drawer: MenuDrawer(),
       body: SafeArea(
         child: Column(
           children: [
