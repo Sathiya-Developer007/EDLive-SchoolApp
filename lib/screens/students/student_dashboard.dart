@@ -15,6 +15,7 @@ import 'student_syllabus_page.dart';
 import 'select_child_page.dart';
 import 'student_events_holidays_page.dart'; 
 import 'student_school_bus_page.dart';
+import 'teacher_list_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -306,13 +307,20 @@ void initState() {
 
                 const SizedBox(height: 12),
                 if (settings.showResources) ...[
-                  DashboardTile(
-                    title: 'Teachers',
-                    subtitle: 'You can interact with teachers',
-                    icon: Icons.person,
-                    color: const Color(0xFFFFD399),
-                    onClose: () => settings.updateVisibility('Teachers', false),
-                  ),
+                 DashboardTile(
+  title: 'Teachers',
+  subtitle: 'You can interact with teachers',
+  icon: Icons.person,
+  color: const Color(0xFFFFD399),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const StudentTeacherPage()),
+    );
+  },
+  onClose: () => settings.updateVisibility('Teachers', false),
+),
+
                   const SizedBox(height: 12),
                 ],
                 if (settings.showCoCurricular) ...[
