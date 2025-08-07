@@ -169,15 +169,26 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const StudentPaymentsPage(),
-                            ),
-                          );
-                        },
-                        child: DashboardTile(
+                     onTap: () async {
+  final prefs = await SharedPreferences.getInstance();
+  final studentId = prefs.getInt('student_id');
+
+  if (studentId != null) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentPaymentsPage(studentId: studentId.toString()), // 👈 convert to String
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Student ID not found. Please login again.'),
+      ),
+    );
+  }
+},
+   child: DashboardTile(
                           title: 'Payments',
                           subtitle: 'Fee Rs. 2500\nDue on Mar. 2018',
                           iconPath: 'assets/icons/payments.svg',
