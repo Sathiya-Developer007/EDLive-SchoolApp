@@ -6,8 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 
-import 'package:school_app/models/payment_assignment_model.dart';
-import 'package:school_app/services/payment_service.dart';
+import 'package:school_app/models/class_section.dart';
+import 'package:school_app/services/class_section_service.dart';
+import 'package:school_app/models/teacher_payment_model.dart';
+import 'package:school_app/services/teacher_payment_service.dart';
 
 class TeacherPaymentsPage extends StatefulWidget {
   const TeacherPaymentsPage({super.key});
@@ -17,32 +19,86 @@ class TeacherPaymentsPage extends StatefulWidget {
 }
 
 class _TeacherPaymentsPageState extends State<TeacherPaymentsPage> {
- List<PaymentAssignment> payments = [];
+  List<ClassSection> classSections = [];
+  int? selectedClassId;
   bool isLoading = true;
+
+  String selectedAcademicYear = '2025-2026';
+  List<PaymentAssignment> payments = [];
 
   @override
   void initState() {
     super.initState();
-    fetchPayments();
+    loadInitialData();
   }
 
-  // List<PaymentAssignment> payments = [];
+  Future<void> loadInitialData() async {
+    try {
+      final fetchedClasses = await ClassService().fetchClassSections();
+      setState(() {
+        classSections = fetchedClasses;
+        selectedClassId = fetchedClasses.isNotEmpty ? fetchedClasses[0].id : null;
+      });
 
-Future<void> fetchPayments() async {
-  try {
-    final data = await PaymentService.fetchPaymentAssignments(
-      classIds: [1, 2],
-      academicYear: '2025-2026',
+      if (selectedClassId != null) {
+        await fetchPayments();
+      }
+    } catch (e) {
+      print("Error fetching class sections: $e");
+    }
+  }
+
+  Future<void> fetchPayments() async {
+    if (selectedClassId == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token'); // saved during login
+
+    if (token == null) {
+      print("Auth token not found.");
+      return;
+    }
+
+    final url = Uri.parse(
+      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/payments/assignments?class_ids=$selectedClassId&academic_year=$selectedAcademicYear',
     );
-    setState(() {
-      payments = data;
-      isLoading = false;
-    });
-  } catch (e) {
-    setState(() => isLoading = false);
-    print("Error: $e");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print("API Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+       final Map<String, dynamic> result = json.decode(response.body);
+final List<dynamic> data = result['data'];
+final parsedPayments = data.map((json) => PaymentAssignment.fromJson(json)).toList();
+
+        print("Parsed payment count: ${parsedPayments.length}");
+
+        setState(() {
+          payments = parsedPayments;
+          isLoading = false;
+        });
+      } else {
+        print("Failed to load payments: ${response.statusCode} - ${response.body}");
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Error fetching payments: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,6 +110,7 @@ Future<void> fetchPayments() async {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
+
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
@@ -63,19 +120,63 @@ Future<void> fetchPayments() async {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : payments.isEmpty
-                          ? const Center(child: Text("No payment data found."))
-                          : ListView.separated(
-                              itemCount: payments.length,
-                              separatorBuilder: (context, index) => const Divider(),
-                              itemBuilder: (context, index) {
-                                final item = payments[index];
-                                return _buildPaymentTile(item);
-                              },
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  "Select Class:",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2E3192),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                DropdownButton<int>(
+                                  value: selectedClassId,
+                                  items: classSections.map((classItem) {
+                                    return DropdownMenuItem<int>(
+                                      value: classItem.id,
+                                      child: Text(classItem.fullName),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      selectedClassId = value;
+                                      isLoading = true;
+                                    });
+                                    fetchPayments();
+                                  },
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 12),
+
+                            Expanded(
+                              child: payments.isEmpty
+                                  ?Center(
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      const SizedBox(height: 8),
+      const Text("No payment data found."),
+    ],
+  ),
+)
+
+                                  : ListView.builder(
+                                      itemCount: payments.length,
+                                      itemBuilder: (context, index) =>
+                                          _buildPaymentTile(payments[index]),
+                                    ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -130,122 +231,93 @@ Future<void> fetchPayments() async {
     );
   }
 
- Widget _buildPaymentTile(PaymentAssignment item) {
-  return Card(
-    elevation: 3,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    margin: const EdgeInsets.symmetric(vertical: 8),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          /// Fee Name & Class
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  item.feeName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E3192),
+  Widget _buildPaymentTile(PaymentAssignment item) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    item.feeName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2E3192),
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'Class ${item.className}-${item.section}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    color: Color(0xFF2E3192),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Class ${item.className}-${item.section}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: Color(0xFF2E3192),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          /// Amount and Due Date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Amount: ₹${item.baseAmount}",
-                style: const TextStyle(fontSize: 15),
-              ),
-              Text(
-                "Due: ${item.dueDate.split('T')[0]}",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.redAccent,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          /// Pending Students
-          if (item.pendingCount > 0)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Pending Students (${item.pendingCount}):",
+                  "Amount: ₹${item.baseAmount}",
+                  style: const TextStyle(fontSize: 15),
+                ),
+                Text(
+                  "Due: ${item.dueDate.split('T')[0]}",
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
                     fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.redAccent,
                   ),
                 ),
-                const SizedBox(height: 4),
-                ...item.pendingStudents.map((s) => Padding(
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (item.pendingCount > 0)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Pending Students (${item.pendingCount}):",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...item.pendingStudents.map(
+                    (s) => Padding(
                       padding: const EdgeInsets.only(left: 8.0, bottom: 2),
                       child: Text(
                         "- ${s.fullName} (${s.admissionNo})",
                         style: const TextStyle(fontSize: 13),
                       ),
-                    )),
-              ],
-            ),
-
-          /// Pay Button
-          // const SizedBox(height: 10),
-          // if (item.upiLink != null && item.upiLink!.isNotEmpty)
-          //   Align(
-          //     alignment: Alignment.centerRight,
-          //     child: ElevatedButton.icon(
-          //       onPressed: () {
-          //         // Add functionality to launch UPI URL
-          //       },
-          //       icon: const Icon(Icons.payment),
-          //       label: const Text("Pay Now"),
-          //       style: ElevatedButton.styleFrom(
-          //         backgroundColor: const Color(0xFF2E3192),
-          //         foregroundColor: Colors.white,
-          //         padding: const EdgeInsets.symmetric(
-          //             horizontal: 20, vertical: 12),
-          //         shape: RoundedRectangleBorder(
-          //           borderRadius: BorderRadius.circular(8),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-        ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

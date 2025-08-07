@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/payment_assignment_model.dart';
+import '../models/teacher_payment_model.dart';
 
 class PaymentService {
   static const String _baseUrl =
@@ -28,6 +28,7 @@ class PaymentService {
       url,
       headers: {
         'accept': 'application/json',
+        
         'Authorization': 'Bearer $token',
       },
     );
