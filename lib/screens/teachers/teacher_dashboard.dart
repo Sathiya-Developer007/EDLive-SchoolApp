@@ -13,6 +13,7 @@ import 'teacher_exam_page.dart';
 import 'teacher_transport.dart';
 import 'teacher_syllabus_page.dart';
 import 'teacher_events_holidays_page.dart';
+import 'teacher_payments_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -115,15 +116,26 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(
-                      child: DashboardTile(
-                        title: 'Payments',
-                        iconPath: 'assets/icons/payments.svg',
-                        color: const Color(0xFFC0DD94),
-                        badgeCount: 3,
-                        centerContent: true,
-                      ),
-                    ),
+                   Expanded(
+  child: GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const TeacherPaymentsPage(),
+        ),
+      );
+    },
+    child: DashboardTile(
+      title: 'Payments',
+      iconPath: 'assets/icons/payments.svg',
+      color: const Color(0xFFC0DD94),
+      badgeCount: 3,
+      centerContent: true,
+    ),
+  ),
+),
+
                     const SizedBox(width: 12),
                    Expanded(
   child: GestureDetector(
