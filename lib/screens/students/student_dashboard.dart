@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
-import 'package:school_app/providers/teacher_settings_provider.dart';
+import 'package:school_app/providers/student_settings_provider.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
 import 'student_timetable.dart';
@@ -53,7 +53,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final child = widget.childData;
-    final settings = Provider.of<SettingsProvider>(context);
+    final settings = Provider.of<StudentSettingsProvider>(context);
 
     return Column(
       children: [
@@ -289,55 +289,63 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   badgeCount: 1,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const StudentSchoolBusPage(),
-                            ),
-                          );
-                        },
-                        child: DashboardTile(
-                          title: 'School bus',
-                          subtitle: '7:45 AM',
-                          iconPath: 'assets/icons/transport.svg',
-                          color: const Color(0xFFCCCCFF),
-                          centerContent: true,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DashboardTile(
-                        title: 'Message',
-                        iconPath: 'assets/icons/message.svg',
-                        color: const Color(0xFFA3D3A7),
-                        centerContent: true,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                DashboardTile(
-                  title: 'Syllabus',
-                  subtitle: 'Updated on 1 Jan 2019',
-                  iconPath: 'assets/icons/syllabus.svg',
-                  color: const Color(0xFF91C1BC),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const StudentSyllabusPage(),
-                      ),
-                    );
-                  },
-                ),
+         Row(
+  children: [
+    if (settings.showSchoolBus) // ✅ Toggle check
+      Expanded(
+        child: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const StudentSchoolBusPage(),
+              ),
+            );
+          },
+          child: DashboardTile(
+            title: 'School bus',
+            subtitle: '7:45 AM',
+            iconPath: 'assets/icons/transport.svg',
+            color: const Color(0xFFCCCCFF),
+            centerContent: true,
+            onClose: () => settings.updateVisibility('School bus', false), // ✅ Close button
+          ),
+        ),
+      ),
+    if (settings.showSchoolBus && settings.showMessage)
+      const SizedBox(width: 12),
+    if (settings.showMessage) // ✅ Toggle check
+      Expanded(
+        child: DashboardTile(
+          title: 'Message',
+          iconPath: 'assets/icons/message.svg',
+          color: const Color(0xFFA3D3A7),
+          centerContent: true,
+          onClose: () => settings.updateVisibility('Message', false), // ✅ Close button
+        ),
+      ),
+  ],
+),
 
+const SizedBox(height: 12),
+
+/// Syllabus
+if (settings.showSyllabus) // 👈 Step 3 — Added this check
+  DashboardTile(
+    title: 'Syllabus',
+    subtitle: 'Updated on 1 Jan 2019',
+    iconPath: 'assets/icons/syllabus.svg',
+    color: const Color(0xFF91C1BC),
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const StudentSyllabusPage(),
+        ),
+      );
+    },
+    onClose: () => settings.updateVisibility('Syllabus', false), // Optional close button
+  ),
                 const SizedBox(height: 12),
                 if (settings.showResources) ...[
                   DashboardTile(

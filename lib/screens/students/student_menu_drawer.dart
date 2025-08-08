@@ -180,6 +180,9 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
   );
 }
 
+else if (item['label'] == 'Settings') {
+  Navigator.pushNamed(context, '/settings');
+}
 
                         ;
                       },

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +22,8 @@ import 'screens/students/select_child_page.dart';
 import 'screens/students/student_todo_list_screen.dart';
 import 'package:school_app/screens/students/student_profile_page.dart';
 import 'screens/students/student_timetable.dart';
+
+import 'providers/student_settings_provider.dart';
 
 import 'providers/teacher_task_provider.dart'; // For teacher
 import 'providers/student_task_provider.dart'; // For student
@@ -58,6 +62,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TimetableProvider()),
         ChangeNotifierProvider(create: (_) => StudentTimetableProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ChangeNotifierProvider(create: (_) => StudentSettingsProvider()),
       ],
       child: MyApp(
         token: token,

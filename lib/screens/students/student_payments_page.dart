@@ -9,6 +9,7 @@ import 'package:school_app/widgets/student_app_bar.dart';
 
 import 'package:school_app/models/student_payment_model.dart';
 import 'package:school_app/services/student_payment_service.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class StudentPaymentsPage extends StatefulWidget {
   final String studentId;
@@ -223,7 +224,7 @@ Future<void> _loadPayments() async {
                   ),
                   onPressed: () {
                     if (payment.upiLink != null) {
-                      launchUrl(Uri.parse(payment.upiLink!));
+                      _showQRDialog(context, payment.upiLink!);
                     }
                   },
                   child: const Text("Pay", style: TextStyle(color: Colors.white)),
@@ -235,6 +236,79 @@ Future<void> _loadPayments() async {
       },
     );
   }
+
+  void _showQRDialog(BuildContext context, String upiLink) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Scan to Pay",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: QrImageView(
+                    data: upiLink,
+                    version: QrVersions.auto,
+                    size: 200,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "Or pay via link",
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.lightBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  onPressed: () {
+                    launchUrl(Uri.parse(upiLink));
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    "Open Payment Link",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Close"),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildHistorySection() {
     final paidPayments = _payments.where((p) => p.paymentStatus == "paid").toList();
