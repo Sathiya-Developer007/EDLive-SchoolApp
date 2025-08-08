@@ -7,6 +7,7 @@ import 'student_exams_screen.dart';
 import 'student_syllabus_page.dart'; // ✅ Adjust the path if needed
 import 'student_events_holidays_page.dart'; // Adjust the path as needed
 import 'student_school_bus_page.dart';
+import 'student_settings_page.dart';
 
 class StudentMenuDrawer extends StatefulWidget {
   const StudentMenuDrawer({super.key});
@@ -35,7 +36,7 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
     },
     {'icon': 'school.svg', 'label': 'My School', 'route': '/school'},
     {'icon': 'calendar.svg', 'label': 'Calendar', 'route': '/calendar'},
-    {'icon': 'settings.svg', 'label': 'Settings', 'route': '/settings'},
+{'icon': 'settings.svg', 'label': 'Settings', 'route': '/student-settings'},
     {'icon': 'logout.svg', 'label': 'Logout', 'route': '/'},
   ];
 
@@ -179,10 +180,10 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
     ),
   );
 }
-
 else if (item['label'] == 'Settings') {
-  Navigator.pushNamed(context, '/settings');
+  Navigator.pushNamed(context, '/student-settings');
 }
+
 
                         ;
                       },

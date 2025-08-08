@@ -16,14 +16,14 @@ class StudentSettingsPage extends StatefulWidget {
 class _StudentSettingsPageState extends State<StudentSettingsPage> {
   int _selectedTab = 0;
 
-  final List<String> settingsKeys = [
+  final settingsKeys = [
     'Achievements',
     'My to-do list',
     'PTA',
     'Library',
     'Syllabus',
-    'Message', // ✅ Added
-    'School bus', // ✅ Optional
+    'Message',
+    'School bus',
     'Special care',
     'Co curricular activities',
     'Quick notes',
@@ -32,7 +32,7 @@ class _StudentSettingsPageState extends State<StudentSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = Provider.of<StudentSettingsProvider>(context);
+final settings = context.watch<StudentSettingsProvider>();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -50,17 +50,23 @@ class _StudentSettingsPageState extends State<StudentSettingsPage> {
           backgroundColor: Colors.white,
           drawer: const StudentMenuDrawer(),
           body: Column(
+            mainAxisSize: MainAxisSize.min, // Add this here
             children: [
-              const StudentAppBar(),
+              // Wrap StudentAppBar in SizedBox to give fixed height
+              const SizedBox(height: 80, child: StudentAppBar()),
+
               _buildHeader(),
               _buildTabBar(),
-              Expanded(
+
+              Flexible( // Use Flexible with loose fit instead of Expanded
+                fit: FlexFit.loose,
                 child: _selectedTab == 0
                     ? ListView.builder(
                         itemCount: settingsKeys.length,
                         itemBuilder: (context, index) {
                           final key = settingsKeys[index];
-                          bool value;
+                          bool value = false;
+
                           switch (key) {
                             case 'Achievements':
                               value = settings.showAchievements;
@@ -79,11 +85,10 @@ class _StudentSettingsPageState extends State<StudentSettingsPage> {
                               break;
                             case 'Message':
                               value = settings.showMessage;
-                              break; // ✅ Added
+                              break;
                             case 'School bus':
                               value = settings.showSchoolBus;
-                              break; // ✅ Optional
-
+                              break;
                             case 'Special care':
                               value = settings.showSpecialCare;
                               break;
@@ -110,33 +115,22 @@ class _StudentSettingsPageState extends State<StudentSettingsPage> {
                                   splashFactory: NoSplash.splashFactory,
                                   switchTheme: SwitchThemeData(
                                     thumbColor:
-                                        MaterialStateProperty.resolveWith<
-                                          Color
-                                        >(
-                                          (states) =>
-                                              states.contains(
-                                                MaterialState.selected,
-                                              )
-                                              ? Colors.white
-                                              : Colors.grey.shade400,
-                                        ),
+                                        MaterialStateProperty.resolveWith<Color>(
+                                      (states) => states.contains(MaterialState.selected)
+                                          ? Colors.white
+                                          : Colors.grey.shade400,
+                                    ),
                                     trackColor:
-                                        MaterialStateProperty.resolveWith<
-                                          Color
-                                        >(
-                                          (states) =>
-                                              states.contains(
-                                                MaterialState.selected,
-                                              )
-                                              ? const Color(0xFF77FF00)
-                                              : Colors.grey.shade300,
-                                        ),
+                                        MaterialStateProperty.resolveWith<Color>(
+                                      (states) => states.contains(MaterialState.selected)
+                                          ? const Color(0xFF77FF00)
+                                          : Colors.grey.shade300,
+                                    ),
                                   ),
                                 ),
                                 child: SwitchListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
+                                  contentPadding:
+                                      const EdgeInsets.symmetric(horizontal: 16),
                                   title: Text(key),
                                   value: value,
                                   tileColor: Colors.transparent,

@@ -289,11 +289,16 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   badgeCount: 1,
                 ),
                 const SizedBox(height: 12),
-         Row(
+        Row(
   children: [
-    if (settings.showSchoolBus) // ✅ Toggle check
+    if (settings.showSchoolBus)
       Expanded(
-        child: GestureDetector(
+        child: DashboardTile(
+          title: 'School bus',
+          subtitle: '7:45 AM',
+          iconPath: 'assets/icons/transport.svg',
+          color: const Color(0xFFCCCCFF),
+          centerContent: true,
           onTap: () {
             Navigator.push(
               context,
@@ -302,26 +307,19 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               ),
             );
           },
-          child: DashboardTile(
-            title: 'School bus',
-            subtitle: '7:45 AM',
-            iconPath: 'assets/icons/transport.svg',
-            color: const Color(0xFFCCCCFF),
-            centerContent: true,
-            onClose: () => settings.updateVisibility('School bus', false), // ✅ Close button
-          ),
+          onClose: () => settings.updateVisibility('School bus', false),
         ),
       ),
     if (settings.showSchoolBus && settings.showMessage)
       const SizedBox(width: 12),
-    if (settings.showMessage) // ✅ Toggle check
+    if (settings.showMessage)
       Expanded(
         child: DashboardTile(
           title: 'Message',
           iconPath: 'assets/icons/message.svg',
           color: const Color(0xFFA3D3A7),
           centerContent: true,
-          onClose: () => settings.updateVisibility('Message', false), // ✅ Close button
+          onClose: () => settings.updateVisibility('Message', false),
         ),
       ),
   ],
