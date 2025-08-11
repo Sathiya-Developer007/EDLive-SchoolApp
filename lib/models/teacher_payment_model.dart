@@ -74,3 +74,24 @@ class PendingStudent {
     );
   }
 }
+
+
+class TeacherClass {
+  final int classId;
+  final String className;
+  final String section;
+
+  TeacherClass({
+    required this.classId,
+    required this.className,
+    required this.section,
+  });
+
+  factory TeacherClass.fromJson(Map<String, dynamic> json) {
+    return TeacherClass(
+      classId: json['class_id'],
+      className: json['class'],
+      section: json['section'],
+    );
+  }
+}

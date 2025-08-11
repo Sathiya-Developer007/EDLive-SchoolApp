@@ -20,20 +20,68 @@ class _TeacherPaymentsPageState extends State<TeacherPaymentsPage> {
  List<PaymentAssignment> payments = [];
   bool isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    fetchPayments();
+ @override
+void initState() {
+  super.initState();
+  loadData();
+}
+
+Future<void> loadData() async {
+  setState(() => isLoading = true);
+
+  final classIds = await fetchAssignedClasses();
+  if (classIds.isEmpty) {
+    setState(() {
+      payments = [];
+      isLoading = false;
+    });
+    return;
   }
+
+  await fetchPayments();
+}
+
 
   // List<PaymentAssignment> payments = [];
 
+  Future<List<int>> fetchAssignedClasses() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token'); // assuming you store auth token
+
+    final response = await http.get(
+      Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/staff/staff/teacher/class'),
+      headers: {
+        'accept': 'application/json',
+        'Authorization': 'Bearer $token', // if auth required
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.map<int>((item) => item['class_id'] as int).toList();
+    } else {
+      throw Exception('Failed to load classes');
+    }
+  } catch (e) {
+    print("Error fetching classes: $e");
+    return [];
+  }
+}
+
+
 Future<void> fetchPayments() async {
   try {
+    // Step 1: Get teacher's assigned classes
+    final teacherClasses = await TeacherClassService.fetchTeacherClasses();
+    final classIds = teacherClasses.map((c) => c.classId).toList();
+
+    // Step 2: Call payment API for these classes
     final data = await PaymentService.fetchPaymentAssignments(
-      classIds: [1, 2],
+      classIds: classIds,
       academicYear: '2025-2026',
     );
+
     setState(() {
       payments = data;
       isLoading = false;
@@ -43,6 +91,8 @@ Future<void> fetchPayments() async {
     print("Error: $e");
   }
 }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

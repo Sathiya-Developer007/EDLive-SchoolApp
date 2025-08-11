@@ -45,3 +45,33 @@ class PaymentService {
     }
   }
 }
+
+
+class TeacherClassService {
+  static const String _baseUrl =
+      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000';
+
+  static Future<List<TeacherClass>> fetchTeacherClasses() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('auth_token');
+
+    if (token == null) throw Exception("Token not found");
+
+    final url = Uri.parse('$_baseUrl/api/staff/staff/teacher/class');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = json.decode(response.body);
+      return jsonData.map((e) => TeacherClass.fromJson(e)).toList();
+    } else {
+      throw Exception('Failed to fetch teacher classes');
+    }
+  }
+}
