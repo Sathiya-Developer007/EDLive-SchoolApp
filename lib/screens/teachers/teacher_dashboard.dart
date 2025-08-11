@@ -15,6 +15,7 @@ import 'teacher_syllabus_page.dart';
 import 'teacher_events_holidays_page.dart';
 import 'teacher_payments_page.dart';
 import 'teacher_pta_page.dart';
+import 'teacher_message_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -180,13 +181,20 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
 
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DashboardTile(
-                        title: 'Message',
-                        iconPath: 'assets/icons/message.svg',
-                        color: const Color(0xFFE8B3DE),
-                        centerContent: true,
-                      ),
-                    ),
+  child: DashboardTile(
+    title: 'Message',
+    iconPath: 'assets/icons/message.svg',
+    color: const Color(0xFFE8B3DE),
+    centerContent: true,
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TeacherMessagePage()),
+      );
+    },
+  ),
+),
+
                   ],
                 ),
                 const SizedBox(height: 12),

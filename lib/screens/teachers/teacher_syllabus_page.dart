@@ -229,7 +229,7 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
             'assets/icons/arrow_right.svg',
             height: 18,
             width: 18,
-            color: Colors.black,
+            color: Colors.grey,
           ),
         ],
       ),

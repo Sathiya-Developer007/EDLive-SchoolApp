@@ -16,23 +16,19 @@ class StudentSettingsPage extends StatefulWidget {
 class _StudentSettingsPageState extends State<StudentSettingsPage> {
   int _selectedTab = 0;
 
+  // ✅ Only keep needed settings
   final settingsKeys = [
     'Achievements',
-    'My to-do list',
     'PTA',
-    'Library',
     'Syllabus',
     'Message',
     'School bus',
-    'Special care',
     'Co curricular activities',
-    'Quick notes',
-    'Resources',
   ];
 
   @override
   Widget build(BuildContext context) {
-final settings = context.watch<StudentSettingsProvider>();
+    final settings = context.watch<StudentSettingsProvider>();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -50,15 +46,13 @@ final settings = context.watch<StudentSettingsProvider>();
           backgroundColor: Colors.white,
           drawer: const StudentMenuDrawer(),
           body: Column(
-            mainAxisSize: MainAxisSize.min, // Add this here
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Wrap StudentAppBar in SizedBox to give fixed height
               const SizedBox(height: 80, child: StudentAppBar()),
-
               _buildHeader(),
               _buildTabBar(),
 
-              Flexible( // Use Flexible with loose fit instead of Expanded
+              Flexible(
                 fit: FlexFit.loose,
                 child: _selectedTab == 0
                     ? ListView.builder(
@@ -67,18 +61,13 @@ final settings = context.watch<StudentSettingsProvider>();
                           final key = settingsKeys[index];
                           bool value = false;
 
+                          // ✅ Map keys to provider values
                           switch (key) {
                             case 'Achievements':
                               value = settings.showAchievements;
                               break;
-                            case 'My to-do list':
-                              value = settings.showTodo;
-                              break;
                             case 'PTA':
                               value = settings.showPTA;
-                              break;
-                            case 'Library':
-                              value = settings.showLibrary;
                               break;
                             case 'Syllabus':
                               value = settings.showSyllabus;
@@ -89,20 +78,9 @@ final settings = context.watch<StudentSettingsProvider>();
                             case 'School bus':
                               value = settings.showSchoolBus;
                               break;
-                            case 'Special care':
-                              value = settings.showSpecialCare;
-                              break;
                             case 'Co curricular activities':
                               value = settings.showCoCurricular;
                               break;
-                            case 'Quick notes':
-                              value = settings.showQuickNotes;
-                              break;
-                            case 'Resources':
-                              value = settings.showResources;
-                              break;
-                            default:
-                              value = false;
                           }
 
                           return Column(
@@ -140,7 +118,11 @@ final settings = context.watch<StudentSettingsProvider>();
                                 ),
                               ),
                               if (index < settingsKeys.length - 1)
-                                const Divider(height: 0, indent: 16),
+                                const Divider(
+                                  height: 0,
+                                  indent: 16,
+                                  color: Color(0xFFE6E6E6), // ✅ Divider color
+                                ),
                             ],
                           );
                         },
