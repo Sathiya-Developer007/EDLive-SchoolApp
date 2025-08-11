@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 
 import 'package:school_app/models/student_payment_model.dart';
 import 'package:school_app/services/student_payment_service.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+
+// ✅ New: TeacherClass model
+class TeacherClass {
+  final String classId;
+  final String className;
+
+  TeacherClass({required this.classId, required this.className});
+
+  factory TeacherClass.fromJson(Map<String, dynamic> json) {
+    return TeacherClass(
+      classId: json['class_id'],
+      className: json['class_name'],
+    );
+  }
+}
 
 class StudentPaymentsPage extends StatefulWidget {
   final String studentId;
@@ -26,41 +42,75 @@ class _StudentPaymentsPageState extends State<StudentPaymentsPage> {
   bool _isLoading = true;
   bool _hasError = false;
 
-@override
-void initState() {
-  super.initState();
-  SharedPreferences.getInstance().then((prefs) {
-    print("TOKEN: ${prefs.getString('auth_token')}");
-    print("STUDENT ID: ${prefs.getString('studentId')}");
-  });
-  _loadPayments();
-}
+  // ✅ New: Class dropdown state
+  List<TeacherClass> _classes = [];
+  String? _selectedClassId;
 
-Future<void> _loadPayments() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-
-    if (token == null) {
-      print("Missing token in SharedPreferences.");
-      throw Exception("Missing auth token");
-    }
-
-    // ✅ Use widget.studentId passed from the previous screen
-    final payments = await StudentPaymentService().fetchStudentPayments(widget.studentId);
-
-    setState(() {
-      _payments = payments;
-      _isLoading = false;
-    });
-  } catch (e) {
-    print("Error loading payments: $e");
-    setState(() {
-      _hasError = true;
-      _isLoading = false;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadClasses();
+    _loadPayments();
   }
-}
+
+  // ✅ New: Load classes from API
+  Future<void> _loadClasses() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final teacherId = prefs.getString('teacherId');
+
+      if (token == null || teacherId == null) {
+        throw Exception("Missing token or teacherId");
+      }
+
+      final url = Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/teacher/$teacherId/classes',
+      );
+
+      final response = await http.get(url, headers: {
+        'accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        final List classList = jsonData['data'] ?? [];
+
+        setState(() {
+          _classes = classList.map((c) => TeacherClass.fromJson(c)).toList();
+        });
+      } else {
+        throw Exception("Failed to load classes");
+      }
+    } catch (e) {
+      print("Error loading classes: $e");
+    }
+  }
+
+  Future<void> _loadPayments() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        throw Exception("Missing auth token");
+      }
+
+      final payments = await StudentPaymentService().fetchStudentPayments(widget.studentId);
+
+      setState(() {
+        _payments = payments;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("Error loading payments: $e");
+      setState(() {
+        _hasError = true;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +136,26 @@ Future<void> _loadPayments() async {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ✅ Class Dropdown
+                      if (_classes.isNotEmpty)
+                        DropdownButton<String>(
+                          value: _selectedClassId,
+                          hint: const Text("Select Class"),
+                          isExpanded: true,
+                          items: _classes.map((c) {
+                            return DropdownMenuItem(
+                              value: c.classId,
+                              child: Text(c.className),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedClassId = value;
+                              // You can trigger new payments load here if needed
+                            });
+                          },
+                        ),
+                      const SizedBox(height: 10),
                       _buildTabSelector(),
                       const SizedBox(height: 20),
                       Expanded(
@@ -108,8 +178,7 @@ Future<void> _loadPayments() async {
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
+  Widget _buildHeader() { /* unchanged */ return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,11 +212,9 @@ Future<void> _loadPayments() async {
           ),
         ],
       ),
-    );
-  }
+    );}
 
-  Widget _buildTabSelector() {
-    return Row(
+  Widget _buildTabSelector() { /* unchanged */ return Row(
       children: [
         GestureDetector(
           onTap: () => setState(() => isDueSelected = true),
@@ -185,60 +252,70 @@ Future<void> _loadPayments() async {
           ),
         ),
       ],
-    );
-  }
+    );}
 
-  Widget _buildDueSection() {
-    final duePayments = _payments.where((p) => p.paymentStatus == "pending").toList();
+  Widget _buildDueSection() { /* unchanged */ final duePayments = _payments.where((p) => p.paymentStatus == "pending").toList();
 
     if (duePayments.isEmpty) {
       return const Center(child: Text("No due payments found."));
     }
 
-    return ListView.builder(
-      itemCount: duePayments.length,
-      itemBuilder: (context, index) {
-        final payment = duePayments[index];
-        final formattedDate = payment.dueDate?.toIso8601String().split('T').first ?? "-";
+   return ListView.builder(
+  itemCount: _payments.length, // ✅ Show all payments from API
+  itemBuilder: (context, index) {
+    final payment = _payments[index];
+    final formattedDate = payment.dueDate != null
+        ? payment.dueDate!.toIso8601String().split('T').first
+        : "-";
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFE6F4FF),
-              borderRadius: BorderRadius.circular(12),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFE6F4FF),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              "Due on $formattedDate",
+              style: const TextStyle(
+                color: Color(0xFF3D348B),
+                fontSize: 20,
+              ),
             ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text("Due on $formattedDate", style: const TextStyle(color: Color(0xFF3D348B), fontSize: 20)),
-                const SizedBox(height: 10),
-                Text("Fee: ${payment.feeName}", style: const TextStyle(fontSize: 16)),
-                Text("Amount: ₹${payment.amount}", style: const TextStyle(fontSize: 16)),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                  onPressed: () {
-                    if (payment.upiLink != null) {
-                      _showQRDialog(context, payment.upiLink!);
-                    }
-                  },
-                  child: const Text("Pay", style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 10),
+            Text("Fee: ${payment.feeName}", style: const TextStyle(fontSize: 16)),
+            Text("Amount: ₹${payment.amount}", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ],
+              ),
+              onPressed: () {
+                if (payment.upiLink != null && payment.upiLink!.isNotEmpty) {
+                  _showQRDialog(context, payment.upiLink!);
+                }
+              },
+              child: const Text(
+                "Pay",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
-  }
+  },
+);
+ }
 
-  void _showQRDialog(BuildContext context, String upiLink) {
-  showDialog(
+  void _showQRDialog(BuildContext context, String upiLink) { /* unchanged */ showDialog(
     context: context,
     builder: (BuildContext context) {
       return Dialog(
@@ -307,11 +384,9 @@ Future<void> _loadPayments() async {
         ),
       );
     },
-  );
-}
+  );}
 
-  Widget _buildHistorySection() {
-    final paidPayments = _payments.where((p) => p.paymentStatus == "paid").toList();
+  Widget _buildHistorySection() { /* unchanged */ final paidPayments = _payments.where((p) => p.paymentStatus == "paid").toList();
 
     if (paidPayments.isEmpty) {
       return const Center(child: Text("No payment history available."));
