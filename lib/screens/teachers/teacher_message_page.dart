@@ -65,163 +65,157 @@ class _TeacherMessagePageState extends State<TeacherMessagePage> {
         drawer: MenuDrawer(),
        body: SafeArea(
   child: SingleChildScrollView(
-    child: ConstrainedBox(
-      constraints: BoxConstraints(
-        minHeight: MediaQuery.of(context).size.height,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-                  // Back and Title
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () {},
-                      ),
-                      const SizedBox(width: 8),
-                      SvgPicture.asset(
-                        'assets/icons/message.svg',
-                        width: 24,
-                        height: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Message',
-                        style:
-                            TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Card Section
-                  Card(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Write message History",
-                              style: TextStyle(
-                                  color: Colors.blue[800],
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 10),
-
-                          // To Dropdown
-                          DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: 'To',
-                              border: OutlineInputBorder(),
-                            ),
-                            value: selectedTo,
-                            items: const [
-                              DropdownMenuItem(
-                                  value: 'Specific Classes',
-                                  child: Text('Specific Classes')),
-                              DropdownMenuItem(
-                                  value: 'Select a group',
-                                  child: Text('Select a group')),
-                            ],
-                            onChanged: (val) {
-                              setState(() {
-                                selectedTo = val;
-                                showAccordion = val == "Specific Classes";
-                              });
-                            },
+    child: Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+                    // Back and Title
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: () {},
+                        ),
+                        const SizedBox(width: 8),
+                        SvgPicture.asset(
+                          'assets/icons/message.svg',
+                          width: 24,
+                          height: 24,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Message',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(height: 12),
-
-                          // Select Classes Accordion
-                          if (showAccordion) _buildAccordion(),
-
-                          const SizedBox(height: 15),
-
-                          const Divider(thickness: 1),
-                          const SizedBox(height: 10),
-                          const Center(
-                              child: Text("OR",
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold))),
-                          const SizedBox(height: 10),
-
-                          // Student Search
-                         // Student Search (only show when 'Select a group' is chosen)
-if (selectedTo == 'Select a group')
-  Column(
-    children: [
-      TextFormField(
-        controller: studentSearchController,
-        decoration: const InputDecoration(
-          labelText:
-              "Enter student ID No, or parent's mobile number",
-          border: OutlineInputBorder(),
-        ),
-        onTap: closeAccordion,
-      ),
-      const SizedBox(height: 15),
-    ],
-  ),
-
-
-                          // Compose
-                          TextFormField(
-                            controller: messageController,
-                            maxLines: 4,
-                            decoration: const InputDecoration(
-                              labelText: "Type your message here",
-                              border: OutlineInputBorder(),
-                            ),
-                            onTap: closeAccordion,
-                          ),
-                          const SizedBox(height: 15),
-
-                          // Send options
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: sendSMS,
-                                onChanged: (val) =>
-                                    setState(() => sendSMS = val!),
-                              ),
-                              const Text("SMS"),
-                              const SizedBox(width: 8),
-                              Checkbox(
-                                value: sendWhatsApp,
-                                onChanged: (val) =>
-                                    setState(() => sendWhatsApp = val!),
-                              ),
-                              const Text("Whatsapp"),
-                              const SizedBox(width: 8),
-                              Checkbox(
-                                value: sendEmail,
-                                onChanged: (val) =>
-                                    setState(() => sendEmail = val!),
-                              ),
-                              const Text("Email"),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-
-                          // File Upload
-                          OutlinedButton(
-                            onPressed: () {},
-                            child: const Text("Select file"),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text("Document.pdf"),
-                          const Text("Image.jpg"),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 10),
 
-                 // File Upload
+                    // Card Section
+                    Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Write message History",
+                              style: TextStyle(
+                                color: Colors.blue[800],
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // To Dropdown
+                            DropdownButtonFormField<String>(
+                              decoration: const InputDecoration(
+                                labelText: 'To',
+                                border: OutlineInputBorder(),
+                              ),
+                              value: selectedTo,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Specific Classes',
+                                  child: Text('Specific Classes'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Select a group',
+                                  child: Text('Select a group'),
+                                ),
+                              ],
+                              onChanged: (val) {
+                                setState(() {
+                                  selectedTo = val;
+                                  showAccordion = val == "Specific Classes";
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Select Classes Accordion
+                            if (showAccordion) _buildAccordion(),
+
+                            const SizedBox(height: 15),
+
+                            const Divider(thickness: 1),
+                            const SizedBox(height: 10),
+                            const Center(
+                              child: Text(
+                                "OR",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Student Search
+                            // Student Search (only show when 'Select a group' is chosen)
+                            if (selectedTo == 'Select a group')
+                              Column(
+                                children: [
+                                  TextFormField(
+                                    controller: studentSearchController,
+                                    decoration: const InputDecoration(
+                                      labelText:
+                                          "Enter student ID No, or parent's mobile number",
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    onTap: closeAccordion,
+                                  ),
+                                  const SizedBox(height: 15),
+                                ],
+                              ),
+
+                            // Compose
+                            TextFormField(
+                              controller: messageController,
+                              maxLines: 4,
+                              decoration: const InputDecoration(
+                                labelText: "Type your message here",
+                                border: OutlineInputBorder(),
+                              ),
+                              onTap: closeAccordion,
+                            ),
+                            const SizedBox(height: 15),
+
+                            // Send options
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: sendSMS,
+                                  onChanged: (val) =>
+                                      setState(() => sendSMS = val!),
+                                ),
+                                const Text("SMS"),
+                                const SizedBox(width: 8),
+                                Checkbox(
+                                  value: sendWhatsApp,
+                                  onChanged: (val) =>
+                                      setState(() => sendWhatsApp = val!),
+                                ),
+                                const Text("Whatsapp"),
+                                const SizedBox(width: 8),
+                                Checkbox(
+                                  value: sendEmail,
+                                  onChanged: (val) =>
+                                      setState(() => sendEmail = val!),
+                                ),
+                                const Text("Email"),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            // File Upload
+                            // File Upload
+                           // File Upload
 OutlinedButton(
   onPressed: () {},
   child: const Text("Select file"),
@@ -254,12 +248,13 @@ Row(
   ],
 ),
    ],
+                ),
               ),
             ),
-          ),
+         ] ),
         ),
       ),
-    ));
+    )));
   }
 
   Widget _buildAccordion() {
@@ -293,10 +288,7 @@ Row(
           value: isClassChecked(label),
           onChanged: (_) => toggleWholeClass(label),
         ),
-        SizedBox(
-          width: 30,
-          child: Text(label),
-        ),
+        SizedBox(width: 30, child: Text(label)),
         Expanded(
           child: Wrap(
             spacing: 6,
@@ -325,7 +317,7 @@ Row(
               );
             }),
           ),
-        )
+        ),
       ],
     );
   }
