@@ -16,6 +16,10 @@ import 'teacher_events_holidays_page.dart';
 import 'teacher_payments_page.dart';
 import 'teacher_pta_page.dart';
 import 'teacher_message_page.dart';
+import 'teacher_resource_page.dart';
+import 'teacher_report_page.dart';
+
+
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -74,12 +78,19 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         },
                         onClose: () => settings.updateVisibility('My to-do list', false),
                       ),
-                    DashboardTile(
-                      title: 'Reports',
-                      subtitle: 'Progress report updated',
-                      iconPath: 'assets/icons/reports.svg',
-                      color: const Color(0xFFFFCCCC),
-                    ),
+                   DashboardTile(
+  title: 'Reports',
+  subtitle: 'Progress report updated',
+  iconPath: 'assets/icons/reports.svg',
+  color: const Color(0xFFFFCCCC),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TeacherReportPage()),
+    );
+  },
+),
+
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -286,14 +297,20 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         color: const Color(0xFFE6E6E6),
                         onClose: () => settings.updateVisibility('Quick notes', false),
                       ),
-                    if (settings.showResources)
-                      DashboardTile(
-                        title: 'Resources',
-                        subtitle: 'Useful links and study materials',
-                        iconPath: 'assets/icons/resources.svg',
-                        color: const Color(0xFFD8CAD8),
-                        onClose: () => settings.updateVisibility('Resources', false),
-                      ),
+                    DashboardTile(
+  title: 'Resources',
+  subtitle: 'Useful links and study materials',
+  iconPath: 'assets/icons/resources.svg',
+  color: const Color(0xFFD8CAD8),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TeacherResourcePage()),
+    );
+  },
+  onClose: () => settings.updateVisibility('Resources', false),
+)
+
                   ],
                 ),
               ],
