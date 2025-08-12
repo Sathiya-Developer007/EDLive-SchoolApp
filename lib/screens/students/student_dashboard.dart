@@ -17,6 +17,7 @@ import 'student_events_holidays_page.dart';
 import 'student_school_bus_page.dart';
 import 'teacher_list_page.dart';
 import 'student_payments_page.dart';
+import 'student_report_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -281,13 +282,22 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                 ),
 
                 const SizedBox(height: 12),
-                DashboardTile(
-                  title: 'Reports',
-                  subtitle: 'Progress report updated',
-                  iconPath: 'assets/icons/reports.svg',
-                  color: const Color(0xFFFFCCCC),
-                  badgeCount: 1,
-                ),
+               DashboardTile(
+  title: 'Reports',
+  subtitle: 'Progress report updated',
+  iconPath: 'assets/icons/reports.svg',
+  color: const Color(0xFFFFCCCC),
+  badgeCount: 1,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const StudentReportPage(),
+      ),
+    );
+  },
+),
+
                 const SizedBox(height: 12),
         Row(
   children: [
