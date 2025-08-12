@@ -13,6 +13,7 @@ class TeacherReportPage extends StatefulWidget {
 }
 
 class _TeacherReportPageState extends State<TeacherReportPage> {
+  String? selectedStudent;
   Map<String, Map<String, String>> marks = {
     "John Doe": {
       "Mathematics": "",
@@ -37,204 +38,335 @@ class _TeacherReportPageState extends State<TeacherReportPage> {
     },
   };
 
-  void _openMarkEntrySheet(String student) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: MarkEntryForm(
-            student: student,
-            subjectsMarks: marks[student]!,
-            onSave: (updatedMarks) {
-              setState(() {
-                marks[student] = updatedMarks;
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Marks saved for $student")),
-              );
-            },
-          ),
-        );
-      },
-    );
+  final TextEditingController searchController = TextEditingController();
+
+  List<String> get filteredStudents {
+    if (searchController.text.isEmpty) {
+      return marks.keys.toList();
+    }
+    return marks.keys
+        .where((s) =>
+            s.toLowerCase().contains(searchController.text.toLowerCase()))
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isWide = MediaQuery.of(context).size.width > 700;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: TeacherAppBar(),
       drawer: MenuDrawer(),
       body: Container(
-        color: const Color(0xFFFDCFD0), // pink background
-        padding: const EdgeInsets.all(16),
+        color: const Color(0xFFFDCFD0),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Back button
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Row(
-                children: const [
-                  Icon(Icons.arrow_back, size: 20, color: Colors.black),
-                  SizedBox(width: 6),
-                  Text("< Back", style: TextStyle(color: Colors.black, fontSize: 16)),
+            // Header + Term dropdown
+          Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    // Title row (icon + title)
+    Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2E3192),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SvgPicture.asset(
+            "assets/icons/reports.svg",
+            height: 36,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Text(
+          "Teacher Report",
+          style: TextStyle(
+            color: Color(0xFF2E3192),
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+
+    const SizedBox(height: 16),
+
+    // Bottom row with total class marks on left and term dropdown on right
+    Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Total Class Avg % Box
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade400),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade300,
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                "Total Class Avg %",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF666666),
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                "78%",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E3192),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Term Dropdown on right
+        ValueListenableBuilder<String>(
+          valueListenable: selectedTerm,
+          builder: (context, value, _) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade400),
+              ),
+              child: DropdownButton<String>(
+                value: value,
+                underline: const SizedBox(),
+                icon: const Icon(Icons.arrow_drop_down, size: 28),
+                items: const [
+                  DropdownMenuItem(value: "Final", child: Text("Final")),
+                  DropdownMenuItem(value: "Mid", child: Text("Mid")),
                 ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Header
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2E3192),
-                    borderRadius: BorderRadius.all(Radius.circular(6)),
-                  ),
-                  child: SvgPicture.asset(
-                    "assets/icons/reports.svg",
-                    height: 36,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  "Class Report",
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E3192),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              "Class Performance Summary",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: Color(0xFF2E3192),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Stats row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
-                _ReportStat(title: "Class", value: "10 A"),
-                _ReportStat(title: "Average Score", value: "78%"),
-                _ReportStat(title: "Top Student", value: "John D."),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            // Term selector with modern dropdown style
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Term:",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-                ValueListenableBuilder<String>(
-                  valueListenable: selectedTerm,
-                  builder: (context, value, _) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF4D4D4D)),
-                        color: Colors.white,
-                      ),
-                      child: DropdownButton<String>(
-                        value: value,
-                        underline: const SizedBox(),
-                        items: const [
-                          DropdownMenuItem(value: "Final", child: Text("Final")),
-                          DropdownMenuItem(value: "Mid", child: Text("Mid")),
-                        ],
-                        onChanged: (newVal) {
-                          if (newVal != null) selectedTerm.value = newVal;
-                        },
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF4D4D4D),
-                        ),
-                        icon: const Icon(Icons.arrow_drop_down, size: 28),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Students list as cards
-            Expanded(
-              child: ListView.builder(
-                itemCount: marks.length,
-                itemBuilder: (context, index) {
-                  final student = marks.keys.elementAt(index);
-                  return GestureDetector(
-                    onTap: () => _openMarkEntrySheet(student),
-                    child: Card(
-                      elevation: 3,
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: const Color(0xFF2E3192),
-                              child: Text(
-                                student.split(" ").map((e) => e[0]).take(2).join(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                student,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const Icon(Icons.edit, color: Color(0xFF2E3192)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
+                onChanged: (newVal) {
+                  if (newVal != null) selectedTerm.value = newVal;
                 },
+                style: const TextStyle(
+                  color: Color(0xFF4D4D4D),
+                  fontSize: 16,
+                ),
               ),
+            );
+          },
+        ),
+      ],
+    ),
+  ],
+),
+
+            const SizedBox(height: 24),
+
+            Expanded(
+              child: isWide
+                  ? Row(
+                      children: [
+                        // Left: Student list with search
+                        SizedBox(
+                          width: 300,
+                          child: Column(
+                            children: [
+                              TextField(
+                                controller: searchController,
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.search),
+                                  hintText: "Search students",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                ),
+                                onChanged: (val) {
+                                  setState(() {});
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              Expanded(
+                                child: ListView.builder(
+                                  itemCount: filteredStudents.length,
+                                  itemBuilder: (context, index) {
+                                    final student = filteredStudents[index];
+                                    final isSelected = student == selectedStudent;
+                                    return Card(
+                                      color: isSelected
+                                          ? const Color(0xFFEAEAEA)
+                                          : Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        side: BorderSide(
+                                          color: isSelected
+                                              ? const Color(0xFF2E3192)
+                                              : Colors.grey.shade300,
+                                          width: isSelected ? 2 : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      margin:
+                                          const EdgeInsets.symmetric(vertical: 6),
+                                      child: ListTile(
+                                        title: Text(
+                                          student,
+                                          style: TextStyle(
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: isSelected
+                                                ? const Color(0xFF2E3192)
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                        trailing: isSelected
+                                            ? const Icon(Icons.edit,
+                                                color: Color(0xFF2E3192))
+                                            : null,
+                                        onTap: () {
+                                          setState(() {
+                                            selectedStudent = student;
+                                          });
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 24),
+
+                        // Right: Mark entry form
+                        Expanded(
+                          child: selectedStudent == null
+                              ? Center(
+                                  child: Text(
+                                    "Select a student to enter marks",
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                )
+                              : MarkEntryCard(
+                                  student: selectedStudent!,
+                                  subjectsMarks: marks[selectedStudent!]!,
+                                  onSave: (updatedMarks) {
+                                    setState(() {
+                                      marks[selectedStudent!] = updatedMarks;
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content:
+                                              Text("Marks saved for $selectedStudent")),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        // On narrow screens, stacked layout:
+                        TextField(
+                          controller: searchController,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.search),
+                            hintText: "Search students",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          onChanged: (val) {
+                            setState(() {});
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: filteredStudents.length,
+                            itemBuilder: (context, index) {
+                              final student = filteredStudents[index];
+                              return Card(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                child: ListTile(
+                                  title: Text(student),
+                                  trailing: const Icon(Icons.edit, color: Color(0xFF2E3192)),
+                                  onTap: () {
+                                    setState(() {
+                                      selectedStudent = student;
+                                    });
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.white,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(20)),
+                                      ),
+                                      builder: (_) => Padding(
+                                        padding: EdgeInsets.only(
+                                          bottom: MediaQuery.of(context)
+                                              .viewInsets
+                                              .bottom,
+                                          left: 16,
+                                          right: 16,
+                                          top: 16,
+                                        ),
+                                        child: MarkEntryCard(
+                                          student: student,
+                                          subjectsMarks: marks[student]!,
+                                          onSave: (updatedMarks) {
+                                            setState(() {
+                                              marks[student] = updatedMarks;
+                                            });
+                                            Navigator.pop(context);
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(
+                                                      "Marks saved for $student")),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -243,13 +375,12 @@ class _TeacherReportPageState extends State<TeacherReportPage> {
   }
 }
 
-// Widget for marks entry form inside bottom sheet
-class MarkEntryForm extends StatefulWidget {
+class MarkEntryCard extends StatefulWidget {
   final String student;
   final Map<String, String> subjectsMarks;
   final void Function(Map<String, String>) onSave;
 
-  const MarkEntryForm({
+  const MarkEntryCard({
     required this.student,
     required this.subjectsMarks,
     required this.onSave,
@@ -257,10 +388,10 @@ class MarkEntryForm extends StatefulWidget {
   });
 
   @override
-  State<MarkEntryForm> createState() => _MarkEntryFormState();
+  State<MarkEntryCard> createState() => _MarkEntryCardState();
 }
 
-class _MarkEntryFormState extends State<MarkEntryForm> {
+class _MarkEntryCardState extends State<MarkEntryCard> {
   late Map<String, TextEditingController> controllers;
 
   @override
@@ -290,53 +421,65 @@ class _MarkEntryFormState extends State<MarkEntryForm> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Enter Marks for ${widget.student}",
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: Color(0xFF2E3192),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ...controllers.entries.map((entry) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: TextField(
-                controller: entry.value,
-                decoration: InputDecoration(
-                  labelText: entry.key,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding:
+            const EdgeInsets.only(bottom: 20, top: 10, left: 4, right: 4),
+        child: Card(
+          elevation: 5,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Enter Marks for ${widget.student}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: Color(0xFF2E3192),
                   ),
                 ),
-                keyboardType: TextInputType.number,
-              ),
-            );
-          }),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E3192),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text(
-                "Save Marks",
-                style: TextStyle(fontSize: 18),
-              ),
+                const SizedBox(height: 24),
+                ...controllers.entries.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: TextField(
+                      controller: entry.value,
+                      decoration: InputDecoration(
+                        labelText: entry.key,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  );
+                }),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:  Colors.grey,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Save Marks",
+                      style: TextStyle(fontSize: 18,  color: Color(0xFF2E3192),),
+                    ),
+                  ),
+                )
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }
