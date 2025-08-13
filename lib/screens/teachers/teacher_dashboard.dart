@@ -18,6 +18,7 @@ import 'teacher_pta_page.dart';
 import 'teacher_message_page.dart';
 import 'teacher_resource_page.dart';
 import 'teacher_report_page.dart';
+import 'teacher_quick_notes.dart';
 
 
 
@@ -290,13 +291,20 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         onClose: () => settings.updateVisibility('Co curricular activities', false),
                       ),
                     if (settings.showQuickNotes)
-                      DashboardTile(
-                        title: 'Quick notes',
-                        subtitle: 'Note anything worth noting',
-                        iconPath: 'assets/icons/quick_notes.svg',
-                        color: const Color(0xFFE6E6E6),
-                        onClose: () => settings.updateVisibility('Quick notes', false),
-                      ),
+                     DashboardTile(
+  title: 'Quick notes',
+  subtitle: 'Note anything worth noting',
+  iconPath: 'assets/icons/quick_notes.svg',
+  color: const Color(0xFFE6E6E6),
+  onClose: () => settings.updateVisibility('Quick notes', false),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const TeacherQuickNotesPage()),
+    );
+  },
+),
+
                     DashboardTile(
   title: 'Resources',
   subtitle: 'Useful links and study materials',
