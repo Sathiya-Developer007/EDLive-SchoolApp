@@ -75,6 +75,31 @@ class _TeacherReportPageState extends State<TeacherReportPage> {
   crossAxisAlignment: CrossAxisAlignment.start,
   children: [
     // Title row (icon + title)
+  // Back button + title row
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    // Back Button Row
+    GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Row(
+        children: const [
+          // Icon(Icons.arrow_back, color: Color(0xFF2E3192), size: 24),
+          SizedBox(width: 4),
+          Text(
+            "< Back",
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    ),
+    const SizedBox(height: 12),
+
+    // Icon + Title Row
     Row(
       children: [
         Container(
@@ -100,7 +125,9 @@ class _TeacherReportPageState extends State<TeacherReportPage> {
         ),
       ],
     ),
-
+  ],
+)
+,
     const SizedBox(height: 16),
 
     // Bottom row with total class marks on left and term dropdown on right
