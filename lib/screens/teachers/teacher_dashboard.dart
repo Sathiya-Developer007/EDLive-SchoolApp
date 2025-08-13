@@ -19,7 +19,8 @@ import 'teacher_message_page.dart';
 import 'teacher_resource_page.dart';
 import 'teacher_report_page.dart';
 import 'teacher_quick_notes.dart';
-
+import 'teacher_specialcare_page.dart';
+import 'teacher_co_curricular_page.dart';
 
 
 class TeacherDashboardPage extends StatefulWidget {
@@ -275,21 +276,40 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
 ),
 
                     if (settings.showSpecialCare)
-                      DashboardTile(
-                        title: 'Special care',
-                        subtitle: 'Students need your support',
-                        iconPath: 'assets/icons/special_care.svg',
-                        color: const Color(0xFFFFD399),
-                        onClose: () => settings.updateVisibility('Special care', false),
-                      ),
+                   DashboardTile(
+  title: 'Special care',
+  subtitle: 'Students need your support',
+  iconPath: 'assets/icons/special_care.svg',
+  color: const Color(0xFFFFD399),
+  onClose: () => settings.updateVisibility('Special care', false),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SpecialCarePage(),
+      ),
+    );
+  },
+),
+
                     if (settings.showCoCurricular)
-                      DashboardTile(
-                        title: 'Co curricular activities',
-                        subtitle: 'NCC Camp on 23, Jan.2019',
-                        iconPath: 'assets/icons/co_curricular.svg',
-                        color: const Color(0xFFDBD88A),
-                        onClose: () => settings.updateVisibility('Co curricular activities', false),
-                      ),
+                     DashboardTile(
+  title: 'Co curricular activities',
+  subtitle: 'NCC Camp on 23, Jan.2019',
+  iconPath: 'assets/icons/co_curricular.svg',
+  color: const Color(0xFFDBD88A),
+  onTap: () {
+    // Navigate to the CoCurricularActivitiesPage
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CoCurricularActivitiesPage(),
+      ),
+    );
+  },
+  onClose: () => settings.updateVisibility('Co curricular activities', false),
+),
+
                     if (settings.showQuickNotes)
                      DashboardTile(
   title: 'Quick notes',
