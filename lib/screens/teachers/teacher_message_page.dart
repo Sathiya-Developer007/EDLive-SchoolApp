@@ -257,198 +257,188 @@ Future<void> fetchAllStudents() async {
                   ),
                   const SizedBox(height: 10),
 
-                  // Card Section
-                 Card(
+                
+// Card Section
+Card(
   shape: RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(8),
   ),
-child:Container(
-  height: MediaQuery.of(context).size.height - 200, // fixed height for container
-  margin: const EdgeInsets.only(bottom: 20), // exactly 20px bottom space
-  padding: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(8),
-  ),
-  child: Scrollbar( // optional, for better UX
-    child: SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Your data
-          Text(
-            "Write message History",
-            style: TextStyle(
-              color: Colors.blue[800],
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-
-                          // To Dropdown
-                          DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: 'To',
-                              border: OutlineInputBorder(),
-                            ),
-                            value: selectedTo,
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Specific Classes',
-                                child: Text('Specific Classes'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Select a group',
-                                child: Text('Select a group'),
-                              ),
-                            ],
-                            onChanged: (val) {
-                              setState(() {
-                                selectedTo = val;
-                                showAccordion = val == "Specific Classes";
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Select Classes Accordion
-                          if (showAccordion) _buildAccordion(),
-
-                          const SizedBox(height: 15),
-
-                          const Divider(thickness: 1),
-                          const SizedBox(height: 10),
-                          const Center(
-                            child: Text(
-                              "OR",
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Student Search
-                          // Student Search (only show when 'Select a group' is chosen)
-                       if (selectedTo == 'Select a group')
-  Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    TextFormField(
-      controller: studentSearchController,
-      decoration: const InputDecoration(
-        labelText: "Student's name, ID No, or parent's mobile number",
-        border: OutlineInputBorder(),
-      ),
-      onChanged: onSearch,
+  child: Container(
+    height: MediaQuery.of(context).size.height - 200, // fixed height
+    margin: const EdgeInsets.only(bottom: 20),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
     ),
-    const SizedBox(height: 10),
-
-    // Show matching results
-    ...searchResults.map(buildStudentTile).toList(),
-
-    const SizedBox(height: 10),
-
-    // Show selected students list
-    if (selectedStudents.isNotEmpty)
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: selectedStudents.map((student) {
-          return Chip(
-            label: Text(student["name"] ?? ""),
-            deleteIcon: const Icon(Icons.close),
-            onDeleted: () {
-              setState(() {
-                selectedStudents.remove(student);
-              });
-            },
-          );
-        }).toList(),
-      ),
-  ],
-)
-,
-                          // Compose
-                          TextFormField(
-                            controller: messageController,
-                            maxLines: 4,
-                            decoration: const InputDecoration(
-                              labelText: "Type your message here",
-                              border: OutlineInputBorder(),
-                            ),
-                            onTap: closeAccordion,
-                          ),
-                          const SizedBox(height: 15),
-
-                          // Send options
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: sendSMS,
-                                onChanged: (val) =>
-                                    setState(() => sendSMS = val!),
-                              ),
-                              const Text("SMS"),
-                              const SizedBox(width: 8),
-                              Checkbox(
-                                value: sendWhatsApp,
-                                onChanged: (val) =>
-                                    setState(() => sendWhatsApp = val!),
-                              ),
-                              const Text("Whatsapp"),
-                              const SizedBox(width: 8),
-                              Checkbox(
-                                value: sendEmail,
-                                onChanged: (val) =>
-                                    setState(() => sendEmail = val!),
-                              ),
-                              const Text("Email"),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-
-                          // File Upload
-                          // File Upload
-                          // File Upload
-                          OutlinedButton(
-                            onPressed: () {},
-                            child: const Text("Select file"),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text("Document.pdf"),
-                          const Text("Image.jpg"),
-                          const SizedBox(height: 20),
-
-                          // Buttons moved inside white container
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey[400],
-                                  ),
-                                  onPressed: () {},
-                                  child: const Text("Cancel"),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                  ),
-                                  onPressed: () {},
-                                  child: const Text("Send"),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-               ) )],
+    child: Scrollbar(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Write message History",
+              style: TextStyle(
+                color: Colors.blue[800],
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
               ),
+            ),
+            const SizedBox(height: 10),
+
+            // Main dropdown
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'To',
+                border: OutlineInputBorder(),
+              ),
+              value: selectedTo,
+              items: const [
+                DropdownMenuItem(
+                  value: 'Specific Classes',
+                  child: Text('Specific Classes'),
+                ),
+                DropdownMenuItem(
+                  value: 'Select a group',
+                  child: Text('Select a group'),
+                ),
+              ],
+              onChanged: (val) {
+                setState(() {
+                  selectedTo = val;
+                  showAccordion = val == "Specific Classes";
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // Accordion for Specific Classes
+            if (showAccordion) _buildAccordion(),
+
+            const SizedBox(height: 15),
+            const Divider(thickness: 1),
+            const SizedBox(height: 10),
+            const Center(
+              child: Text(
+                "OR",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Student Search (always below dropdown)
+            TextFormField(
+              controller: studentSearchController,
+              decoration: const InputDecoration(
+                labelText: "Student's name, ID No, or parent's mobile number",
+                border: OutlineInputBorder(),
+              ),
+              onChanged: onSearch,
+            ),
+            const SizedBox(height: 10),
+
+            // Show matching results
+            ...searchResults.map(buildStudentTile).toList(),
+
+            const SizedBox(height: 10),
+
+            // Selected students chips
+            if (selectedStudents.isNotEmpty)
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: selectedStudents.map((student) {
+                  return Chip(
+                    label: Text(student["name"] ?? ""),
+                    deleteIcon: const Icon(Icons.close),
+                    onDeleted: () {
+                      setState(() {
+                        selectedStudents.remove(student);
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+
+            const SizedBox(height: 15),
+
+            // Compose message
+            TextFormField(
+              controller: messageController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: "Type your message here",
+                border: OutlineInputBorder(),
+              ),
+              onTap: closeAccordion,
+            ),
+            const SizedBox(height: 15),
+
+            // Send options
+            Row(
+              children: [
+                Checkbox(
+                  value: sendSMS,
+                  onChanged: (val) => setState(() => sendSMS = val!),
+                ),
+                const Text("SMS"),
+                const SizedBox(width: 8),
+                Checkbox(
+                  value: sendWhatsApp,
+                  onChanged: (val) => setState(() => sendWhatsApp = val!),
+                ),
+                const Text("Whatsapp"),
+                const SizedBox(width: 8),
+                Checkbox(
+                  value: sendEmail,
+                  onChanged: (val) => setState(() => sendEmail = val!),
+                ),
+                const Text("Email"),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // File Upload
+            OutlinedButton(
+              onPressed: () {},
+              child: const Text("Select file"),
+            ),
+            const SizedBox(height: 8),
+            const Text("Document.pdf"),
+            const Text("Image.jpg"),
+            const SizedBox(height: 20),
+
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[400],
+                    ),
+                    onPressed: () {},
+                    child: const Text("Cancel"),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                    ),
+                    onPressed: () {},
+                    child: const Text("Send"),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+)
+] ),
             ),
           ),
         ),
