@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:school_app/services/teacher_msg_service.dart';
 
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
@@ -37,6 +38,7 @@ class _TeacherMessagePageState extends State<TeacherMessagePage> {
 List<Student> allStudents = [];
 List<Student> searchResults = [];
 List<Map<String, dynamic>> selectedStudents = [];
+
 
 
 
@@ -422,14 +424,52 @@ Card(
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                    ),
-                    onPressed: () {},
-                    child: const Text("Send"),
-                  ),
-                ),
+  child: ElevatedButton(
+    style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+    onPressed: () async {
+      if (selectedStudents.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Select at least one student")),
+        );
+        return;
+      }
+      
+
+      final token = await getToken();
+      if (token == null) return;
+
+      bool allSuccess = true;
+
+      for (var student in selectedStudents) {
+        final channels = <String>[];
+        if (sendSMS) channels.add("sms");
+        if (sendWhatsApp) channels.add("whatsapp");
+        if (sendEmail) channels.add("email");
+
+        final success = await MessageService.sendMessage(
+          token: token,
+          studentId: student["id"],
+          messageText: messageController.text,
+          isAppreciation: true,
+          isMeetingRequest: false,
+          channels: channels,
+        );
+
+        if (!success) allSuccess = false;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(allSuccess
+              ? "Message sent successfully"
+              : "Some messages failed"),
+        ),
+      );
+    },
+    child: const Text("Send"),
+  ),
+),
+
               ],
             ),
           ],
