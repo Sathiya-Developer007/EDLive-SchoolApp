@@ -423,7 +423,7 @@ Card(
                   ),
                 ),
                 const SizedBox(width: 10),
-                Expanded(
+        Expanded(
   child: ElevatedButton(
     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
     onPressed: () async {
@@ -433,7 +433,6 @@ Card(
         );
         return;
       }
-      
 
       final token = await getToken();
       if (token == null) return;
@@ -441,6 +440,19 @@ Card(
       bool allSuccess = true;
 
       for (var student in selectedStudents) {
+        // Check if guardian_name exists
+        if (student["guardian_name"] == null || student["guardian_name"].isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Cannot send message to ${student["name"]}: Guardian info missing",
+              ),
+            ),
+          );
+          allSuccess = false;
+          continue; // skip this student
+        }
+
         final channels = <String>[];
         if (sendSMS) channels.add("sms");
         if (sendWhatsApp) channels.add("whatsapp");
@@ -458,17 +470,16 @@ Card(
         if (!success) allSuccess = false;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(allSuccess
-              ? "Message sent successfully"
-              : "Some messages failed"),
-        ),
-      );
+      if (allSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Messages sent successfully")),
+        );
+      }
     },
-    child: const Text("Send"),
+    child: const Text("Send"), // ✅ Must be here, outside onPressed
   ),
-),
+)
+
 
               ],
             ),
