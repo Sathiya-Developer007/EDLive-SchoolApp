@@ -187,106 +187,56 @@ Future<void> fetchAllStudents() async {
     debugPrint("Error fetching students: $e");
   }
 }
-
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: closeAccordion,
-      behavior: HitTestBehavior.translucent,
-      child: Scaffold(
-        backgroundColor: Colors.pink[100],
-        appBar: TeacherAppBar(),
-        drawer: MenuDrawer(),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Back and Title
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Back button row
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Text(
-                          "< Back",
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Icon + Title row
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(
-                              6,
-                            ), // space inside background
-
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF2E3192,
-                              ), // background color
-                              // borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: SvgPicture.asset(
-                              'assets/icons/message.svg',
-                              width: 20,
-                              height: 20,
-                              color: Colors.white, // make icon white
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Message',
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2E3192),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                
-// Card Section
-Card(
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(8),
-  ),
-  child: Container(
-    height: MediaQuery.of(context).size.height - 200, // fixed height
-    margin: const EdgeInsets.only(bottom: 20),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Scrollbar(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Write message History",
-              style: TextStyle(
-                color: Colors.blue[800],
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+Widget build(BuildContext context) {
+  return GestureDetector(
+    onTap: closeAccordion,
+    behavior: HitTestBehavior.translucent,
+    child: Scaffold(
+      backgroundColor: Colors.pink[100], // fixed background
+      appBar: TeacherAppBar(),
+      drawer: MenuDrawer(),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top title/back section
+              const Text("< Back"),
+              const SizedBox(height: 10),
+              const Text(
+                "Message",
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 12),
+
+              // White card container with scroll
+              Expanded(
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Scrollbar(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Your entire white container content goes here
+                            Text(
+                              "Write message History",
+                              style: TextStyle(
+                                color: Colors.blue[800],
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
 
             // Main dropdown
             DropdownButtonFormField<String>(
@@ -489,12 +439,11 @@ Card(
     ),
   ),
 )
-] ),
+        )] ),
             ),
           ),
         ),
-      ),
-    );
+  );
   }
 
   Widget _buildAccordion() {
