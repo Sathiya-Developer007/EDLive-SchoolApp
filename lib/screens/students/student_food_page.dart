@@ -113,7 +113,7 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
                     const Text(
                       "Food",
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                          color: Color(0xFF2E3192),
                       ),
@@ -367,21 +367,32 @@ class FoodTile extends StatelessWidget {
             onChanged: (value) => onChanged(value ?? false),
           ),
           const SizedBox(width: 8),
+        Expanded(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
-                Text(time,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                const SizedBox(height: 5),
-                Text(description),
-              ],
+            child: Text(
+              title,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
+          Text(
+            time,
+            style: const TextStyle(color: Colors.grey, fontSize: 13),
+          ),
         ],
+      ),
+      const SizedBox(height: 5),
+      Text(description),
+    ],
+  ),
+)
+    ],
       ),
     );
   }
