@@ -35,7 +35,7 @@ class TeacherAttendanceService {
     required bool isPresent,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
 
     final response = await http.post(
       Uri.parse('$baseUrl/api/attendance/toggle'),

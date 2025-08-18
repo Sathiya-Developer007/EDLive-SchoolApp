@@ -42,7 +42,7 @@ class AttendanceService {
     required bool isPresent,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
 
     final url = Uri.parse('$baseUrl/attendance/toggle');
 

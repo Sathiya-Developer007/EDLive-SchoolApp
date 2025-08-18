@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:school_app/models/class_section.dart';
+import 'package:school_app/services/class_section_service.dart';
 
 class AnnounceMeetingPage extends StatefulWidget {
   const AnnounceMeetingPage({Key? key}) : super(key: key);
@@ -11,10 +13,15 @@ class AnnounceMeetingPage extends StatefulWidget {
 }
 
 class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
-  String? selectedClass = '10';
+  // String? selectedClass = '10';
   bool isAllDivision = true;
   DateTime selectedDate = DateTime.now();
   TimeOfDay selectedTime = const TimeOfDay(hour: 14, minute: 0);
+
+  List<ClassSection> classSections = [];
+ClassSection? selectedClassSection;
+bool isLoadingClasses = true;
+
 
   bool sendSMS = true;
   bool sendWhatsApp = true;
@@ -25,6 +32,81 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
   final TextEditingController descriptionController = TextEditingController();
 
   bool isLoading = false;
+
+
+  @override
+void initState() {
+  super.initState();
+  _loadClasses();
+}
+
+Future<void> _loadClasses() async {
+  setState(() => isLoadingClasses = true);
+  try {
+    final classes = await ClassService().fetchClassSections();
+    setState(() {
+      classSections = classes;
+      if (classes.isNotEmpty) selectedClassSection = classes[0];
+    });
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to load classes: $e")),
+    );
+  } finally {
+    setState(() => isLoadingClasses = false);
+  }
+}
+
+
+Future<void> _announceMeeting(int meetingId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? '';
+
+    final url = Uri.parse(
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/pta/announce");
+
+    // Determine selected channels
+    List<String> channels = [];
+    if (sendSMS) channels.add("sms");
+    if (sendWhatsApp) channels.add("whatsapp");
+    if (sendEmail) channels.add("email");
+
+    final body = jsonEncode({
+      "meetingId": meetingId,
+      "class_ids": selectedClassSection != null ? [selectedClassSection!.id] : [],
+      "include_all_sections": isAllDivision,
+      "channels": channels,
+    });
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Meeting announced successfully")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(
+          "Announcement error: ${response.statusCode} ${response.body}"
+        )),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text("Announcement error: $e")));
+  }
+}
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -56,23 +138,28 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
               const SizedBox(height: 16),
 
               // Select classes dropdown
-              DropdownButtonFormField<String>(
-                value: selectedClass,
-                decoration: const InputDecoration(
-                  labelText: "Select classes",
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                ),
-                items: ["8", "9", "10"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (val) {
-                  setState(() {
-                    selectedClass = val;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
+           isLoadingClasses
+    ? const CircularProgressIndicator()
+    : DropdownButtonFormField<ClassSection>(
+        value: selectedClassSection,
+        decoration: const InputDecoration(
+          labelText: "Select class",
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12),
+        ),
+        items: classSections
+            .map((cls) => DropdownMenuItem(
+                  value: cls,
+                  child: Text(cls.fullName),
+                ))
+            .toList(),
+        onChanged: (val) {
+          setState(() {
+            selectedClassSection = val;
+          });
+        },
+      ),
+    const SizedBox(height: 16),
 
               // Division selection
               Row(
@@ -349,7 +436,8 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
             "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}",
         "time":
             "${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}",
-        "class_ids": [int.parse(selectedClass!)],
+       "class_ids": selectedClassSection != null ? [selectedClassSection!.id] : [],
+
         "include_all_sections": isAllDivision,
       });
 
@@ -362,12 +450,20 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
         body: body,
       );
 
-      if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Meeting created successfully")),
-        );
-        Navigator.pop(context);
-      } else {
+     if (response.statusCode == 201) {
+  final data = jsonDecode(response.body);
+  final meetingId = data['id']; // Get created meeting id
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("Meeting created successfully")),
+  );
+
+  // Send announcements
+  await _announceMeeting(meetingId);
+
+  Navigator.pop(context);
+}
+else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content:
