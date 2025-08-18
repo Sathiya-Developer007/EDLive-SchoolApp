@@ -198,17 +198,53 @@ Widget build(BuildContext context) {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top title/back section
-              const Text("< Back"),
-              const SizedBox(height: 10),
-              const Text(
-                "Message",
-                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+          child:Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    // Keep top section exactly as old design
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: const Text(
+            "< Back",
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+              fontWeight: FontWeight.normal,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E3192),
               ),
-              const SizedBox(height: 12),
+              child: SvgPicture.asset(
+                'assets/icons/message.svg',
+                width: 20,
+                height: 20,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Message',
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3192),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+    const SizedBox(height: 10),
 
               // White card container with scroll
               Expanded(

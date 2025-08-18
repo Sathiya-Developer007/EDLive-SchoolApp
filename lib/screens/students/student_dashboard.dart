@@ -18,6 +18,7 @@ import 'student_school_bus_page.dart';
 import 'teacher_list_page.dart';
 import 'student_payments_page.dart';
 import 'student_report_page.dart';
+import 'student_food_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -282,7 +283,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                 ),
 
                 const SizedBox(height: 12),
-               DashboardTile(
+              DashboardTile(
   title: 'Reports',
   subtitle: 'Progress report updated',
   iconPath: 'assets/icons/reports.svg',
@@ -297,6 +298,27 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   },
 ),
+
+const SizedBox(height: 12),
+
+// New Food Section
+DashboardTile(
+  title: 'Food',
+  subtitle: 'Menu updated today',
+  iconPath: 'assets/icons/food.svg',
+  color: const Color(0xFFFFE0B2),
+  centerContent: false, // 👈 use row layout
+  height: 65, // 👈 reduced height (140 - 40px)
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const StudentFoodPage(),
+      ),
+    );
+  },
+),
+
 
                 const SizedBox(height: 12),
         Row(
@@ -409,6 +431,9 @@ class DashboardTile extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onClose;
 
+  // 👇 NEW: optional height override
+  final double? height;
+
   const DashboardTile({
     super.key,
     required this.title,
@@ -420,6 +445,7 @@ class DashboardTile extends StatelessWidget {
     this.centerContent = false,
     this.onTap,
     this.onClose,
+    this.height, // 👈 add to constructor
   });
 
   @override
@@ -458,7 +484,8 @@ class DashboardTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: centerContent ? 140 : null,
+        // 👇 Use the provided height if given; otherwise fall back to default
+        height: height ?? (centerContent ? 140 : null),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: color,
@@ -502,9 +529,7 @@ class DashboardTile extends StatelessWidget {
                                         text: 'Fee Rs. 2500\n',
                                         style: TextStyle(
                                           fontSize: 13,
-                                          color: Color(
-                                            0xFF2E3192,
-                                          ), // blue color
+                                          color: Color(0xFF2E3192),
                                         ),
                                       ),
                                       TextSpan(
@@ -523,9 +548,7 @@ class DashboardTile extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: title == 'Attendance'
-                                        ? const Color(
-                                            0xFFED1C24,
-                                          ) // red for attendance
+                                        ? const Color(0xFFED1C24)
                                         : Colors.grey,
                                   ),
                                 ),
