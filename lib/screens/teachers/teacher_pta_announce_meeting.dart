@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AnnounceMeetingPage extends StatefulWidget {
   const AnnounceMeetingPage({Key? key}) : super(key: key);
@@ -10,7 +13,7 @@ class AnnounceMeetingPage extends StatefulWidget {
 class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
   String? selectedClass = '10';
   bool isAllDivision = true;
-  DateTime selectedDate = DateTime(2019, 2, 2);
+  DateTime selectedDate = DateTime.now();
   TimeOfDay selectedTime = const TimeOfDay(hour: 14, minute: 0);
 
   bool sendSMS = true;
@@ -20,6 +23,8 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
   final TextEditingController divisionController = TextEditingController();
   final TextEditingController subjectController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+
+  bool isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -59,8 +64,7 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
                   contentPadding: EdgeInsets.symmetric(horizontal: 12),
                 ),
                 items: ["8", "9", "10"]
-                    .map((e) =>
-                        DropdownMenuItem(value: e, child: Text(e)))
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
                 onChanged: (val) {
                   setState(() {
@@ -71,80 +75,77 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
               const SizedBox(height: 16),
 
               // Division selection
-        Row(
-  crossAxisAlignment: CrossAxisAlignment.center,
-  children: [
-    // First option: Division
-    Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          "Division",
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Radio<bool>(
-              value: true,
-              groupValue: isAllDivision,
-              onChanged: (val) {
-                setState(() {
-                  isAllDivision = val!;
-                });
-              },
-            ),
-            const Text("All"),
-          ],
-        ),
-      ],
-    ),
-
-    const SizedBox(width: 10), // reduced spacing
-
-    // Second option: Enter Division
-    Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text(
-          "Enter Division",
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Radio<bool>(
-              value: false,
-              groupValue: isAllDivision,
-              onChanged: (val) {
-                setState(() {
-                  isAllDivision = val!;
-                });
-              },
-            ),
-        SizedBox(
-  width: 60,
-  height: 30, // Increased height
-  child: TextField(
-    controller: divisionController,
-    enabled: !isAllDivision,
-    textAlign: TextAlign.center,
-    decoration: const InputDecoration(
-      isDense: false, // allows taller height
-      contentPadding: EdgeInsets.symmetric(vertical: 8),
-      border: OutlineInputBorder(),
-    ),
-  ),
-)
-
-
-          ],
-        ),
-      ],
-    ),
-  ],
-)
-,    const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Division",
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Radio<bool>(
+                            value: true,
+                            groupValue: isAllDivision,
+                            onChanged: (val) {
+                              setState(() {
+                                isAllDivision = val!;
+                              });
+                            },
+                          ),
+                          const Text("All"),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Enter Division",
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Radio<bool>(
+                            value: false,
+                            groupValue: isAllDivision,
+                            onChanged: (val) {
+                              setState(() {
+                                isAllDivision = val!;
+                              });
+                            },
+                          ),
+                          SizedBox(
+                            width: 60,
+                            height: 30,
+                            child: TextField(
+                              controller: divisionController,
+                              enabled: !isAllDivision,
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                isDense: false,
+                                contentPadding:
+                                    EdgeInsets.symmetric(vertical: 8),
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
               // Date & Time
               Row(
@@ -210,36 +211,34 @@ class _AnnounceMeetingPageState extends State<AnnounceMeetingPage> {
               const SizedBox(height: 16),
 
               // Checkboxes
-          Row(
-  children: [
-    Checkbox(
-      value: sendSMS,
-      onChanged: (val) => setState(() => sendSMS = val!),
-      fillColor: WidgetStateProperty.all(Colors.white), // background
-      checkColor: Colors.green, // tick color
-    ),
-    const Text("SMS"),
-    const SizedBox(width: 8),
-    Checkbox(
-      value: sendWhatsApp,
-      onChanged: (val) => setState(() => sendWhatsApp = val!),
-      fillColor: WidgetStateProperty.all(Colors.white),
-      checkColor: Colors.green,
-    ),
-    const Text("Whats app"),
-    const SizedBox(width: 8),
-    Checkbox(
-      value: sendEmail,
-      onChanged: (val) => setState(() => sendEmail = val!),
-      fillColor: WidgetStateProperty.all(Colors.white),
-      checkColor: Colors.green,
-    ),
-    const Text("Email"),
-  ],
-),
-const Spacer(),
-
-
+              Row(
+                children: [
+                  Checkbox(
+                    value: sendSMS,
+                    onChanged: (val) => setState(() => sendSMS = val!),
+                    fillColor: MaterialStateProperty.all(Colors.white),
+                    checkColor: Colors.green,
+                  ),
+                  const Text("SMS"),
+                  const SizedBox(width: 8),
+                  Checkbox(
+                    value: sendWhatsApp,
+                    onChanged: (val) => setState(() => sendWhatsApp = val!),
+                    fillColor: MaterialStateProperty.all(Colors.white),
+                    checkColor: Colors.green,
+                  ),
+                  const Text("Whats app"),
+                  const SizedBox(width: 8),
+                  Checkbox(
+                    value: sendEmail,
+                    onChanged: (val) => setState(() => sendEmail = val!),
+                    fillColor: MaterialStateProperty.all(Colors.white),
+                    checkColor: Colors.green,
+                  ),
+                  const Text("Email"),
+                ],
+              ),
+              const Spacer(),
 
               // Buttons
               Row(
@@ -250,7 +249,10 @@ const Spacer(),
                         backgroundColor: Colors.grey.shade400,
                       ),
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("Cancel", style: TextStyle(color: Colors.white),),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -259,10 +261,14 @@ const Spacer(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.lightBlue,
                       ),
-                      onPressed: () {
-                        // Send meeting logic here
-                      },
-                      child: const Text("Send", style: TextStyle(color: Colors.white),),
+                      onPressed: isLoading ? null : _sendMeeting,
+                      child: isLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white)
+                          : const Text(
+                              "Send",
+                              style: TextStyle(color: Colors.white),
+                            ),
                     ),
                   ),
                 ],
@@ -316,6 +322,63 @@ const Spacer(),
       setState(() {
         selectedTime = time;
       });
+    }
+  }
+
+  Future<void> _sendMeeting() async {
+    if (subjectController.text.isEmpty || descriptionController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+
+      final url = Uri.parse(
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/pta/meetings");
+
+      final body = jsonEncode({
+        "title": subjectController.text,
+        "description": descriptionController.text,
+        "date":
+            "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}",
+        "time":
+            "${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}",
+        "class_ids": [int.parse(selectedClass!)],
+        "include_all_sections": isAllDivision,
+      });
+
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: body,
+      );
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Meeting created successfully")),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text("Error: ${response.statusCode} ${response.body}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 }

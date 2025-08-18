@@ -90,15 +90,23 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
                           selectedIndex = index;
                         });
 
-                        if (item['label'] == 'Logout') {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.remove('auth_token');
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            '/',
-                            (route) => false,
-                          );
-                        } else if (item['label'] == 'Timetable') {
+                       
+if (item['label'] == 'Logout') {
+    // 1. Clear ALL cached data (not just auth_token)
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.clear(); // Clear everything instead of just 'auth_token'
+
+  // 2. Reset any state management (e.g., Provider, Riverpod, GetX)
+  // Example: If using Provider/Riverpod
+  // context.read<AuthProvider>().logout(); 
+
+  // 3. Navigate to login and COMPLETELY reset the navigation stack
+  Navigator.pushNamedAndRemoveUntil(
+    context,
+    '/', // Ensure this is your login route
+    (route) => false,
+  );}
+ else if (item['label'] == 'Timetable') {
                           final prefs = await SharedPreferences.getInstance();
                           final year =
                               prefs.getString('academic_year') ?? '2024-2025';

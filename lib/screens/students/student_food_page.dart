@@ -86,7 +86,7 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
                     "< Back",
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.normal,
                       color: Colors.black,
                     ),
                   ),
@@ -378,7 +378,7 @@ class FoodTile extends StatelessWidget {
             child: Text(
               title,
               style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold),
+                  fontSize: 16, fontWeight: FontWeight.bold,color: Color(0xFF2E3192)),
             ),
           ),
           Text(
