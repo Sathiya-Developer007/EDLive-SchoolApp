@@ -3,25 +3,48 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'teacher_menu_drawer.dart';
+import '../../services/teacher_syllabus_service_2.dart';
 
-
-class SyllabusDetailPage extends StatelessWidget {
+class SyllabusDetailPage extends StatefulWidget {
   final String selectedClass;
+  final int classId;
+  final int subjectId;
   final String subject;
+  final String academicYear;
 
   const SyllabusDetailPage({
     super.key,
     required this.selectedClass,
+    required this.classId,
+    required this.subjectId,
     required this.subject,
+    this.academicYear = "2025-2026", // default
   });
+
+  @override
+  State<SyllabusDetailPage> createState() => _SyllabusDetailPageState();
+}
+
+class _SyllabusDetailPageState extends State<SyllabusDetailPage> {
+  final SyllabusService syllabusService = SyllabusService();
+  late Future<List<SyllabusTerm>> syllabusFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    syllabusFuture = syllabusService.fetchSyllabus(
+      widget.classId,
+      widget.subjectId,
+      widget.academicYear,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFA7D7A7),
-     appBar: TeacherAppBar(),
-drawer: MenuDrawer(),
-
+      appBar: TeacherAppBar(),
+      drawer: MenuDrawer(),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.only(top: 10),
@@ -32,19 +55,14 @@ drawer: MenuDrawer(),
               Padding(
                 padding: const EdgeInsets.only(left: 16.0),
                 child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text(
-                    "< Back",
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  onTap: () => Navigator.pop(context),
+                  child: const Text("< Back", style: TextStyle(fontSize: 16)),
                 ),
               ),
 
               const SizedBox(height: 8),
 
-              // Syllabus Header
+              // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
@@ -77,34 +95,27 @@ drawer: MenuDrawer(),
 
               const SizedBox(height: 16),
 
-              // White Container with subject & class info
+              // White Container with API data
               Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-  child: SizedBox(
-    height: MediaQuery.of(context).size.height * 0.65, // adjust percentage as needed
-    child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Class > Subject Row
                       Row(
                         children: [
+                          Text('Class ${widget.selectedClass} > '),
                           Text(
-                            'Class $selectedClass > ',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          Text(
-                            subject,
+                            widget.subject,
                             style: const TextStyle(
-                              fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey
+                              color: Colors.grey,
                             ),
                           ),
                           const Spacer(),
@@ -113,116 +124,111 @@ drawer: MenuDrawer(),
                       ),
                       const SizedBox(height: 10),
 
-                      // Add + Pencil Row
-                   Container(
-  padding: const EdgeInsets.only(bottom: 8), // optional spacing below content
-  decoration: const BoxDecoration(
-    border: Border(
-      bottom: BorderSide(
-        color: Color(0xFF999999), // or any color you prefer
-        width: 0.5, // thin border
-      ),
-    ),
-  ),
-  child: Row(
-    children: [
-      const Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
-      const SizedBox(width: 4),
-      const Text(
-        'Add',
-        style: TextStyle(
-          fontSize: 14,
-          color: Color(0xFF29ABE2),
-          fontWeight: FontWeight.w500,
+                      // Divider row with Add + Pencil
+                      Container(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Color(0xFF999999), width: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
+                            const SizedBox(width: 4),
+                            const Text('Add',
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF29ABE2),
+                                    fontWeight: FontWeight.w500)),
+                            const Spacer(),
+                            SvgPicture.asset(
+                              'assets/icons/pencil.svg',
+                              height: 18,
+                              width: 18,
+                              color: Colors.black,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 🔹 API Data Loader
+                      FutureBuilder<List<SyllabusTerm>>(
+                        future: syllabusFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          } else if (snapshot.hasError) {
+                            return Text("Error: ${snapshot.error}");
+                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return const Text("No syllabus available.");
+                          }
+
+                          final terms = snapshot.data!;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: terms.map((term) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 20.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      term.term,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        color: Color(0xFF2E3192),
+                                      ),
+                                    ),
+                                    Text(
+                                      term.academicYear,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: term.items.map((item) {
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                        child: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text("${item.sequence + 1}. ${item.title}"),
+    if (item.description.isNotEmpty)
+      Padding(
+        padding: const EdgeInsets.only(left: 16.0, top: 2.0),
+        child: Text(
+          item.description,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.black54,
+          ),
         ),
       ),
-      const Spacer(),
-      SvgPicture.asset(
-        'assets/icons/pencil.svg',
-        height: 18,
-        width: 18,
-        color: Colors.black,
-      ),
-    ],
-  ),
+  ],
 ),
 
-                      const SizedBox(height: 16),
-
-                      // Semester 1 Section
-                      const Text(
-                        'Semester/Term 1',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Color(0xFF2E3192),
-                          // fontWeight: FontWeight.w600,
-                        ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                    const Divider(height: 30),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        },
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        '30, Aug 2019',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-const Padding(
-  padding: EdgeInsets.all( 8.0), // or use all(), only(), etc.
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text('1. Lesson name'),
-      SizedBox(height: 4),
-      Text('2. Lesson name two goes here'),
-      SizedBox(height: 4),
-      Text('3. Topic name three goes here'),
-    ],
-  ),
-),
-
-                      const Divider(height: 30),
-
-                      // Semester 2 Section
-                      const Text(
-                        'Semester/Term 2',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Color(0xFF2E3192),
-                          // fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                        const Text(
-                        '30, Aug 2019',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-const Padding(
-  padding: EdgeInsets.all(8.0), // or use all(), only(), etc.
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text('1. Lesson name'),
-      SizedBox(height: 4),
-      Text('2. Lesson name two goes here'),
-      SizedBox(height: 4),
-      Text('3. Topic name three goes here'),
-    ],
-  ),
-),
-
-
-                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
               ),
-
-              // const SizedBox(height: 40),
-           ), ],
+            ],
           ),
         ),
       ),

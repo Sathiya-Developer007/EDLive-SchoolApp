@@ -98,7 +98,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   runSpacing: 12,
                   children: [
                     DashboardTile(
-                      title: 'Notifications',
+                      title: 'Announcement',
                       subtitle: 'A note from teacher',
                       iconPath: 'assets/icons/notification.svg',
                       color: const Color(0xFFF9F7A5),
