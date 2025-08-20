@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 
+import 'teacher_resource_addpage.dart';
+
 class TeacherResourcePage extends StatefulWidget {
   const TeacherResourcePage({super.key});
 
@@ -202,26 +204,36 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                       const SizedBox(height: 8),
 
                       // Add button row
-                   Container(
-  padding: const EdgeInsets.symmetric(vertical: 10),
-  decoration: const BoxDecoration(
-    border: Border(
-      bottom: BorderSide(color: Colors.grey, width: 0.8), // ✅ Bottom border
-    ),
-  ),
-  child: Row(
-    children: const [
-      Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
-      SizedBox(width: 8),
-      Text(
-        "Add",
-        style: TextStyle(
-          color: Color(0xFF29ABE2),
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-        ),
+               GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const TeacherResourceAddPage(), // 👈 open Add page
       ),
-    ],
+    );
+  },
+  child: Container(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    decoration: const BoxDecoration(
+      border: Border(
+        bottom: BorderSide(color: Colors.grey, width: 0.8), // ✅ Bottom border
+      ),
+    ),
+    child: Row(
+      children: const [
+        Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
+        SizedBox(width: 8),
+        Text(
+          "Add",
+          style: TextStyle(
+            color: Color(0xFF29ABE2),
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
   ),
 )
 ,

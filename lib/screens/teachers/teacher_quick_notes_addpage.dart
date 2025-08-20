@@ -71,7 +71,7 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
       // White container that expands + scrolls internally
       Expanded(
         child: Container(
-          margin: const EdgeInsets.only(bottom: 20,right: 20,left:10), // 20px gap at bottom
+          margin: const EdgeInsets.only(bottom: 20,right: 10,left:10), // 20px gap at bottom
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
           decoration: BoxDecoration(
             color: Colors.white,
