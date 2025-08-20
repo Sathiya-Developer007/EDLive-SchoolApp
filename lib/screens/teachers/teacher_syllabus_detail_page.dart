@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'teacher_menu_drawer.dart';
-import '../../services/teacher_syllabus_service_2.dart';
+import '../../services/teacher_syllabus_service_page2.dart';
 
 class SyllabusDetailPage extends StatefulWidget {
   final String selectedClass;
@@ -40,198 +40,210 @@ class _SyllabusDetailPageState extends State<SyllabusDetailPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFA7D7A7),
-      appBar: TeacherAppBar(),
-      drawer: MenuDrawer(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // < Back button
-              Padding(
-                padding: const EdgeInsets.only(left: 16.0),
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Text("< Back", style: TextStyle(fontSize: 16)),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2E3192),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: SvgPicture.asset(
-                        'assets/icons/syllabus.svg',
-                        height: 24,
-                        width: 24,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Syllabus',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E3192),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // White Container with API data
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Class > Subject Row
-                      Row(
-                        children: [
-                          Text('Class ${widget.selectedClass} > '),
-                          Text(
-                            widget.subject,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const Spacer(),
-                          const Icon(Icons.more_vert),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Divider row with Add + Pencil
-                      Container(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: Color(0xFF999999), width: 0.5),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
-                            const SizedBox(width: 4),
-                            const Text('Add',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF29ABE2),
-                                    fontWeight: FontWeight.w500)),
-                            const Spacer(),
-                            SvgPicture.asset(
-                              'assets/icons/pencil.svg',
-                              height: 18,
-                              width: 18,
-                              color: Colors.black,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // 🔹 API Data Loader
-                      FutureBuilder<List<SyllabusTerm>>(
-                        future: syllabusFuture,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          } else if (snapshot.hasError) {
-                            return Text("Error: ${snapshot.error}");
-                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return const Text("No syllabus available.");
-                          }
-
-                          final terms = snapshot.data!;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: terms.map((term) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 20.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      term.term,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        color: Color(0xFF2E3192),
-                                      ),
-                                    ),
-                                    Text(
-                                      term.academicYear,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.black54,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: term.items.map((item) {
-                                        return Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                        child: Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Text("${item.sequence + 1}. ${item.title}"),
-    if (item.description.isNotEmpty)
-      Padding(
-        padding: const EdgeInsets.only(left: 16.0, top: 2.0),
-        child: Text(
-          item.description,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.black54,
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFA7D7A7),
+    appBar: TeacherAppBar(),
+    drawer: MenuDrawer(),
+    body: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // < Back button
+        Padding(
+          padding: const EdgeInsets.only(left: 16.0, top: 10),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: const Text("< Back", style: TextStyle(fontSize: 16)),
           ),
         ),
-      ),
-  ],
-),
 
-                                        );
-                                      }).toList(),
-                                    ),
-                                    const Divider(height: 30),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+        const SizedBox(height: 8),
+
+        // Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E3192),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: SvgPicture.asset(
+                  'assets/icons/syllabus.svg',
+                  height: 24,
+                  width: 24,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Syllabus',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E3192),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
+
+        const SizedBox(height: 16),
+
+        // White Container (fixed height, full screen minus appbar + header)
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0)
+                .copyWith(bottom: 50), // 👈 gap at bottom
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Class > Subject Row
+                  Row(
+                    children: [
+                      Text('Class ${widget.selectedClass} > '),
+                      Text(
+                        widget.subject,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.more_vert),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Divider row with Add + Pencil
+                  Container(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Color(0xFF999999), width: 0.5),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.add_circle_outline,
+                            color: Color(0xFF29ABE2)),
+                        const SizedBox(width: 4),
+                        const Text('Add',
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF29ABE2),
+                                fontWeight: FontWeight.w500)),
+                        const Spacer(),
+                        SvgPicture.asset(
+                          'assets/icons/pencil.svg',
+                          height: 18,
+                          width: 18,
+                          color: Colors.black,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // 🔹 Scrollable API Data inside white box
+                  Expanded(
+                    child: FutureBuilder<List<SyllabusTerm>>(
+                      future: syllabusFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        } else if (snapshot.hasError) {
+                          return Text("Error: ${snapshot.error}");
+                        } else if (!snapshot.hasData ||
+                            snapshot.data!.isEmpty) {
+                          return const Text("No syllabus available.");
+                        }
+
+                        final terms = snapshot.data!;
+                        return ListView(
+                          children: terms.map((term) {
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.only(bottom: 20.0),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    term.term,
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      color: Color(0xFF2E3192),
+                                    ),
+                                  ),
+                                  Text(
+                                    term.academicYear,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: term.items.map((item) {
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.symmetric(
+                                                vertical: 4.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                                "${item.sequence + 1}. ${item.title}"),
+                                            if (item.description.isNotEmpty)
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.only(
+                                                        left: 16.0, top: 2.0),
+                                                child: Text(
+                                                  item.description,
+                                                  style:
+                                                      const TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const Divider(height: 30),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }
