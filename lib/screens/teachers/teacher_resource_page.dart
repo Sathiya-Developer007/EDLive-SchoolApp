@@ -57,21 +57,51 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                     onTap: () {
                       Navigator.pop(context); // Go back
                     },
-                    child: Row(
-                      children: const [
-                        Padding(
-                          padding: EdgeInsets.only(left: 4),
-                          child: Text(
-                            '< Back',
-                            style: TextStyle(
-                              color: Colors.black, // Changed to black
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                    child:// Back + Add Row
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    GestureDetector(
+      onTap: () {
+        Navigator.pop(context); // Go back
+      },
+      child: const Text(
+        '< Back',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 14,
+        ),
+      ),
+    ),
+
+    // + Add Button
+    GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TeacherResourceAddPage(), // 👈 open Add page
+          ),
+        );
+      },
+      child: Row(
+        children: const [
+          Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
+          SizedBox(width: 4),
+          Text(
+            "Add",
+            style: TextStyle(
+              color: Color(0xFF29ABE2),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    ),
+  ],
+),
+ ),
                   const SizedBox(height: 6), // Space between Back and title
                   Row(
                     children: [
@@ -217,23 +247,23 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
     padding: const EdgeInsets.symmetric(vertical: 10),
     decoration: const BoxDecoration(
       border: Border(
-        bottom: BorderSide(color: Colors.grey, width: 0.8), // ✅ Bottom border
+        bottom: BorderSide(color: Colors.grey, width: 0.2), // ✅ Bottom border
       ),
     ),
-    child: Row(
-      children: const [
-        Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
-        SizedBox(width: 8),
-        Text(
-          "Add",
-          style: TextStyle(
-            color: Color(0xFF29ABE2),
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    ),
+    // child: Row(
+    //   children: const [
+    //     Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
+    //     SizedBox(width: 8),
+    //     Text(
+    //       "Add",
+    //       style: TextStyle(
+    //         color: Color(0xFF29ABE2),
+    //         fontSize: 15,
+    //         fontWeight: FontWeight.w600,
+    //       ),
+    //     ),
+    //   ],
+    // ),
   ),
 )
 ,
