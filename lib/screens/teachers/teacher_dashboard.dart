@@ -21,7 +21,7 @@ import 'teacher_report_page.dart';
 import 'teacher_quick_notes.dart';
 import 'teacher_specialcare_page.dart';
 import 'teacher_co_curricular_page.dart';
-
+import 'teacher_notifiction_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -49,13 +49,20 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    DashboardTile(
-                      title: 'Notifications',
-                      subtitle: 'PTA meeting on 12, Feb. 2019',
-                      iconPath: 'assets/icons/notification.svg',
-                      color: const Color(0xFFF9F7A5),
-                      badgeCount: 1,
-                    ),
+DashboardTile(
+  title: 'Notifications',
+  subtitle: 'PTA meeting on 12, Feb. 2019',
+  iconPath: 'assets/icons/notification.svg',
+  color: const Color(0xFFF9F7A5),
+  badgeCount: 1,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NotificationPage()),
+    );
+  },
+),
+
                     if (settings.showAchievements)
                       DashboardTile(
                         title: 'Achievements',
