@@ -21,172 +21,246 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFE6E6E6),
+      backgroundColor: const Color(0xFFD3C4D6), // same purple bg
       appBar: TeacherAppBar(),
       drawer: MenuDrawer(),
-     body: SafeArea(
-  child: Column(
-    children: [
-      // Top section (Back + Title)
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Text(
-                "< Back",
-                style: TextStyle(fontSize: 16, color: Colors.black),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Back + Title
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Text(
+                  "< Back",
+                  style: TextStyle(fontSize: 14, color: Colors.black),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 6),
 
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  color: const Color(0xFF2E3192),
-                  child: SvgPicture.asset(
-                    'assets/icons/quick_notes.svg',
-                    height: 24,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF2E3192),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icons/quick_notes.svg',
+                      height: 20,
+                      width: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Quick Notes",
+                    style: TextStyle(
+                      color: Color(0xFF2D3E9A),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // White container (same style as Resources page)
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
                     color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
                   ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // scrollable form
+                   Expanded(
+  child: SingleChildScrollView(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Class Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Class", style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 20),
+            SizedBox(
+              width: 200,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  "Quick notes",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF2E3192),
-                  ),
+                child: DropdownButton<String>(
+                  value: selectedClass,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: ["10 A", "9 B", "8 C"].map((cls) {
+                    return DropdownMenuItem(
+                      value: cls,
+                      child: Text(cls),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => selectedClass = val);
+                  },
                 ),
-              ],
+              ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 12),
 
-      // White container that expands + scrolls internally
-      Expanded(
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 20,right: 10,left:10), // 20px gap at bottom
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Class"),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  value: selectedClass,
-                  decoration: _inputDecoration(),
-                  items: ["10 A", "9 B", "8 C"]
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (val) {
-                    setState(() => selectedClass = val);
-                  },
+        // Student Name Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Student Name", style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 20),
+            SizedBox(
+              width: 200,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                const SizedBox(height: 16),
-
-                const Text("Student Name"),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
+                child: DropdownButton<String>(
                   value: selectedStudent,
-                  decoration: _inputDecoration(),
-                  items: ["All", "John", "Ananya", "Rahul"]
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: ["All", "John", "Ananya", "Rahul"].map((stu) {
+                    return DropdownMenuItem(
+                      value: stu,
+                      child: Text(stu),
+                    );
+                  }).toList(),
                   onChanged: (val) {
-                    setState(() => selectedStudent = val);
+                    if (val != null) setState(() => selectedStudent = val);
                   },
                 ),
-                const SizedBox(height: 16),
-
-                const Text("Quick Notes:"),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: noteController,
-                  decoration: _inputDecoration(),
-                ),
-                const SizedBox(height: 16),
-
-                const Text("Description:"),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: descController,
-                  maxLines: 3,
-                  decoration: _inputDecoration(),
-                ),
-                const SizedBox(height: 16),
-
-                const Text("Web Links:"),
-                const SizedBox(height: 4),
-                TextField(
-                  controller: linkController,
-                  decoration: _inputDecoration(),
-                ),
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey.shade400,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {},
-                        child: const Text(
-                          "Remove",
-                          style:
-                              TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF29ABE2),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {},
-                        child: const Text(
-                          "Add",
-                          style:
-                              TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Quick Notes
+        const Text("Quick Notes:", style: TextStyle(fontSize: 14)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: noteController,
+          decoration: _inputDecoration(),
+        ),
+        const SizedBox(height: 16),
+
+        // Description
+        const Text("Description:", style: TextStyle(fontSize: 14)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: descController,
+          maxLines: 3,
+          decoration: _inputDecoration(),
+        ),
+        const SizedBox(height: 16),
+
+        // Web Links
+        const Text("Web Links:", style: TextStyle(fontSize: 14)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: linkController,
+          decoration: _inputDecoration(),
+        ),
+        const SizedBox(height: 16),
+      ],
+    ),
+  ),
+),
+
+
+                      const SizedBox(height: 16),
+
+                      // Buttons always at bottom
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade400,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  "Remove",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                debugPrint("Added Quick Note: "
+                                    "${noteController.text}, ${descController.text}, ${linkController.text}");
+                                Navigator.pop(context);
+                              },
+                              child: Container(
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF29ABE2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    "Add",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            ],
           ),
         ),
       ),
-    ],
-  ),
-),
- );
+    );
   }
 
   InputDecoration _inputDecoration() {
     return InputDecoration(
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      filled: true,
+      fillColor: const Color(0xFFF5F5F5),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
-        borderSide: const BorderSide(color: Colors.black26),
+        borderSide: BorderSide.none,
       ),
     );
   }
