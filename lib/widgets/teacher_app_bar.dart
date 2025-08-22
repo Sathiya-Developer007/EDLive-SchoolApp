@@ -16,15 +16,15 @@ class TeacherAppBar extends StatelessWidget implements PreferredSizeWidget {
     return PreferredSize(
       preferredSize: const Size.fromHeight(100),
       child: Container(
-        height: 100,
+        height: 63,
         child: Column(
           children: [
             // 🔲 Top black bar
-            Container(
-              height: 30,
-              width: double.infinity,
-              color: Colors.black,
-            ),
+            // Container(
+            //   height: 30,
+            //   width: double.infinity,
+            //   color: Colors.black,
+            // ),
             // ⬜ Main AppBar content
             Expanded(
               child: AppBar(

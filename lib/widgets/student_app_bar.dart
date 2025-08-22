@@ -19,7 +19,7 @@ class StudentAppBar extends StatelessWidget implements PreferredSizeWidget {
       preferredSize: preferredSize,
       child: Column(
         children: [
-          Container(height: 30, width: double.infinity, color: Colors.black),
+          // Container(height: 30, width: double.infinity, color: Colors.black),
           Expanded(
             child: AppBar(
               backgroundColor: Colors.white,
@@ -75,5 +75,5 @@ class StudentAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(100);
+  Size get preferredSize => const Size.fromHeight(63);
 }
