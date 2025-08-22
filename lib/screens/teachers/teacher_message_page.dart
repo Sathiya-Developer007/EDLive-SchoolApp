@@ -8,6 +8,9 @@ import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:school_app/models/teacher_class_student.dart';
 import 'package:school_app/services/teacher_class_student_list.dart';
 
+import 'package:school_app/models/class_section.dart';
+import 'package:school_app/services/class_section_service.dart';
+
 class TeacherMessagePage extends StatefulWidget {
   const TeacherMessagePage({super.key});
 
@@ -16,6 +19,8 @@ class TeacherMessagePage extends StatefulWidget {
 }
 
 class _TeacherMessagePageState extends State<TeacherMessagePage> {
+
+
   String? selectedTo;
   bool showAccordion = false;
   bool sendSMS = false;
@@ -40,6 +45,38 @@ List<Student> searchResults = [];
 List<Map<String, dynamic>> selectedStudents = [];
 
 
+
+
+
+  List<ClassSection> classSections = [];
+Map<int, bool> selectedClassSections = {}; // key = ClassSection.id
+
+bool loadingClasses = false;
+
+
+@override
+void initState() {
+  super.initState();
+  fetchAllStudents();
+  fetchClassSectionsFromApi();
+}
+
+Future<void> fetchClassSectionsFromApi() async {
+  setState(() => loadingClasses = true);
+
+  try {
+    final service = ClassService();
+    final sections = await service.fetchClassSections();
+    setState(() {
+      classSections = sections;
+      selectedClassSections = {for (var s in sections) s.id: false};
+    });
+  } catch (e) {
+    debugPrint("Error fetching class sections: $e");
+  } finally {
+    setState(() => loadingClasses = false);
+  }
+}
 
 
 
@@ -162,11 +199,11 @@ void showStudentDetails(Student student) {
     }
   }
 
-@override
-void initState() {
-  super.initState();
-  fetchAllStudents();
-}
+// @override
+// void initState() {
+//   super.initState();
+//   fetchAllStudents();
+// }
 
 Future<String?> getToken() async {
   final prefs = await SharedPreferences.getInstance();
@@ -413,15 +450,43 @@ Widget build(BuildContext context) {
   child: ElevatedButton(
     style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
     onPressed: () async {
-      if (selectedStudents.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Select at least one student")),
-        );
-        return;
-      }
+      final selectedSections = classSections
+    .where((cls) => selectedClassSections[cls.id] == true)
+    .toList();
 
-      final token = await getToken();
-      if (token == null) return;
+if (selectedSections.isEmpty && selectedStudents.isEmpty) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("Select at least one student or class")),
+  );
+  return;
+}
+
+final token = await getToken();
+if (token == null) return;
+
+// Send to selected individual students
+for (var student in selectedStudents) {
+  final channels = <String>[];
+  if (sendSMS) channels.add("sms");
+  if (sendWhatsApp) channels.add("whatsapp");
+  if (sendEmail) channels.add("email");
+
+  await MessageService.sendMessage(
+    token: token,
+    studentId: student["id"],
+    messageText: messageController.text,
+    isAppreciation: true,
+    isMeetingRequest: false,
+    channels: channels,
+  );
+}
+
+// TODO: Send to students in selected class sections
+for (var cls in selectedSections) {
+  // Call your API or fetch students by class/section
+  // Then send messages to each student like above
+}
+
 
       bool allSuccess = true;
 
@@ -482,28 +547,94 @@ Widget build(BuildContext context) {
   );
   }
 
-  Widget _buildAccordion() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Select Classes',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 5),
-          ...classSelections.keys
-              .map((className) => _buildClassCheckboxRow(className))
-              .toList(),
-        ],
-      ),
-    );
+Widget _buildAccordion() {
+  if (loadingClasses) {
+    return const Center(child: CircularProgressIndicator());
   }
+
+  // Group sections by class name
+  final Map<String, List<ClassSection>> groupedClasses = {};
+  for (var cls in classSections) {
+    groupedClasses.putIfAbsent(cls.className, () => []).add(cls);
+  }
+
+  return Container(
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey),
+      borderRadius: BorderRadius.circular(5),
+    ),
+    padding: const EdgeInsets.all(8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Classes',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 5),
+
+        ...groupedClasses.entries.map((entry) {
+          final className = entry.key;
+          final sections = entry.value;
+
+          bool isClassChecked() =>
+              sections.every((s) => selectedClassSections[s.id] == true);
+
+          void toggleWholeClass() {
+            setState(() {
+              final allSelected = isClassChecked();
+              for (var s in sections) {
+                selectedClassSections[s.id] = !allSelected;
+              }
+            });
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: isClassChecked(),
+                onChanged: (_) => toggleWholeClass(),
+              ),
+              SizedBox(width: 30, child: Text(className)),
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  children: sections.map((cls) {
+                    final selected = selectedClassSections[cls.id] ?? false;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedClassSections[cls.id] = !selected;
+                        });
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          color: selected ? Colors.blue : Colors.white,
+                        ),
+                        child: Text(
+                          cls.section.toUpperCase(),
+                          style: TextStyle(
+                            color: selected ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ],
+    ),
+  );
+}
+
 
   Widget _buildClassCheckboxRow(String label) {
     return Row(
