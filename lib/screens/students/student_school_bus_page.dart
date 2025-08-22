@@ -2,169 +2,147 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
+import '../../services/student_schoolbus.dart';
+import '../../models/student_schoolbus.dart';
 
-class StudentSchoolBusPage extends StatelessWidget {
+class StudentSchoolBusPage extends StatefulWidget {
   const StudentSchoolBusPage({super.key});
+
+  @override
+  State<StudentSchoolBusPage> createState() => _StudentSchoolBusPageState();
+}
+
+class _StudentSchoolBusPageState extends State<StudentSchoolBusPage> {
+  Transport? transport;
+  bool isLoading = true;
+  String errorMsg = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransport();
+  }
+
+  Future<void> _loadTransport() async {
+    try {
+      // Example student_id = 18, academic_year = "2025-2026"
+      final data = await TransportService.fetchStudentTransport(18, "2025-2026");
+      setState(() {
+        transport = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMsg = e.toString();
+        isLoading = false;
+      });
+    }
+  }
+
+  // Reusable info row
+  Widget buildInfoRow(String label, String value, {String? value2}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: value2 == null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                const SizedBox(height: 4),
+                Text(value, style: const TextStyle(fontSize: 16, color: Colors.black)),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    const SizedBox(height: 4),
+                    Text(value, style: const TextStyle(fontSize: 16, color: Colors.black)),
+                  ],
+                ),
+                Text(value2, style: const TextStyle(fontSize: 16, color: Colors.black)),
+              ],
+            ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFDAD9FF),
+      backgroundColor: Colors.transparent,
       appBar: StudentAppBar(),
       drawer: StudentMenuDrawer(),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 🔙 Back and Title Row
-         Padding(
-  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: const Text(
-          '< Back',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.black,
-          ),
-        ),
-      ),
-      const SizedBox(height: 12),
-    Row(
-  children: [
-    Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Color(0xFF2E3192), // Background color for icon
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: SvgPicture.asset(
-        'assets/icons/transport.svg',
-        height: 20,
-        width: 20,
-        color: Colors.white, // Make the icon white for contrast
-      ),
-    ),
-    const SizedBox(width: 8),
-    const Text(
-      'School bus',
-      style: TextStyle(
-        fontSize: 34,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF1F227A),
-      ),
-    ),
-  ],
-),
- ],
-  ),
-),
-
-            // 🚌 Bus Info Card
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+      body: Container(
+        color: const Color(0xFFDAD9FF),
+        width: double.infinity,
+        height: double.infinity,
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : errorMsg.isNotEmpty
+                ? Center(child: Text(errorMsg))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Bus No.',
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Color(0xFF1F227A),
+                        // 🔙 Back Button
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Text(
+                            '< Back',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'KL 8 G 1214',
-                          style: TextStyle(
-                            fontSize: 20,
-                            // fontWeight: FontWeight.bold,
-                            color: Color(0xFF1F227A),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          '7 : 45 am',
-                          style: TextStyle(
-                            fontSize: 14,
-                           color: Color(0xFF0000FF),
+                        const SizedBox(height: 8),
 
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          '@',
-                          style: TextStyle(fontSize: 20, color: Colors.black),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Gandhi Street,T Nagar',
-                          style: TextStyle(fontSize: 14, color: Colors.black),
-                        ),
-                        const SizedBox(height: 24),
-                        // const Divider(thickness: 1, color: Colors.grey),
-                        const SizedBox(height: 24),
+                        // 🚍 Icon + Title
                         Row(
                           children: [
-                            const Text(
-                              'Driver Mobile: ',
-                              style: TextStyle(fontSize: 14, color: Color(0xFF4D4D4D),
-),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2E3192),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: SvgPicture.asset(
+                                'assets/icons/transport.svg',
+                                height: 20,
+                                width: 20,
+                                color: Colors.white,
+                              ),
                             ),
-                            GestureDetector(
-                              onTap: () {},
-                              child: const Text(
-                                '+91 8056347856',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                 color: Color(0xFF0000FF),
-
-                                  // decoration: TextDecoration.underline,
-                                ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'School Bus',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E3192),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 18),
-                        Row(
-                          children: [
-                            const Text(
-                              'Transport Manager: ',
-                              style: TextStyle(fontSize: 14,color: Color(0xFF4D4D4D),
-),
-                            ),
-                            GestureDetector(
-                              onTap: () {},
-                              child: const Text(
-                                '+91 8056347856',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                 color: Color(0xFF0000FF),
-                                  // decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        const SizedBox(height: 20),
+
+                        // API Data
+                        buildInfoRow("Bus Number", transport!.busNumber),
+                        buildInfoRow("Pick-up Time", transport!.arrivalTime),
+                        buildInfoRow("Pick-up Location", transport!.stopName),
+                        buildInfoRow("Driver", transport!.driverName, value2: transport!.driverContact),
+                        buildInfoRow("Transport Manager",
+                            transport!.managerName ?? "-", value2: transport!.managerContact ?? "-"),
                       ],
                     ),
                   ),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

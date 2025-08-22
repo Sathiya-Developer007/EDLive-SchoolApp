@@ -105,7 +105,8 @@ if (item['label'] == 'Logout') {
     context,
     '/', // Ensure this is your login route
     (route) => false,
-  );}
+  );
+  }
  else if (item['label'] == 'Timetable') {
                           final prefs = await SharedPreferences.getInstance();
                           final year =
