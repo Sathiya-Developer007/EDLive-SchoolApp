@@ -19,6 +19,7 @@ import 'teacher_list_page.dart';
 import 'student_payments_page.dart';
 import 'student_report_page.dart';
 import 'student_food_page.dart';
+import 'student_achievement_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -105,16 +106,25 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       badgeCount: 1,
                     ),
                     if (settings.showAchievements)
-                      DashboardTile(
-                        title: 'Achievements',
-                        subtitle:
-                            'Will appear only if there is any achievement',
-                        iconPath: 'assets/icons/achievements.svg',
-                        color: const Color(0xFFF7EB7C),
-                        badgeCount: 1,
-                        onClose: () =>
-                            settings.updateVisibility('Achievements', false),
-                      ),
+                    DashboardTile(
+  title: 'Achievements',
+  subtitle: 'Will appear only if there is any achievement',
+  iconPath: 'assets/icons/achievements.svg',
+  color: const Color(0xFFF7EB7C),
+  badgeCount: 1,
+  onClose: () => settings.updateVisibility('Achievements', false),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StudentAchievementPage(
+          classId: 1, // TODO: replace with logged-in student's classId
+        ),
+      ),
+    );
+  },
+),
+
                     DashboardTile(
                       title: 'My To-Do List',
                       subtitle: 'Check your tasks',

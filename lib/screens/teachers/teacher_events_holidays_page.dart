@@ -117,10 +117,10 @@ class _TeacherEventsHolidaysPageState
                     child: const Text('< Back', style: TextStyle(fontSize: 16)),
                   ),
                   const Spacer(),
-                  const Text(
-                    'Gallery',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  // const Text(
+                  //   'Gallery',
+                  //   style: TextStyle(fontWeight: FontWeight.bold),
+                  // ),
                 ],
               ),
             ),

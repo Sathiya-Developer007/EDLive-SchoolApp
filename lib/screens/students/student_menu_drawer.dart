@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+ import 'package:restart_app/restart_app.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'student_timetable.dart';
 import 'student_attendance_page.dart';
