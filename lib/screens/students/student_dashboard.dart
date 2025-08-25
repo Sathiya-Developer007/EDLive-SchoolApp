@@ -106,25 +106,29 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       badgeCount: 1,
                     ),
                     if (settings.showAchievements)
-                    DashboardTile(
+                  DashboardTile(
   title: 'Achievements',
   subtitle: 'Will appear only if there is any achievement',
   iconPath: 'assets/icons/achievements.svg',
   color: const Color(0xFFF7EB7C),
   badgeCount: 1,
   onClose: () => settings.updateVisibility('Achievements', false),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => StudentAchievementPage(
-          classId: 1, // TODO: replace with logged-in student's classId
-        ),
-      ),
-    );
-  },
-),
+  onTap: () async {
+  final prefs = await SharedPreferences.getInstance();
+  final classId = prefs.getInt('class_id') ?? 0; // fallback if missing
 
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => StudentAchievementPage(
+        classId: classId,
+      ),
+    ),
+  );
+},
+
+)
+,
                     DashboardTile(
                       title: 'My To-Do List',
                       subtitle: 'Check your tasks',

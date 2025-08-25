@@ -22,6 +22,7 @@ import 'teacher_quick_notes.dart';
 import 'teacher_specialcare_page.dart';
 import 'teacher_co_curricular_page.dart';
 import 'teacher_notifiction_page.dart';
+import 'teacher_achievement_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
@@ -64,14 +65,23 @@ DashboardTile(
 ),
 
                     if (settings.showAchievements)
-                      DashboardTile(
-                        title: 'Achievements',
-                        subtitle: 'Congratulate your student',
-                        iconPath: 'assets/icons/achievements.svg',
-                        color: const Color(0xFFFCEE21),
-                        badgeCount: 1,
-                        onClose: () => settings.updateVisibility('Achievements', false),
-                      ),
+                   DashboardTile(
+  title: 'Achievements',
+  subtitle: 'Congratulate your student',
+  iconPath: 'assets/icons/achievements.svg',
+  color: const Color(0xFFFCEE21),
+  badgeCount: 1,
+  onClose: () => settings.updateVisibility('Achievements', false),
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TeacherAchievementPage(),
+      ),
+    );
+  },
+)
+,
                     if (settings.showTodo)
                       DashboardTile(
                         title: 'My to-do list',
