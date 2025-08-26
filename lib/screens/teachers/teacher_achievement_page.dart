@@ -76,7 +76,7 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
       final service = StudentService();
       final students = await service.fetchStudents();
 
-      final filtered = students.where((s) => s.classId == classId).toList();
+     final filtered = students; //where((s) => s.classId == classId).toList();
 
       setState(() {
         _students = filtered;
