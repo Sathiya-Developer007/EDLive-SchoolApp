@@ -1,7 +1,9 @@
+import '../models/teacher_student_profileview.dart';
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/teacher_class_student.dart';
-import '../models/teacher_student_profileview.dart';
+
 
 class StudentService {
   static Future<List<Student>> fetchStudents(String token) async {

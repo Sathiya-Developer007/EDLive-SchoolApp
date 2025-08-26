@@ -32,6 +32,7 @@ import 'providers/teacher_settings_provider.dart';
 import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
 import 'providers/teacher_attendance_provider.dart';
+import 'providers/achievement_provider.dart';
 
 import 'dart:convert';
 
@@ -64,6 +65,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => StudentTimetableProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => StudentSettingsProvider()),
+         ChangeNotifierProvider(create: (_) => AchievementProvider()),
       ],
       child: MyApp(
         token: token,
