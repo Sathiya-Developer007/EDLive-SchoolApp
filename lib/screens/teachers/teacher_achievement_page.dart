@@ -27,7 +27,7 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
   int? _categoryId = 1;
   int? _classId;
   int? _studentId;
-  int _academicYearId = 2024;
+  int _academicYearId = 2025;
   String _visibility = "school";
   DateTime? _selectedDate;
 
@@ -94,43 +94,52 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
     }
   }
 
-  Future<void> _submit(BuildContext context) async {
-    if (_formKey.currentState!.validate()) {
-      if (_classId == null || _studentId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please select class & student")),
-        );
-        return;
-      }
-
-      final achievement = Achievement(
-        studentId: _studentId!,
-        title: _titleController.text,
-        description: _descController.text,
-        categoryId: _categoryId!,
-        achievementDate: _selectedDate?.toIso8601String().split("T").first ?? "",
-        awardedBy: _awardedByController.text,
-        imageUrl: _imageUrlController.text,
-        isVisible: _visibility,
-        classId: _classId!,
-        academicYearId: _academicYearId,
+ Future<void> _submit(BuildContext context) async {
+  if (_formKey.currentState!.validate()) {
+    if (_classId == null || _studentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select class & student")),
       );
+      return;
+    }
 
-      try {
-        await Provider.of<AchievementProvider>(context, listen: false)
-            .addAchievement(achievement);
+    // Map dropdown ID to API string
+    final categoryMap = {
+      1: "academic",
+      2: "sports",
+      3: "arts",
+      4: "leadership",
+      5: "community_service",
+    };
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Achievement added successfully")),
-        );
-        _formKey.currentState!.reset();
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e")),
-        );
-      }
+    final achievement = Achievement(
+      studentId: _studentId!,
+      title: _titleController.text,
+      description: _descController.text,
+      categoryId: categoryMap[_categoryId!]!, // 🔹 send string to API
+      achievementDate: _selectedDate?.toIso8601String().split("T").first ?? "",
+      awardedBy: _awardedByController.text,
+      imageUrl: _imageUrlController.text,
+      isVisible: _visibility,
+      classId: _classId!,
+      academicYearId: _academicYearId,
+    );
+
+    try {
+      await Provider.of<AchievementProvider>(context, listen: false)
+          .addAchievement(achievement);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Achievement added successfully")),
+      );
+      _formKey.currentState!.reset();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

@@ -3,7 +3,7 @@ class Achievement {
   final int studentId;
   final String title;
   final String description;
-  final int categoryId;
+  final String categoryId;
   final String achievementDate;
   final String awardedBy;
   final String imageUrl;
