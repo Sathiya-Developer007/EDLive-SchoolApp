@@ -148,26 +148,28 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
               ),
             ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E3192),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AddTeacherAchievementPage(),
-                ),
-              );
-            },
-            child: const Text(
-              "+ Add",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
+         ElevatedButton.icon(
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.blue,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(5),
+    ),
+  ),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddTeacherAchievementPage(),
+      ),
+    );
+  },
+  icon: const Icon(Icons.add_circle, color: Colors.white), // add circle icon
+  label: const Text(
+    "Add",
+    style: TextStyle(color: Colors.white),
+  ),
+)
+
         ],
       ),
 
