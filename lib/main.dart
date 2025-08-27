@@ -32,7 +32,7 @@ import 'providers/teacher_settings_provider.dart';
 import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
 import 'providers/teacher_attendance_provider.dart';
-import 'providers/achievement_provider.dart';
+import 'providers/teacher_achievement_provider.dart';
 
 import 'dart:convert';
 

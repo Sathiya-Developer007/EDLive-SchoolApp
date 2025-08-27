@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:school_app/models/achievement_model.dart';
 import 'package:school_app/models/class_section.dart';
 import 'package:school_app/models/teacher_student_classsection.dart';
-import 'package:school_app/providers/achievement_provider.dart';
+import 'package:school_app/providers/teacher_achievement_provider.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/services/class_section_service.dart';
 import 'package:school_app/services/teacher_student_classsection.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_app/models/achievement_model.dart';
-import 'package:school_app/services/achievement_service.dart';
+import 'package:school_app/services/teacher_achievement_service.dart';
 
 class AchievementProvider with ChangeNotifier {
   final AchievementService _service = AchievementService();

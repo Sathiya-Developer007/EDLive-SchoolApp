@@ -152,7 +152,7 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
   style: ElevatedButton.styleFrom(
     backgroundColor: Colors.blue,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(5),
+      borderRadius: BorderRadius.circular(8),
     ),
   ),
   onPressed: () {

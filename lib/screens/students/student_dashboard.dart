@@ -20,6 +20,7 @@ import 'student_payments_page.dart';
 import 'student_report_page.dart';
 import 'student_food_page.dart';
 import 'student_achievement_page.dart';
+import 'student_messages_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -46,6 +47,12 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   //     await provider.fetchStudentTodos(); // ✅ Fetch ToDos from backend
   //   }
   // }
+
+  Future<int?> _getStudentId() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getInt('student_id');  // 👈 same key you saved in login
+}
+
 
   String getCurrentAcademicYear() {
     final now = DateTime.now();
@@ -359,15 +366,31 @@ DashboardTile(
     if (settings.showSchoolBus && settings.showMessage)
       const SizedBox(width: 12),
     if (settings.showMessage)
-      Expanded(
-        child: DashboardTile(
-          title: 'Message',
-          iconPath: 'assets/icons/message.svg',
-          color: const Color(0xFFA3D3A7),
-          centerContent: true,
-          onClose: () => settings.updateVisibility('Message', false),
+  Expanded(
+  child: DashboardTile(
+    title: 'Message',
+    iconPath: 'assets/icons/message.svg',
+    color: const Color(0xFFA3D3A7),
+    centerContent: true,
+    onTap: () async {
+      final studentId = await _getStudentId();
+      if (studentId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No student ID found, please login again')),
+        );
+        return;
+      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StudentMessagesPage(studentId: studentId),
         ),
-      ),
+      );
+    },
+    onClose: () => settings.updateVisibility('Message', false),
+  ),
+)
+
   ],
 ),
 
