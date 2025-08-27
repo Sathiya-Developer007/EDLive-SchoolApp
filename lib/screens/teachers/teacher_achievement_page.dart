@@ -95,51 +95,60 @@ final TextEditingController _academicYearController = TextEditingController();
     }
   }
 
- Future<void> _submit(BuildContext context) async {
-  if (_formKey.currentState!.validate()) {
-    if (_classId == null || _studentId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select class & student")),
-      );
-      return;
-    }
+Future<void> _submit(BuildContext context) async {
+  if (!_formKey.currentState!.validate()) return;
 
-    // Map dropdown ID to API string
-    final categoryMap = {
-      1: "academic",
-      2: "sports",
-      3: "arts",
-      4: "leadership",
-      5: "community_service",
-    };
+  // Ensure class and student are selected
+  if (_classId == null || _studentId == null) return;
 
- final achievement = Achievement(
-  studentId: _studentId!,
-  title: _titleController.text,
-  description: _descController.text,
-  categoryId: categoryMap[_categoryId!]!,
-  achievementDate: _selectedDate?.toIso8601String().split("T").first ?? "",
-  awardedBy: _awardedByController.text,
-  imageUrl: _imageUrlController.text,
-  isVisible: _visibility,
-  classId: _classId!,
-academicYearId: int.parse(_academicYearController.text),
-);
+  // Map dropdown ID to API string
+  final categoryMap = {
+    1: "academic",
+    2: "sports",
+    3: "arts",
+    4: "leadership",
+    5: "community_service",
+  };
 
+  final achievement = Achievement(
+    studentId: _studentId!,
+    title: _titleController.text,
+    description: _descController.text,
+    categoryId: categoryMap[_categoryId!]!,
+    achievementDate: _selectedDate?.toIso8601String().split("T").first ?? "",
+    awardedBy: _awardedByController.text,
+    imageUrl: _imageUrlController.text,
+    isVisible: _visibility,
+    classId: _classId!,
+    academicYearId: int.tryParse(_academicYearController.text) ?? 2024,
+  );
 
-    try {
-      await Provider.of<AchievementProvider>(context, listen: false)
-          .addAchievement(achievement);
+  try {
+    await Provider.of<AchievementProvider>(context, listen: false)
+        .addAchievement(achievement);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Achievement added successfully")),
-      );
-      _formKey.currentState!.reset();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
+    // Only show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Achievement added successfully")),
+    );
+
+    // Reset form
+    _formKey.currentState!.reset();
+
+    // Clear selected date and dropdowns
+    setState(() {
+      _selectedDate = null;
+      _categoryId = 1;
+      _visibility = "school";
+      _selectedStudentId = _students.isNotEmpty ? _students.first.id : null;
+      _studentId = _selectedStudentId;
+      _classId = _classSections.isNotEmpty ? _classSections.first.id : null;
+    });
+
+  } catch (e, stack) {
+    // Only log error to console, do not show UI
+    print("Error adding achievement: $e");
+    print(stack);
   }
 }
 

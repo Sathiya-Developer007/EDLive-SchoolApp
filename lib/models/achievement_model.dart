@@ -36,8 +36,7 @@ class Achievement {
       "imageUrl": imageUrl,
       "isVisible": isVisible,
       "classId": classId,
-      "academic_year": academicYearId,
-
+      "academicYearId": academicYearId,
     };
   }
 

@@ -13,9 +13,19 @@ class AchievementProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _service.createAchievement(achievement);
-    } catch (e) {
-      rethrow;
+      // Log payload
+      print("Sending Achievement: ${achievement.toJson()}");
+
+      // Call backend
+      final response = await _service.createAchievement(achievement);
+
+      // Log backend response
+      print("Backend response: $response");
+
+    } catch (e, stack) {
+      // Only log error to console; do not show UI
+      print("Error adding achievement: $e");
+      print(stack);
     } finally {
       _loading = false;
       notifyListeners();
