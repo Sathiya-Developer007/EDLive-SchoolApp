@@ -10,14 +10,14 @@ import 'package:school_app/services/class_section_service.dart';
 import 'package:school_app/services/teacher_student_classsection.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 
-class TeacherAchievementPage extends StatefulWidget {
-  const TeacherAchievementPage({super.key});
+class AddTeacherAchievementPage extends StatefulWidget {
+  const AddTeacherAchievementPage({super.key});
 
   @override
-  State<TeacherAchievementPage> createState() => _TeacherAchievementPageState();
+  State<AddTeacherAchievementPage> createState() => _TeacherAchievementPageState();
 }
 
-class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
+class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _titleController = TextEditingController();
