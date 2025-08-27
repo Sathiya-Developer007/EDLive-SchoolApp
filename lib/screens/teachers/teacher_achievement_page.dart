@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:school_app/models/achievement_model.dart';
 import 'package:school_app/models/class_section.dart';
@@ -27,7 +28,7 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
   int? _categoryId = 1;
   int? _classId;
   int? _studentId;
-  int _academicYearId = 2025;
+final TextEditingController _academicYearController = TextEditingController();
   String _visibility = "school";
   DateTime? _selectedDate;
 
@@ -112,18 +113,19 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
       5: "community_service",
     };
 
-    final achievement = Achievement(
-      studentId: _studentId!,
-      title: _titleController.text,
-      description: _descController.text,
-      categoryId: categoryMap[_categoryId!]!, // 🔹 send string to API
-      achievementDate: _selectedDate?.toIso8601String().split("T").first ?? "",
-      awardedBy: _awardedByController.text,
-      imageUrl: _imageUrlController.text,
-      isVisible: _visibility,
-      classId: _classId!,
-      academicYearId: _academicYearId,
-    );
+ final achievement = Achievement(
+  studentId: _studentId!,
+  title: _titleController.text,
+  description: _descController.text,
+  categoryId: categoryMap[_categoryId!]!,
+  achievementDate: _selectedDate?.toIso8601String().split("T").first ?? "",
+  awardedBy: _awardedByController.text,
+  imageUrl: _imageUrlController.text,
+  isVisible: _visibility,
+  classId: _classId!,
+academicYearId: int.parse(_academicYearController.text),
+);
+
 
     try {
       await Provider.of<AchievementProvider>(context, listen: false)
@@ -150,60 +152,83 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
       drawer: MenuDrawer(),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : Container(
-              color: const Color(0xFFFCEE21),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Text(
-                        "< Back",
-                        style: TextStyle(fontSize: 16, color: Colors.black),
-                      ),
+          :Container(
+  color: const Color(0xFFFCEE21),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: const Text(
+            "< Back",
+            style: TextStyle(fontSize: 16, color: Colors.black),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // 🔹 Add Achievement title with SVG icon
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E3192), // icon background color
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SvgPicture.asset(
+                'assets/icons/achievements.svg', // your SVG path
+                height: 24,
+                width: 24,
+                color: Colors.white, // icon color
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              "Add Achievement",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3192), // text color
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  // 🔹 Removed old "Add Achievement" text from inside
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "🎓 Student Information",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
                     ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 15,
-                              spreadRadius: 2,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: ListView(
-                            children: [
-                              const Text(
-                                "Add Achievement",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              const Divider(),
-                              const SizedBox(height: 12),
-                              const Text(
-                                "🎓 Student Information",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
+                  ),
+                  const SizedBox(height: 12),
 
                               // Class Dropdown
                               _loadingClasses
@@ -267,6 +292,7 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
       ),
 
 const SizedBox(height: 20),
+
                               const Divider(),
                               const SizedBox(height: 12),
 
@@ -279,7 +305,10 @@ const SizedBox(height: 20),
                                   color: Colors.black87,
                                 ),
                               ),
+
                               const SizedBox(height: 12),
+
+                              
 
                               TextFormField(
                                 controller: _titleController,
@@ -341,6 +370,30 @@ const SizedBox(height: 20),
                                 validator: (val) => val!.isEmpty ? "Enter image url" : null,
                               ),
                               const SizedBox(height: 16),
+
+                             TextFormField(
+  controller: _academicYearController,
+  keyboardType: TextInputType.number,
+  maxLength: 4,
+  decoration: InputDecoration(
+    labelText: "Academic Year",
+    filled: true,
+    fillColor: Colors.grey.shade50,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide.none,
+    ),
+    counterText: "", // hides maxLength counter
+  ),
+  validator: (val) {
+    if (val == null || val.isEmpty) return "Enter academic year";
+    if (int.tryParse(val) == null) return "Enter a valid year";
+    return null;
+  },
+),
+
+
+ const SizedBox(height: 16),
 
                               // Date Picker
                               Container(
