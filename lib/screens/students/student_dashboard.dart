@@ -136,21 +136,24 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
 
 )
 ,
-                    DashboardTile(
-                      title: 'My To-Do List',
-                      subtitle: 'Check your tasks',
-                      iconPath: 'assets/icons/todo.svg',
-                      color: const Color(0xFF8FD8E5),
-                      badgeCount: context
-                          .watch<StudentTaskProvider>()
-                          .newTaskCount,
+                   DashboardTile(
+  title: 'My To-Do List',
+  subtitle: 'Check your tasks',
+  iconPath: 'assets/icons/todo.svg',
+  color: const Color(0xFF8FD8E5),
+  badgeCount: context.watch<StudentTaskProvider>().newTaskCount,
+  onTap: () {
+    Navigator.pushNamed(
+      context,
+      '/student-todo',
+      arguments: {
+        'studentId': child['studentId'],  // 🔄 pass studentId here
+        'child': child,
+      },
+    );
+  },
+),
 
-                      onTap: () => Navigator.pushNamed(
-                        context,
-                        '/student-todo',
-                        arguments: child, // 🔄 Pass child data here
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),

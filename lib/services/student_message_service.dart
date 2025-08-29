@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/message_model.dart';
+import '../models/student_message_model.dart';
 
 class MessageService {
   static const String baseUrl =

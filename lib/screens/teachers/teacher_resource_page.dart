@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
+import '../../models/teacher_class_model.dart';
+import '../../services/teacher_resource_service.dart';
 
 import 'teacher_resource_addpage.dart';
 
@@ -13,16 +15,11 @@ class TeacherResourcePage extends StatefulWidget {
 }
 
 class _TeacherResourcePageState extends State<TeacherResourcePage> {
-  String selectedClass = 'Class 10';
+  String? selectedClass; // 👈 make it nullable
   String selectedSubject = 'All';
 
-  final List<String> classes = [
-    'Class 10',
-    'Class 9',
-    'Class 8',
-    'Class 7',
-    // add more classes as needed
-  ];
+  List<TeacherClassModel> classList = [];
+  bool isLoading = true;
 
   final List<String> subjects = [
     'All',
@@ -33,11 +30,32 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    loadClasses();
+  }
+
+  Future<void> loadClasses() async {
+    try {
+      final classes = await TeacherResourceService.fetchTeacherClasses();
+      setState(() {
+        classList = classes;
+        if (classes.isNotEmpty) {
+          selectedClass = classes.first.className; // default
+        }
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      debugPrint("Error fetching classes: $e");
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Colors from screenshot
     const Color backgroundColor = Color(0xFFD3C4D6); // light purple background
     const Color headerTextColor = Color(0xFF2D3E9A); // dark blue text
-    const Color linkColor = Color(0xFF1E3CA7); // blue links
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -53,71 +71,64 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context); // Go back
-                    },
-                    child:// Back + Add Row
-Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    GestureDetector(
-      onTap: () {
-        Navigator.pop(context); // Go back
-      },
-      child: const Text(
-        '< Back',
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 14,
-        ),
-      ),
-    ),
-
-    // + Add Button
-    GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const TeacherResourceAddPage(), // 👈 open Add page
-          ),
-        );
-      },
-      child: Row(
-        children: const [
-          Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
-          SizedBox(width: 4),
-          Text(
-            "Add",
-            style: TextStyle(
-              color: Color(0xFF29ABE2),
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    ),
-  ],
-),
- ),
+                  // Back + Add Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context); // Go back
+                        },
+                        child: const Text(
+                          '< Back',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      // + Add Button
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const TeacherResourceAddPage(), // 👈 open Add page
+                            ),
+                          );
+                        },
+                        child: Row(
+                          children: const [
+                            Icon(Icons.add_circle_outline,
+                                color: Color(0xFF29ABE2)),
+                            SizedBox(width: 4),
+                            Text(
+                              "Add",
+                              style: TextStyle(
+                                color: Color(0xFF29ABE2),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 6), // Space between Back and title
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(
-                          6,
-                        ), // spacing inside background
+                        padding: const EdgeInsets.all(6),
                         decoration: const BoxDecoration(
-                          color: Color(0xFF2E3192), // background color
-                          // shape: BoxShape.circle, // make it rounded
+                          color: Color(0xFF2E3192),
                         ),
                         child: SvgPicture.asset(
-                          'assets/icons/resources.svg', // change to your resource icon path
+                          'assets/icons/resources.svg', // your resource icon
                           height: 20,
                           width: 20,
-                          color: Colors.white, // icon color
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -143,130 +154,139 @@ Row(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 16,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Dropdown selectors row
-                    Row(
-  children: [
-    Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Select Class',
-            style: TextStyle(fontSize: 14),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            height: 40, // 🔹 reduced height
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: DropdownButton<String>(
-              value: selectedClass,
-              isExpanded: true,
-              underline: const SizedBox(),
-              items: classes.map((cls) {
-                return DropdownMenuItem(
-                  value: cls,
-                  child: Text(cls, style: const TextStyle(fontSize: 14)),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    selectedClass = val;
-                  });
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    ),
-    const SizedBox(width: 32),
-    Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Select Subject',
-            style: TextStyle(fontSize: 14),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            height: 40, // 🔹 reduced height
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: DropdownButton<String>(
-              value: selectedSubject,
-              isExpanded: true,
-              underline: const SizedBox(),
-              items: subjects.map((subj) {
-                return DropdownMenuItem(
-                  value: subj,
-                  child: Text(subj, style: const TextStyle(fontSize: 14)),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    selectedSubject = val;
-                  });
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    ),
-  ],
-)
-,
+                      Row(
+                        children: [
+                          // 🔹 Class Dropdown
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Select Class',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8),
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: isLoading
+                                      ? const Center(
+                                          child: SizedBox(
+                                            height: 16,
+                                            width: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        )
+                                      : DropdownButton<String>(
+                                          value: selectedClass,
+                                          isExpanded: true,
+                                          underline: const SizedBox(),
+                                          items: classList.map((cls) {
+                                            return DropdownMenuItem(
+                                              value: cls.className,
+                                              child: Text(
+                                                cls.className,
+                                                style: const TextStyle(
+                                                    fontSize: 14),
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setState(() {
+                                                selectedClass = val;
+                                              });
+                                            }
+                                          },
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 32),
+
+                          // 🔹 Subject Dropdown
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Select Subject',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8),
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: DropdownButton<String>(
+                                    value: selectedSubject,
+                                    isExpanded: true,
+                                    underline: const SizedBox(),
+                                    items: subjects.map((subj) {
+                                      return DropdownMenuItem(
+                                        value: subj,
+                                        child: Text(
+                                          subj,
+                                          style:
+                                              const TextStyle(fontSize: 14),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          selectedSubject = val;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
                       const SizedBox(height: 8),
 
-                      // Add button row
-               GestureDetector(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const TeacherResourceAddPage(), // 👈 open Add page
-      ),
-    );
-  },
-  child: Container(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    decoration: const BoxDecoration(
-      border: Border(
-        bottom: BorderSide(color: Colors.grey, width: 0.2), // ✅ Bottom border
-      ),
-    ),
-    // child: Row(
-    //   children: const [
-    //     Icon(Icons.add_circle_outline, color: Color(0xFF29ABE2)),
-    //     SizedBox(width: 8),
-    //     Text(
-    //       "Add",
-    //       style: TextStyle(
-    //         color: Color(0xFF29ABE2),
-    //         fontSize: 15,
-    //         fontWeight: FontWeight.w600,
-    //       ),
-    //     ),
-    //   ],
-    // ),
-  ),
-)
-,
+                      // Add button row (kept as you wrote)
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const TeacherResourceAddPage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                  color: Colors.grey, width: 0.2),
+                            ),
+                          ),
+                        ),
+                      ),
 
                       const SizedBox(height: 16),
 
