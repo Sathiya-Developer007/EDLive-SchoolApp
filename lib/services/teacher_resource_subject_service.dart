@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/teacher_subject_model.dart';
+import '../models/teacher_resource_subject_model.dart';
 
 class SubjectResourceService {
   static const String subjectUrl =

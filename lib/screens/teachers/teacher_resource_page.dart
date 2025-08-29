@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
-import '../../models/teacher_class_model.dart';
-import '../../models/teacher_subject_model.dart';
+import '../../models/teacher_resource_class_model.dart';
+import '../../models/teacher_resource_subject_model.dart';
+import '../../services/teacher_resource_classsection_service.dart';
+import '../../services/teacher_resource_subject_service.dart';
+
+import '../../models/teacher_resource_model.dart';
 import '../../services/teacher_resource_service.dart';
-import '../../services/subject_service.dart'; // 👈 added
 
 import 'teacher_resource_addpage.dart';
 
@@ -22,6 +25,9 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
 
   List<TeacherClassModel> classList = [];
   List<TeacherSubjectModel> subjectList = [];
+
+  List<TeacherResourceModel> resources = [];
+  bool isResourceLoading = true;
 
   bool isClassLoading = true;
   bool isSubjectLoading = true;
@@ -65,6 +71,31 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
     }
   }
 
+  Future<void> loadResources() async {
+    try {
+      final classObj = classList.firstWhere(
+        (c) => c.className == selectedClass,
+        orElse: () => classList.first,
+      );
+      final classId = classObj.classId;
+
+      final subjectId = selectedSubject?.subjectId;
+
+      final res = await TeacherResourceMainService.fetchResources(
+        classId: classId,
+        subjectId: subjectId,
+      );
+
+      setState(() {
+        resources = res;
+        isResourceLoading = false;
+      });
+    } catch (e) {
+      setState(() => isResourceLoading = false);
+      debugPrint("Error fetching resources: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color backgroundColor = Color(0xFFD3C4D6);
@@ -105,8 +136,10 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                         },
                         child: Row(
                           children: const [
-                            Icon(Icons.add_circle_outline,
-                                color: Color(0xFF29ABE2)),
+                            Icon(
+                              Icons.add_circle_outline,
+                              color: Color(0xFF29ABE2),
+                            ),
                             SizedBox(width: 4),
                             Text(
                               "Add",
@@ -159,8 +192,10 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -172,11 +207,14 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Select Class',
-                                    style: TextStyle(fontSize: 14)),
+                                const Text(
+                                  'Select Class',
+                                  style: TextStyle(fontSize: 14),
+                                ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8),
+                                    horizontal: 8,
+                                  ),
                                   height: 40,
                                   decoration: BoxDecoration(
                                     border: Border.all(color: Colors.grey),
@@ -188,7 +226,8 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                             height: 16,
                                             width: 16,
                                             child: CircularProgressIndicator(
-                                                strokeWidth: 2),
+                                              strokeWidth: 2,
+                                            ),
                                           ),
                                         )
                                       : DropdownButton<String>(
@@ -201,7 +240,8 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                               child: Text(
                                                 cls.className,
                                                 style: const TextStyle(
-                                                    fontSize: 14),
+                                                  fontSize: 14,
+                                                ),
                                               ),
                                             );
                                           }).toList(),
@@ -209,7 +249,9 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                             if (val != null) {
                                               setState(() {
                                                 selectedClass = val;
+                                                isResourceLoading = true;
                                               });
+                                              loadResources();
                                             }
                                           },
                                         ),
@@ -224,11 +266,14 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Select Subject',
-                                    style: TextStyle(fontSize: 14)),
+                                const Text(
+                                  'Select Subject',
+                                  style: TextStyle(fontSize: 14),
+                                ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8),
+                                    horizontal: 8,
+                                  ),
                                   height: 40,
                                   decoration: BoxDecoration(
                                     border: Border.all(color: Colors.grey),
@@ -240,7 +285,8 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                             height: 16,
                                             width: 16,
                                             child: CircularProgressIndicator(
-                                                strokeWidth: 2),
+                                              strokeWidth: 2,
+                                            ),
                                           ),
                                         )
                                       : DropdownButton<TeacherSubjectModel>(
@@ -253,7 +299,8 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                               child: Text(
                                                 subj.subjectName,
                                                 style: const TextStyle(
-                                                    fontSize: 14),
+                                                  fontSize: 14,
+                                                ),
                                               ),
                                             );
                                           }).toList(),
@@ -261,7 +308,9 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                             if (val != null) {
                                               setState(() {
                                                 selectedSubject = val;
+                                                isResourceLoading = true;
                                               });
+                                              loadResources();
                                             }
                                           },
                                         ),
@@ -280,18 +329,18 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  const TeacherResourceAddPage(),
+                              builder: (_) => const TeacherResourceAddPage(),
                             ),
                           );
                         },
                         child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: const BoxDecoration(
                             border: Border(
                               bottom: BorderSide(
-                                  color: Colors.grey, width: 0.2),
+                                color: Colors.grey,
+                                width: 0.2,
+                              ),
                             ),
                           ),
                         ),
@@ -302,75 +351,29 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                       // Scrollable resource list inside Expanded
                       Expanded(
                         child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-  const Text(
-    'Official Learning Links',
-    style: TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF2E3192),
-    ),
-  ),
-  const SizedBox(height: 8),
-
-  _buildResourceItem(
-    title: 'CBSE Academic Portal',
-    description: 'Sample Papers, Marking Schemes',
-    linkText: 'www.cbse.gov.in',
-    onTap: () {},
-  ),
-  _buildResourceItem(
-    title: 'DIKSHA App',
-    description: 'NCERT books, Practice, Videos',
-    linkText: 'diksha.gov.in',
-    onTap: () {},
-  ),
-
-  const Divider(
-    color: Color(0xFFCCCCCC), // light grey line
-    thickness: 1,
-    height: 30, // spacing before and after line
-  ),
-
-  const Text(
-    'NCERT & Government Portals',
-    style: TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF2E3192),
-    ),
-  ),
-  const SizedBox(height: 8),
-
-  _buildResourceItem(
-    title: 'NCERT Official',
-    description: 'Textbooks, Solutions, Exemplars',
-    linkText: 'ncert.nic.in',
-    onTap: () {},
-  ),
-  _buildResourceItem(
-    title: 'NDLI (National Digital Library)',
-    description: 'Millions of Educational Resources',
-    linkText: 'ndl.iitkgp.ac.in',
-    onTap: () {},
-  ),
-  _buildResourceItem(
-    title: 'ePathshala',
-    description: 'Free NCERT E-Books & Multimedia',
-    linkText: 'epathshala.nic.in',
-    onTap: () {},
-  ),
-
-  const Divider(
-    color: Color(0xFFCCCCCC),
-    thickness: 1,
-    height: 30,
-  ),
-]
-   ),
-                        ),
+                          child: Expanded(
+  child: isResourceLoading
+      ? const Center(child: CircularProgressIndicator())
+      : resources.isEmpty
+          ? const Center(child: Text("No resources available"))
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: resources.map((res) {
+                  return _buildResourceItem(
+                    title: res.title,
+                    description: res.description,
+                    linkText: res.webLinks.isNotEmpty ? res.webLinks.first : "",
+                    onTap: () {
+                      // 👇 open link
+                      debugPrint("Opening: ${res.webLinks}");
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+),
+ ),
                       ),
                     ],
                   ),
@@ -383,57 +386,53 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
     );
   }
 
-Widget _buildResourceItem({
-  required String title,
-  required String description,
-  required String linkText,
-  required VoidCallback onTap,
-}) {
-  const Color linkColor = Color(0xFF1E3CA7);
-  return InkWell(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.only(bottom: 12),
-      decoration: const BoxDecoration(
-        border: Border(
-          // bottom: BorderSide(color: Colors.grey, width: 0.5), // bottom line
+  Widget _buildResourceItem({
+    required String title,
+    required String description,
+    required String linkText,
+    required VoidCallback onTap,
+  }) {
+    const Color linkColor = Color(0xFF1E3CA7);
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    linkText,
+                    style: const TextStyle(
+                      color: linkColor,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.pink),
+          ],
         ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.normal,
-                    fontSize: 15,
-                    // decoration: TextDecoration.underline,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: const TextStyle(fontSize: 13, color:Color(0xFF808080)),
-                ),
-                Text(
-                  linkText,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF2E3192),
-                  decoration:TextDecoration.underline,decorationColor:Color(0xFF2E3192)),
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: Colors.black,
-          ),
-        ],
-      ),
-    ),
-  );
-}
+    );
+  }
 }
