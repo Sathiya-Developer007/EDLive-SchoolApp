@@ -3,7 +3,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import '../../models/teacher_class_model.dart';
+import '../../models/teacher_subject_model.dart';
 import '../../services/teacher_resource_service.dart';
+import '../../services/subject_service.dart'; // 👈 added
 
 import 'teacher_resource_addpage.dart';
 
@@ -15,24 +17,20 @@ class TeacherResourcePage extends StatefulWidget {
 }
 
 class _TeacherResourcePageState extends State<TeacherResourcePage> {
-  String? selectedClass; // 👈 make it nullable
-  String selectedSubject = 'All';
+  String? selectedClass;
+  TeacherSubjectModel? selectedSubject;
 
   List<TeacherClassModel> classList = [];
-  bool isLoading = true;
+  List<TeacherSubjectModel> subjectList = [];
 
-  final List<String> subjects = [
-    'All',
-    'Math',
-    'Science',
-    'English',
-    // add more subjects as needed
-  ];
+  bool isClassLoading = true;
+  bool isSubjectLoading = true;
 
   @override
   void initState() {
     super.initState();
     loadClasses();
+    loadSubjects(); // 👈 fetch subjects from API
   }
 
   Future<void> loadClasses() async {
@@ -41,21 +39,36 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
       setState(() {
         classList = classes;
         if (classes.isNotEmpty) {
-          selectedClass = classes.first.className; // default
+          selectedClass = classes.first.className;
         }
-        isLoading = false;
+        isClassLoading = false;
       });
     } catch (e) {
-      setState(() => isLoading = false);
+      setState(() => isClassLoading = false);
       debugPrint("Error fetching classes: $e");
+    }
+  }
+
+  Future<void> loadSubjects() async {
+    try {
+      final subjects = await SubjectResourceService.fetchTeacherSubjects();
+      setState(() {
+        subjectList = subjects;
+        if (subjects.isNotEmpty) {
+          selectedSubject = subjects.first; // default subject
+        }
+        isSubjectLoading = false;
+      });
+    } catch (e) {
+      setState(() => isSubjectLoading = false);
+      debugPrint("Error fetching subjects: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Colors from screenshot
-    const Color backgroundColor = Color(0xFFD3C4D6); // light purple background
-    const Color headerTextColor = Color(0xFF2D3E9A); // dark blue text
+    const Color backgroundColor = Color(0xFFD3C4D6);
+    const Color headerTextColor = Color(0xFF2D3E9A);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -67,34 +80,26 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Custom header row
+              // --- Header ---
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back + Add Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context); // Go back
-                        },
+                        onTap: () => Navigator.pop(context),
                         child: const Text(
                           '< Back',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.black, fontSize: 14),
                         ),
                       ),
-                      // + Add Button
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  const TeacherResourceAddPage(), // 👈 open Add page
+                              builder: (_) => const TeacherResourceAddPage(),
                             ),
                           );
                         },
@@ -116,7 +121,7 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6), // Space between Back and title
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Container(
@@ -125,7 +130,7 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                           color: Color(0xFF2E3192),
                         ),
                         child: SvgPicture.asset(
-                          'assets/icons/resources.svg', // your resource icon
+                          'assets/icons/resources.svg',
                           height: 20,
                           width: 20,
                           color: Colors.white,
@@ -147,7 +152,7 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
 
               const SizedBox(height: 24),
 
-              // Single white container wrapping everything
+              // --- White Container ---
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
@@ -159,7 +164,7 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Dropdown selectors row
+                      // --- Dropdown Row ---
                       Row(
                         children: [
                           // 🔹 Class Dropdown
@@ -167,10 +172,8 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Select Class',
-                                  style: TextStyle(fontSize: 14),
-                                ),
+                                const Text('Select Class',
+                                    style: TextStyle(fontSize: 14)),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8),
@@ -179,14 +182,13 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                     border: Border.all(color: Colors.grey),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: isLoading
+                                  child: isClassLoading
                                       ? const Center(
                                           child: SizedBox(
                                             height: 16,
                                             width: 16,
                                             child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
+                                                strokeWidth: 2),
                                           ),
                                         )
                                       : DropdownButton<String>(
@@ -217,15 +219,13 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                           ),
                           const SizedBox(width: 32),
 
-                          // 🔹 Subject Dropdown
+                          // 🔹 Subject Dropdown (UPDATED)
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Select Subject',
-                                  style: TextStyle(fontSize: 14),
-                                ),
+                                const Text('Select Subject',
+                                    style: TextStyle(fontSize: 14)),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8),
@@ -234,28 +234,37 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                                     border: Border.all(color: Colors.grey),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: DropdownButton<String>(
-                                    value: selectedSubject,
-                                    isExpanded: true,
-                                    underline: const SizedBox(),
-                                    items: subjects.map((subj) {
-                                      return DropdownMenuItem(
-                                        value: subj,
-                                        child: Text(
-                                          subj,
-                                          style:
-                                              const TextStyle(fontSize: 14),
+                                  child: isSubjectLoading
+                                      ? const Center(
+                                          child: SizedBox(
+                                            height: 16,
+                                            width: 16,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          ),
+                                        )
+                                      : DropdownButton<TeacherSubjectModel>(
+                                          value: selectedSubject,
+                                          isExpanded: true,
+                                          underline: const SizedBox(),
+                                          items: subjectList.map((subj) {
+                                            return DropdownMenuItem(
+                                              value: subj,
+                                              child: Text(
+                                                subj.subjectName,
+                                                style: const TextStyle(
+                                                    fontSize: 14),
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setState(() {
+                                                selectedSubject = val;
+                                              });
+                                            }
+                                          },
                                         ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(() {
-                                          selectedSubject = val;
-                                        });
-                                      }
-                                    },
-                                  ),
                                 ),
                               ],
                             ),
