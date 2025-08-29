@@ -124,46 +124,53 @@ Future<void> loadSubjects() async {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Text(
-                          '< Back',
-                          style: TextStyle(color: Colors.black, fontSize: 14),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const TeacherResourceAddPage(),
-                            ),
-                          );
-                        },
-                        child: Row(
-                          children: const [
-                            Icon(
-                              Icons.add_circle_outline,
-                              color: Color(0xFF29ABE2),
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              "Add",
-                              style: TextStyle(
-                                color: Color(0xFF29ABE2),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
+                Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  children: [
+    GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: const Text(
+        '< Back',
+        style: TextStyle(color: Colors.black, fontSize: 14),
+      ),
+    ),
+    GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const TeacherResourceAddPage(),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Color(0xFF29ABE2), // ✅ white background
+          borderRadius: BorderRadius.circular(20), // optional rounding
+        ),
+        child: Row(
+          children: const [
+            Icon(
+              Icons.add_circle_outline,
+              color: Colors.white,
+            ),
+            SizedBox(width: 4),
+            Text(
+              "Add",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ],
+),
+    const SizedBox(height: 6),
                   Row(
                     children: [
                       Container(
