@@ -32,6 +32,9 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
   bool isClassLoading = true;
   bool isSubjectLoading = true;
 
+TeacherResourceModel? selectedResource;
+
+
   @override
   void initState() {
     super.initState();
@@ -186,173 +189,134 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
               const SizedBox(height: 24),
 
               // --- White Container ---
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 16,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // --- Dropdown Row ---
-                      Row(
-                        children: [
-                          // 🔹 Class Dropdown
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Select Class',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                  ),
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: isClassLoading
-                                      ? const Center(
-                                          child: SizedBox(
-                                            height: 16,
-                                            width: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        )
-                                      : DropdownButton<String>(
-                                          value: selectedClass,
-                                          isExpanded: true,
-                                          underline: const SizedBox(),
-                                          items: classList.map((cls) {
-                                            return DropdownMenuItem(
-                                              value: cls.className,
-                                              child: Text(
-                                                cls.className,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                          onChanged: (val) {
-                                            if (val != null) {
-                                              setState(() {
-                                                selectedClass = val;
-                                                isResourceLoading = true;
-                                              });
-                                              loadResources();
-                                            }
-                                          },
-                                        ),
-                                ),
-                              ],
-                            ),
+            Expanded(
+  child: Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+    child: selectedResource == null
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Dropdown Row (only in list view) ---
+              Row(
+                children: [
+                  // 🔹 Class Dropdown
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Select Class', style: TextStyle(fontSize: 14)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          height: 40,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          const SizedBox(width: 32),
-
-                          // 🔹 Subject Dropdown (UPDATED)
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Select Subject',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
+                          child: isClassLoading
+                              ? const Center(
+                                  child: SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
                                   ),
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: isSubjectLoading
-                                      ? const Center(
-                                          child: SizedBox(
-                                            height: 16,
-                                            width: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        )
-                                      : DropdownButton<TeacherSubjectModel>(
-                                          value: selectedSubject,
-                                          isExpanded: true,
-                                          underline: const SizedBox(),
-                                          items: subjectList.map((subj) {
-                                            return DropdownMenuItem(
-                                              value: subj,
-                                              child: Text(
-                                                subj.subjectName,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                          onChanged: (val) {
-                                            if (val != null) {
-                                              setState(() {
-                                                selectedSubject = val;
-                                                isResourceLoading = true;
-                                              });
-                                              loadResources();
-                                            }
-                                          },
-                                        ),
+                                )
+                              : DropdownButton<String>(
+                                  value: selectedClass,
+                                  isExpanded: true,
+                                  underline: const SizedBox(),
+                                  items: classList.map((cls) {
+                                    return DropdownMenuItem(
+                                      value: cls.className,
+                                      child: Text(cls.className, style: const TextStyle(fontSize: 14)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        selectedClass = val;
+                                        isResourceLoading = true;
+                                      });
+                                      loadResources();
+                                    }
+                                  },
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Add button row (kept as you wrote)
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const TeacherResourceAddPage(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Colors.grey,
-                                width: 0.2,
-                              ),
-                            ),
-                          ),
                         ),
-                      ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 32),
 
-                      const SizedBox(height: 16),
+                  // 🔹 Subject Dropdown
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Select Subject', style: TextStyle(fontSize: 14)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          height: 40,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: isSubjectLoading
+                              ? const Center(
+                                  child: SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : DropdownButton<TeacherSubjectModel>(
+                                  value: selectedSubject,
+                                  isExpanded: true,
+                                  underline: const SizedBox(),
+                                  items: subjectList.map((subj) {
+                                    return DropdownMenuItem(
+                                      value: subj,
+                                      child: Text(subj.subjectName, style: const TextStyle(fontSize: 14)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        selectedSubject = val;
+                                        isResourceLoading = true;
+                                      });
+                                      loadResources();
+                                    }
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
 
-                      // Scrollable resource list inside Expanded
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Expanded(
-  child: isResourceLoading
+              const SizedBox(height: 16),
+
+              // --- Resource List ---
+              Expanded(child: _buildResourceListView()),
+            ],
+          )
+        : _buildResourceDetailView(selectedResource!), // 👈 only details here
+  ),
+),
+   ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+Widget _buildResourceListView() {
+  return isResourceLoading
       ? const Center(child: CircularProgressIndicator())
       : resources.isEmpty
           ? const Center(child: Text("No resources available"))
@@ -365,74 +329,166 @@ class _TeacherResourcePageState extends State<TeacherResourcePage> {
                     description: res.description,
                     linkText: res.webLinks.isNotEmpty ? res.webLinks.first : "",
                     onTap: () {
-                      // 👇 open link
                       debugPrint("Opening: ${res.webLinks}");
+                    },
+                    onDetailsTap: () {
+                      setState(() {
+                        selectedResource = res; // ✅ switch to details
+                      });
                     },
                   );
                 }).toList(),
               ),
-            ),
-),
- ),
-                      ),
-                    ],
+            );
+}
+
+Widget _buildResourceDetailView(TeacherResourceModel res) {
+  return SingleChildScrollView(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12), // 👈 less left-right space
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFF2E3192),
+                ),
+                onPressed: () {
+                  setState(() {
+                    selectedResource = null; // ✅ back to list
+                  });
+                },
+              ),
+              Expanded(
+                child: Text(
+                  res.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
                   ),
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: 14), // 👈 space between header & desc
 
-  Widget _buildResourceItem({
-    required String title,
-    required String description,
-    required String linkText,
-    required VoidCallback onTap,
-  }) {
-    const Color linkColor = Color(0xFF1E3CA7);
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    linkText,
-                    style: const TextStyle(
-                      color: linkColor,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ],
+          Text(
+            res.description,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+              height: 1.8, // 👈 more line spacing
+            ),
+          ),
+
+          const SizedBox(height: 20), // 👈 bigger space before links
+
+          if (res.webLinks.isNotEmpty) ...[
+            const Text(
+              "Links:",
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: Colors.black,
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.pink),
+            const SizedBox(height: 8), 
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: res.webLinks.map((link) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10), // 👈 space between links
+                  child: GestureDetector(
+                    onTap: () {
+                      debugPrint("Open link: $link");
+                      // 👉 use url_launcher.launchUrl(Uri.parse(link));
+                    },
+                    child: Text(
+                      link,
+                      style: const TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.none, // 👈 underline removed
+                        height: 1.6, // 👈 better readability
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ],
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+Widget _buildResourceItem({
+  required String title,
+  required String description,
+  required String linkText,
+  required VoidCallback onTap,
+  required VoidCallback onDetailsTap,
+}) {
+  const Color linkColor = Color(0xFF1E3CA7);
+
+  return Container(
+    padding: const EdgeInsets.only(bottom: 12, top: 12),
+    decoration: const BoxDecoration(
+      border: Border(
+        bottom: BorderSide(color: Colors.grey, width: 0.5), // bottom line
+      ),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // 🔹 Left side (title, description, link)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E3192),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: onTap,
+                child: Text(
+  linkText,
+  style: const TextStyle(
+    fontSize: 14,
+    color: Colors.blue,   // keep blue if you want link color
+    decoration: TextDecoration.none, // ✅ removes underline
+  ),
+),
+
+              ),
+            ],
+          ),
+        ),
+
+        // 🔹 Right side arrow (opens details)
+       IconButton(
+  icon: const Icon(Icons.arrow_forward_ios, size: 18),
+  onPressed: onDetailsTap,
+),
+
+
+      ],
+    ),
+  );
+}
 }
