@@ -322,12 +322,12 @@ Widget _dayTitle() {
           fontWeight: FontWeight.bold,
         ),
       ),
-      SvgPicture.asset(
-        'assets/icons/pencil.svg',
-        height: 16,
-        width: 16,
-        color: Colors.black,
-      ),
+      // SvgPicture.asset(
+      //   'assets/icons/pencil.svg',
+      //   height: 16,
+      //   width: 16,
+      //   color: Colors.black,
+      // ),
     ],
   );
 }

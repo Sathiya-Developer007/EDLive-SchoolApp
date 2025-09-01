@@ -233,7 +233,7 @@ class _EventsHolidaysPageState extends State<EventsHolidaysPage> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.chevron_right),
-                                    color: Color(0xFFE6E6E6),
+                                    color: Colors.black,
                                     onPressed: () {
                                       setState(() {
                                         if (isMonthSelected) {
