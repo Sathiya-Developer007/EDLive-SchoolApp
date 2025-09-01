@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/syllabus_model.dart';
+import '../models/student_syllabus_model.dart';
 
 class SyllabusService {
   final String baseUrl = "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api";

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
-import 'syllabus_detail_page.dart';
-import '../../models/syllabus_model.dart';
-import '../../services/syllabus_service.dart';
+import 'student_syllabus_detail_page.dart';
+import '../../models/student_syllabus_model.dart';
+import '../../services/student_syllabus_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 

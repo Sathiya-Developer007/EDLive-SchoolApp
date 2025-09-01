@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
-import '../../models/syllabus_detail_model.dart';
-import '../../services/syllabus_detail_service.dart';
+import '../../models/student_syllabus_detail_model.dart';
+import '../../services/student_syllabus_detail_service.dart';
 
 class SyllabusDetailPage extends StatefulWidget {
   final int classId;
