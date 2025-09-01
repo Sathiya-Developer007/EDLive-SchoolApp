@@ -3,7 +3,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:school_app/models/quicknote_class_model.dart';
+import 'package:school_app/models/quicknote_student_model.dart';
 import 'package:school_app/services/quicknote_class_service.dart';
+import 'package:school_app/services/quicknote_student_service.dart';
 
 class AddQuickNotePage extends StatefulWidget {
   const AddQuickNotePage({super.key});
@@ -14,7 +16,10 @@ class AddQuickNotePage extends StatefulWidget {
 
 class _AddQuickNotePageState extends State<AddQuickNotePage> {
   QuickNoteClass? selectedClass;
-  String? selectedStudent = "All";
+  QuickNoteStudent? selectedStudent;
+
+  List<QuickNoteStudent> students = [];
+  bool isLoadingStudents = false;
 
   final TextEditingController noteController = TextEditingController();
   final TextEditingController descController = TextEditingController();
@@ -26,6 +31,27 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
   void initState() {
     super.initState();
     futureClasses = QuickNoteClassService().fetchClasses();
+  }
+
+  Future<void> _loadStudents(int classId) async {
+    setState(() {
+      isLoadingStudents = true;
+      students = [];
+      selectedStudent = null;
+    });
+
+    try {
+      students = await QuickNoteStudentService().fetchStudents(classId);
+      setState(() {
+        selectedStudent = students.isNotEmpty ? students.first : null;
+      });
+    } catch (e) {
+      debugPrint("Error loading students: $e");
+    } finally {
+      setState(() {
+        isLoadingStudents = false;
+      });
+    }
   }
 
   @override
@@ -96,45 +122,56 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
                                   SizedBox(
                                     width: 200,
                                     child: FutureBuilder<List<QuickNoteClass>>(
-                                      future: futureClasses,
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState ==
-                                            ConnectionState.waiting) {
-                                          return const Center(
-                                              child:
-                                                  CircularProgressIndicator());
-                                        } else if (snapshot.hasError) {
-                                          return Text(
-                                              "Error: ${snapshot.error}");
-                                        } else if (!snapshot.hasData ||
-                                            snapshot.data!.isEmpty) {
-                                          return const Text("No classes found");
-                                        } else {
-                                          final classes = snapshot.data!;
-                                          return DropdownButton<QuickNoteClass>(
-                                            value: selectedClass ??
-                                                classes.first, // default
-                                            isExpanded: true,
-                                            underline: const SizedBox(),
-                                            items: classes.map((cls) {
-                                              return DropdownMenuItem(
-                                                value: cls,
-                                                child: Text(cls.className),
-                                              );
-                                            }).toList(),
-                                            onChanged: (val) {
-                                              setState(() => selectedClass = val);
-                                            },
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ),
+  future: futureClasses,
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (snapshot.hasError) {
+      return Text("Error: ${snapshot.error}");
+    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      return const Text("No classes found");
+    } else {
+      final classes = snapshot.data!;
+
+      // ✅ Don't call setState inside build
+      if (selectedClass == null) {
+        // Instead of setState, just assign directly
+        selectedClass = classes.first;
+
+        // Trigger async load AFTER build is done
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _loadStudents(selectedClass!.classId);
+        });
+      }
+
+      return DropdownButton<QuickNoteClass>(
+        value: selectedClass,
+        isExpanded: true,
+        underline: const SizedBox(),
+        items: classes.map((cls) {
+          return DropdownMenuItem(
+            value: cls,
+            child: Text(cls.className),
+          );
+        }).toList(),
+        onChanged: (val) {
+          if (val != null) {
+            setState(() {
+              selectedClass = val;
+            });
+            _loadStudents(val.classId);
+          }
+        },
+      );
+    }
+  },
+),
+  ),
                                 ],
                               ),
                               const SizedBox(height: 16),
 
-                              // Student dropdown (same as before)
+                              // 🔽 Dynamic Student Dropdown
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -144,29 +181,40 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
                                   const SizedBox(width: 20),
                                   SizedBox(
                                     width: 200,
-                                    child: DropdownButton<String>(
-                                      value: selectedStudent,
-                                      isExpanded: true,
-                                      underline: const SizedBox(),
-                                      items: ["All", "John", "Ananya", "Rahul"]
-                                          .map((stu) {
-                                        return DropdownMenuItem(
-                                          value: stu,
-                                          child: Text(stu),
-                                        );
-                                      }).toList(),
-                                      onChanged: (val) {
-                                        if (val != null) {
-                                          setState(() => selectedStudent = val);
-                                        }
-                                      },
-                                    ),
+                                    child: isLoadingStudents
+                                        ? const Center(
+                                            child:
+                                                CircularProgressIndicator())
+                                        : DropdownButton<QuickNoteStudent>(
+                                            value: selectedStudent,
+                                            isExpanded: true,
+                                            underline: const SizedBox(),
+                                            hint: const Text("Select Student"),
+                                            items: [
+                                              if (students.isNotEmpty)
+                                                ...students.map((stu) {
+                                                  return DropdownMenuItem(
+                                                    value: stu,
+                                                    child: Text(stu.fullName),
+                                                  );
+                                                }),
+                                              const DropdownMenuItem(
+                                                value: null,
+                                                child: Text("All Students"),
+                                              )
+                                            ],
+                                            onChanged: (val) {
+                                              setState(() {
+                                                selectedStudent = val;
+                                              });
+                                            },
+                                          ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 16),
 
-                              // Notes, Desc, Links (unchanged)
+                              // Notes, Desc, Links
                               TextField(
                                 controller: noteController,
                                 decoration: _inputDecoration("Quick Notes"),
@@ -210,7 +258,7 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
                             child: GestureDetector(
                               onTap: () {
                                 debugPrint(
-                                    "Added Quick Note for class: ${selectedClass?.className}, student: $selectedStudent, note: ${noteController.text}, desc: ${descController.text}, link: ${linkController.text}");
+                                    "Added Quick Note for class: ${selectedClass?.className}, student: ${selectedStudent?.fullName ?? "All"}, note: ${noteController.text}, desc: ${descController.text}, link: ${linkController.text}");
                                 Navigator.pop(context);
                               },
                               child: Container(
