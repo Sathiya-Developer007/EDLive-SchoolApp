@@ -6,6 +6,7 @@ import 'package:school_app/models/quicknote_class_model.dart';
 import 'package:school_app/models/quicknote_student_model.dart';
 import 'package:school_app/services/quicknote_class_service.dart';
 import 'package:school_app/services/quicknote_student_service.dart';
+import 'package:school_app/services/quicknote_service.dart';
 
 class AddQuickNotePage extends StatefulWidget {
   const AddQuickNotePage({super.key});
@@ -198,10 +199,10 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
                                                     child: Text(stu.fullName),
                                                   );
                                                 }),
-                                              const DropdownMenuItem(
-                                                value: null,
-                                                child: Text("All Students"),
-                                              )
+                                              // const DropdownMenuItem(
+                                              //   value: null,
+                                              //   child: Text("All Students"),
+                                              // )
                                             ],
                                             onChanged: (val) {
                                               setState(() {
@@ -256,11 +257,38 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () {
-                                debugPrint(
-                                    "Added Quick Note for class: ${selectedClass?.className}, student: ${selectedStudent?.fullName ?? "All"}, note: ${noteController.text}, desc: ${descController.text}, link: ${linkController.text}");
-                                Navigator.pop(context);
-                              },
+                             onTap: () async {
+  try {
+    final service = QuickNoteService();
+
+    final note = await service.createQuickNote(
+      title: noteController.text.trim(),
+      description: descController.text.trim(),
+      webLinks: linkController.text.isNotEmpty
+          ? [linkController.text.trim()]  // wrap in array
+          : [],
+      studentIds: selectedStudent != null ? [selectedStudent!.id] : [],
+      classId: selectedClass!.classId,
+    );
+
+    debugPrint("✅ Quick Note Created: $note");
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Quick note added successfully!")),
+      );
+      Navigator.pop(context);
+    }
+  } catch (e) {
+    debugPrint("❌ Error adding quick note: $e");
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+},
+
                               child: Container(
                                 height: 44,
                                 decoration: BoxDecoration(
