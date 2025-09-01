@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/quick_note_model.dart';
+import '../models/teacher_quick_note_model.dart';
 
 class QuickNoteService {
   static const String baseUrl = 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/quicknotes';

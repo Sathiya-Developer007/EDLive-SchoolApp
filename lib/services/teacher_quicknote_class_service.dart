@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:school_app/models/quicknote_class_model.dart';
+import 'package:school_app/models/teacher_quicknote_class_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class QuickNoteClassService {
