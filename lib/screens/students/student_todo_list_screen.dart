@@ -1,12 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '/providers/student_task_provider.dart';
 import 'student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 
@@ -14,44 +12,62 @@ class StudentToDoListPage extends StatefulWidget {
   const StudentToDoListPage({Key? key}) : super(key: key);
 
   @override
-  State<StudentToDoListPage> createState() => _StudentToDoListPage();
+  State<StudentToDoListPage> createState() => _StudentToDoListPageState();
 }
 
-class _StudentToDoListPage extends State<StudentToDoListPage> {
+class _StudentToDoListPageState extends State<StudentToDoListPage> {
+  List<Map<String, dynamic>> _tasks = [];
+  bool _isLoading = true;
   Map<int, String> _classDisplayNames = {};
   List<Map<String, dynamic>> _classList = [];
 
-@override
-void initState() {
-  super.initState();
-  _loadTokenAndData();
-}
-
-Future<void> _loadTokenAndData() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('auth_token');
-
-  if (token != null) {
-    final provider = Provider.of<StudentTaskProvider>(context, listen: false);
-    provider.setAuthToken(token);
-
-    // ✅ 1. Fetch tasks
-    await provider.fetchStudentTodos();
-
-    // ✅ 2. Mark unseen tasks as seen
-    final newTasks = provider.tasks.where(
-      (task) => !provider.seenTaskIds.contains(task.id),
-    );
-    await provider.markTasksAsSeen(newTasks.map((e) => e.id!).toList());
-  } else {
-    print("⚠️ Token is null");
+  @override
+  void initState() {
+    super.initState();
+    _fetchTasks();
+    _fetchClassList();
   }
 
-  // Your optional class list load logic here...
-}
+  Future<void> _fetchTasks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final studentId = prefs.getInt('student_id'); // ✅ Save this during login
 
+      if (token == null || studentId == null) {
+        print("⚠️ Missing token or studentId");
+        return;
+      }
 
-Future<void> _fetchClassList() async {
+      final url = Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student/$studentId',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _tasks = List<Map<String, dynamic>>.from(data);
+          _isLoading = false;
+        });
+      } else {
+        print("❌ Failed to fetch todos: ${response.statusCode}");
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      print("❌ Error fetching todos: $e");
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchClassList() async {
     final url = Uri.parse(
       'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes',
     );
@@ -81,25 +97,16 @@ Future<void> _fetchClassList() async {
     }
   }
 
-  String _formatDisplayDate(DateTime date) {
-    return DateFormat('dd.MMM yyyy').format(date);
+  String _formatDisplayDate(String dateString) {
+    try {
+      return DateFormat('dd.MMM yyyy').format(DateTime.parse(dateString));
+    } catch (_) {
+      return dateString;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<StudentTaskProvider>(context);
-    final tasks = provider.tasks;
-
-    // ✅ Mark new tasks as seen only once after build
-    Future.microtask(() {
-      final newTasks = provider.tasks.where(
-        (task) => !provider.seenTaskIds.contains(task.id),
-      );
-      if (newTasks.isNotEmpty) {
-        provider.markTasksAsSeen(newTasks.map((e) => e.id!).toList());
-      }
-    });
-
     return Scaffold(
       backgroundColor: const Color(0xFF87CEEB),
       appBar: const StudentAppBar(),
@@ -144,16 +151,16 @@ Future<void> _fetchClassList() async {
             ),
           ),
           Expanded(
-            child: provider.isLoading
+            child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : tasks.isEmpty
+                : _tasks.isEmpty
                     ? const Center(child: Text('No tasks found.'))
                     : ListView.builder(
-                        itemCount: tasks.length,
+                        itemCount: _tasks.length,
                         itemBuilder: (context, index) {
-                          final task = tasks[index];
-                          final className = task.classId != null
-                              ? _classDisplayNames[task.classId]
+                          final task = _tasks[index];
+                          final className = task['class_id'] != null
+                              ? _classDisplayNames[task['class_id']]
                               : null;
 
                           return Padding(
@@ -171,14 +178,12 @@ Future<void> _fetchClassList() async {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _formatDisplayDate(
-                                      DateTime.parse(task.date),
-                                    ),
+                                    _formatDisplayDate(task['date']),
                                     style: const TextStyle(fontSize: 14),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    task.title,
+                                    task['title'] ?? '',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
@@ -186,13 +191,14 @@ Future<void> _fetchClassList() async {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    task.description,
+                                    task['description'] ?? '',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.black87,
                                     ),
                                   ),
-                                  if (className != null && className.isNotEmpty)
+                                  if (className != null &&
+                                      className.isNotEmpty)
                                     ...[
                                       const SizedBox(height: 4),
                                       Text(

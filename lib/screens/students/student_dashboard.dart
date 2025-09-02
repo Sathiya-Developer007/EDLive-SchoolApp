@@ -21,6 +21,7 @@ import 'student_report_page.dart';
 import 'student_food_page.dart';
 import 'student_achievement_page.dart';
 import 'student_messages_page.dart';
+import 'student_notifiction_page.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
@@ -105,13 +106,22 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    DashboardTile(
-                      title: 'Announcement',
-                      subtitle: 'A note from teacher',
-                      iconPath: 'assets/icons/notification.svg',
-                      color: const Color(0xFFF9F7A5),
-                      badgeCount: 1,
-                    ),
+                   DashboardTile(
+  title: 'Notification',
+  subtitle: 'A note from teacher',
+  iconPath: 'assets/icons/notification.svg',
+  color: const Color(0xFFF9F7A5),
+  badgeCount: 1,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StudentNotifictionPage(),
+      ),
+    );
+  },
+),
+
                     if (settings.showAchievements)
                   DashboardTile(
   title: 'Achievements',
@@ -631,3 +641,5 @@ class DashboardTile extends StatelessWidget {
     );
   }
 }
+
+

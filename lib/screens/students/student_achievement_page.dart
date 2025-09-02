@@ -16,6 +16,8 @@ class Achievement {
   final String evidenceUrl;
   final String fullName;
   final String visibility;
+  final String createdAt;   // 🔹 add
+  final String updatedAt;   // 🔹 add
 
   Achievement({
     required this.id,
@@ -27,6 +29,8 @@ class Achievement {
     required this.evidenceUrl,
     required this.fullName,
     required this.visibility,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory Achievement.fromJson(Map<String, dynamic> json) {
@@ -40,6 +44,8 @@ class Achievement {
       evidenceUrl: json['evidence_url'] ?? '',
       fullName: json['full_name'] ?? '',
       visibility: json['visibility'] ?? '',
+      createdAt: json['created_at'] ?? '',    // 🔹 map json
+      updatedAt: json['updated_at'] ?? '',
     );
   }
 }
@@ -106,24 +112,33 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
     futureAchievements = fetchAchievements();
   }
 
-  Future<List<Achievement>> fetchAchievements() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+Future<List<Achievement>> fetchAchievements() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? '';
 
-    final response = await http.get(
-      Uri.parse(
-        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible?classId=${widget.classId}",
-      ),
-      headers: {'accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
+  final response = await http.get(
+    Uri.parse(
+      "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible?classId=${widget.classId}",
+    ),
+    headers: {'accept': 'application/json', 'Authorization': 'Bearer $token'},
+  );
 
-    if (response.statusCode == 200) {
-      final List jsonData = json.decode(response.body);
-      return jsonData.map((e) => Achievement.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load achievements');
-    }
+  if (response.statusCode == 200) {
+    final List jsonData = json.decode(response.body);
+    final achievements = jsonData.map((e) => Achievement.fromJson(e)).toList();
+
+    // 🔹 sort latest created_at first
+    achievements.sort((a, b) {
+      final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1900);
+      final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1900);
+      return dateB.compareTo(dateA); // latest → top
+    });
+
+    return achievements;
+  } else {
+    throw Exception('Failed to load achievements');
   }
+}
 
   @override
 Widget build(BuildContext context) {

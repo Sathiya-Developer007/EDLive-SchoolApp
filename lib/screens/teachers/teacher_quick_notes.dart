@@ -341,7 +341,7 @@ Widget _noteItem(QuickNote note, int index) {
             style: const TextStyle(
               fontSize: 15,
               color: Color(0xFF2E3192),
-              decoration: TextDecoration.underline,
+              // decoration: TextDecoration.underline,
             ),
           ),
           contentPadding: const EdgeInsets.only(left: 10, right: 0),

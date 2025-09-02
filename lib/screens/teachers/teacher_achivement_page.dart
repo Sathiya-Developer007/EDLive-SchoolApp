@@ -100,25 +100,38 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
   }
 
   Future<List<Achievement>> fetchAchievements() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? '';
 
-    // API URL without classId
-    final url =
-        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible";
+  final url =
+      "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible";
 
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {'accept': 'application/json', 'Authorization': 'Bearer $token'},
-    );
+  final response = await http.get(
+    Uri.parse(url),
+    headers: {'accept': 'application/json', 'Authorization': 'Bearer $token'},
+  );
 
-    if (response.statusCode == 200) {
-      final List jsonData = json.decode(response.body);
-      return jsonData.map((e) => Achievement.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load achievements');
-    }
+  if (response.statusCode == 200) {
+    final List jsonData = json.decode(response.body);
+    final achievements =
+        jsonData.map((e) => Achievement.fromJson(e)).toList();
+
+    // 🔽 sort by created_at instead of achievement_date
+    achievements.sort((a, b) {
+      final dateA = DateTime.tryParse((jsonData
+              .firstWhere((x) => x['id'] == a.id)['created_at'])
+          .toString()) ?? DateTime(1900);
+      final dateB = DateTime.tryParse((jsonData
+              .firstWhere((x) => x['id'] == b.id)['created_at'])
+          .toString()) ?? DateTime(1900);
+      return dateB.compareTo(dateA); // latest created_at first
+    });
+
+    return achievements;
+  } else {
+    throw Exception('Failed to load achievements');
   }
+}
 
   @override
   Widget build(BuildContext context) {
