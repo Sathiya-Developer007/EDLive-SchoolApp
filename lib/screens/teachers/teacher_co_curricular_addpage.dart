@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 import '/models/class_section.dart';
 import '/services/class_section_service.dart';
@@ -22,23 +24,21 @@ class AddCoCurricularActivityPage extends StatefulWidget {
 
 class _AddCoCurricularActivityPageState
     extends State<AddCoCurricularActivityPage> {
-  // Class & student
   List<ClassSection> classSections = [];
   ClassSection? selectedClass;
   List<Student> students = [];
   Student? selectedStudent;
 
-  // Category & activity
   List<CoCurricularCategory> categories = [];
   CoCurricularCategory? selectedCategoryObj;
   List<CoCurricularActivity> allActivities = [];
   List<String> activityNames = [];
   String? selectedActivity;
 
-  // Other fields
   TextEditingController remarksController = TextEditingController();
   bool isLoadingClasses = true;
   bool isLoadingStudents = false;
+  bool isSubmitting = false;
 
   @override
   void initState() {
@@ -103,21 +103,84 @@ class _AddCoCurricularActivityPageState
     }
   }
 
-Future<void> loadActivitiesByCategory(int categoryId) async {
-  try {
-    final activities = await CoCurricularService.fetchActivitiesByCategory(categoryId);
+  Future<void> loadActivitiesByCategory(int categoryId) async {
+    try {
+      final activities =
+          await CoCurricularService.fetchActivitiesByCategory(categoryId);
 
-    setState(() {
-      allActivities = activities;
-      activityNames = activities.map((e) => e.name).toList();
-      selectedActivity = activityNames.isNotEmpty ? activityNames.first : null;
-    });
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Failed to load activities')),
-    );
+      setState(() {
+        allActivities = activities;
+        activityNames = activities.map((e) => e.name).toList();
+        selectedActivity =
+            activityNames.isNotEmpty ? activityNames.first : null;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load activities')),
+      );
+    }
   }
-}
+
+  Future<void> enrollStudent() async {
+    if (selectedStudent == null ||
+        selectedClass == null ||
+        selectedCategoryObj == null ||
+        selectedActivity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select all fields')),
+      );
+      return;
+    }
+
+    setState(() => isSubmitting = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+
+      // Find activity object by name
+      final activityObj =
+          allActivities.firstWhere((a) => a.name == selectedActivity);
+
+      final body = jsonEncode({
+        "studentId": selectedStudent!.id,
+        "activityId": activityObj.id,
+        "classId": selectedClass!.id,
+        "categoryId": selectedCategoryObj!.id,
+        "academicYear": "2025-2026",
+        "remarks": remarksController.text,
+      });
+
+      final response = await http.post(
+        Uri.parse(
+            'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/co-curricular/enroll'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: body,
+      );
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student enrolled successfully')),
+        );
+        remarksController.clear();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Failed to enroll: ${response.statusCode} ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() => isSubmitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,7 +244,7 @@ Future<void> loadActivitiesByCategory(int categoryId) async {
                                     child: Text(c.fullName),
                                   ))
                               .toList(),
-                          onChanged: (val) async {
+                          onChanged: (val) {
                             setState(() {
                               selectedClass = val;
                             });
@@ -288,7 +351,16 @@ Future<void> loadActivitiesByCategory(int categoryId) async {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             ElevatedButton.icon(
-                              icon: const Icon(Icons.add, color: Colors.white),
+                              icon: isSubmitting
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.add, color: Colors.white),
                               label: const Text('Add'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
@@ -300,9 +372,7 @@ Future<void> loadActivitiesByCategory(int categoryId) async {
                                 elevation: 4,
                                 shadowColor: Colors.greenAccent,
                               ),
-                              onPressed: () {
-                                // TODO: Add logic
-                              },
+                              onPressed: isSubmitting ? null : enrollStudent,
                             ),
                             ElevatedButton.icon(
                               icon: const Icon(Icons.remove, color: Colors.white),
