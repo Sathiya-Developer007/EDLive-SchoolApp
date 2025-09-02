@@ -8,26 +8,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '/providers/student_timetable_provider.dart';
 import '/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
-import '../../models/student_timetable_model.dart';
+import 'package:school_app/models/student_timetable_model.dart';
 
 class StudentTimeTablePage extends StatefulWidget {
   final String academicYear;
-  const StudentTimeTablePage({
-    super.key,
-    required this.academicYear,
-  }) : assert(academicYear != '');
+  const StudentTimeTablePage({super.key, required this.academicYear})
+      : assert(academicYear != '');
 
   @override
   State<StudentTimeTablePage> createState() => _StudentTimeTablePageState();
 }
 
 class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
-  // ── DATE & SCROLL STATE ────────────────────────────────────────────
   late DateTime _centerDate;
   late DateTime _startDate;
   final _scroll = ScrollController();
 
-  // ── OTHER STATE ────────────────────────────────────────────────────
   late final String academicYear;
 
   static const _MONTHS = [
@@ -36,30 +32,25 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
 
-  // ── INIT ───────────────────────────────────────────────────────────
-@override
-void initState() {
-  super.initState();
-  academicYear = widget.academicYear;
-  _centerDate = DateTime.now();
-  _startDate = _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
+  @override
+  void initState() {
+    super.initState();
+    academicYear = widget.academicYear;
+    _centerDate = DateTime.now();
+    _startDate = _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
 
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    // Get studentId from SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    final studentId = prefs.getString('studentId');
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      final studentId = prefs.getString('studentId');
 
-    if (studentId != null) {
-      // ✅ Pass both studentId and academicYear
-      context.read<StudentTimetableProvider>().load(studentId, academicYear);
-    }
+      if (studentId != null) {
+        context.read<StudentTimetableProvider>().load(studentId, academicYear);
+      }
 
-    _centerCurrentDate();
-  });
-}
+      _centerCurrentDate();
+    });
+  }
 
-
-  // ── DATE HELPERS ───────────────────────────────────────────────────
   List<DateTime> get _visibleDates =>
       List.generate(30, (i) => _startDate.add(Duration(days: i)));
 
@@ -86,7 +77,6 @@ void initState() {
     _centerCurrentDate();
   }
 
-  // ── BUILD ──────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final timetable = context.watch<StudentTimetableProvider>();
@@ -108,7 +98,6 @@ void initState() {
     );
   }
 
-  // ── UI PARTS ───────────────────────────────────────────────────────
   Widget _header() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -347,12 +336,20 @@ void initState() {
       );
     }
 
-   final dayName = DateFormat('EEEE').format(_centerDate).toLowerCase();
-final entries = timetable.entriesForDay(dayName);
-print("📅 Selected date: $_centerDate => $dayName");
-print("📚 Entries found: ${entries.length}");
+    final dayName = DateFormat('EEEE').format(_centerDate).toLowerCase();
+    final entries = timetable.entriesForDay(dayName);
 
-    if (entries.isEmpty) return const Center(child: Text('No classes today'));
+    debugPrint("📅 Selected day: $dayName");
+    debugPrint("📌 Available subjects: ${timetable.allEntries.map((e) => e.subject).toList()}");
+
+    if (entries.isEmpty) {
+      debugPrint("❌ No entries for $dayName");
+      return const Center(child: Text('No classes today'));
+    }
+
+    for (var e in entries) {
+      debugPrint("➡ ${e.subject} @ ${e.timesByDay[dayName]}");
+    }
 
     return ListView.builder(
       itemCount: entries.length,
@@ -368,7 +365,6 @@ print("📚 Entries found: ${entries.length}");
   }
 }
 
-// ── SMALL PERIOD ROW WIDGET ──────────────────────────────────────────
 class _PeriodRow extends StatelessWidget {
   final String time;
   final String subject;
