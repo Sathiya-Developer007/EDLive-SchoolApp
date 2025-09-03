@@ -22,7 +22,7 @@ import 'student_food_page.dart';
 import 'student_achievement_page.dart';
 import 'student_messages_page.dart';
 import 'student_notifiction_page.dart';
-
+import 'student_cocurricular_page.dart';
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
   const StudentDashboardPage({super.key, required this.childData});
@@ -447,16 +447,32 @@ if (settings.showSyllabus) // 👈 Step 3 — Added this check
                   const SizedBox(height: 12),
                 ],
                 if (settings.showCoCurricular) ...[
-                  DashboardTile(
-                    title: 'Co curricular activities',
-                    subtitle: 'NCC Camp on 23, Jan.2019',
-                    iconPath: 'assets/icons/co_curricular.svg',
-                    color: const Color(0xFFDBD88A),
-                    onClose: () => settings.updateVisibility(
-                      'Co curricular activities',
-                      false,
-                    ),
-                  ),
+               DashboardTile(
+  title: 'Co curricular activities',
+  subtitle: 'View your enrolled activities',
+  iconPath: 'assets/icons/co_curricular.svg',
+  color: const Color(0xFFDBD88A),
+  onTap: () async {
+    final prefs = await SharedPreferences.getInstance();
+    final studentId = prefs.getInt("student_id") ?? 0;
+    final academicYear = "2025-2026";
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentActivitiesPage(
+          studentId: studentId,
+          academicYear: academicYear,
+        ),
+      ),
+    );
+  },
+  onClose: () => settings.updateVisibility(
+    'Co curricular activities',
+    false,
+  ),
+),
+
                   const SizedBox(height: 12),
                 ],
               ],
