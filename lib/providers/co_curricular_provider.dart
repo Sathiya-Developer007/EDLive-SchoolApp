@@ -2,39 +2,42 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../models/co_curricular_category.dart';
+import '../models/co_curricular_stat.dart';
 
 class CoCurricularProvider extends ChangeNotifier {
-  List<CoCurricularCategory> categories = [];
+  List<CoCurricularStat> stats = [];
   bool isLoading = false;
   String? error;
 
-  Future<void> fetchCategories() async {
+  Future<void> fetchStats({int? classId, String? academicYear}) async {
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
+      final token = prefs.getString('auth_token');
+
+      if (token == null) {
+        throw Exception("No token found");
+      }
+
+      final uri = Uri.parse(
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/co-curricular/stats"
+        "${classId != null ? "?classId=$classId" : ""}"
+        "${academicYear != null ? "&academicYear=$academicYear" : ""}",
+      );
 
       final response = await http.get(
-        Uri.parse(
-            'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/co-curricular/categories'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
+        uri,
+        headers: {"Authorization": "Bearer $token"},
       );
 
       if (response.statusCode == 200) {
-        final List data = json.decode(response.body);
-        categories = data
-            .map((json) => CoCurricularCategory.fromJson(json))
-            .toList();
+        final List<dynamic> data = json.decode(response.body);
+        stats = data.map((e) => CoCurricularStat.fromJson(e)).toList();
       } else {
-        error = 'Failed to load categories';
+        error = "Failed to load stats (${response.statusCode})";
       }
     } catch (e) {
       error = e.toString();

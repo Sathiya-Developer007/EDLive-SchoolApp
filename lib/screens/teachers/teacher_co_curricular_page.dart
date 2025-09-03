@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '/providers/co_curricular_provider.dart';
 import 'teacher_co_curricular_addpage.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
+import 'package:school_app/models/co_curricular_stat.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 
 class CoCurricularActivitiesPage extends StatelessWidget {
@@ -13,7 +14,8 @@ class CoCurricularActivitiesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => CoCurricularProvider()..fetchCategories(),
+create: (_) => CoCurricularProvider()..fetchStats(),
+
       child: Scaffold(
         appBar: TeacherAppBar(),
         drawer: MenuDrawer(),
@@ -45,25 +47,39 @@ class CoCurricularActivitiesPage extends StatelessWidget {
                             ),
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const AddCoCurricularActivityPage(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.add_circle_outline,
-                              color: Color(0xFF29ABE2)),
-                          label: const Text(
-                            'Add',
-                            style: TextStyle(
-                                color: Color(0xFF29ABE2), fontSize: 15),
-                          ),
-                        ),
-                      ],
+                   TextButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddCoCurricularActivityPage(),
+      ),
+    );
+  },
+  style: TextButton.styleFrom(
+    backgroundColor:  Colors.blue, // Blue background
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20), // Rounded button
+    ),
+  ),
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: const [
+      Icon(Icons.add, color: Colors.white, size: 18),
+      SizedBox(width: 6),
+      Text(
+        'Add',
+        style: TextStyle(
+          color: Colors.white, // White text
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ],
+  ),
+),
+ ],
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -108,30 +124,27 @@ class CoCurricularActivitiesPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.all(16),
-                    child: Consumer<CoCurricularProvider>(
-                      builder: (context, provider, _) {
-                        if (provider.isLoading) {
-                          return const Center(child: CircularProgressIndicator());
-                        } else if (provider.error != null) {
-                          return Center(
-                              child: Text('Error: ${provider.error}'));
-                        } else if (provider.categories.isEmpty) {
-                          return const Center(child: Text('No categories found'));
-                        }
+child: Consumer<CoCurricularProvider>(
+  builder: (context, provider, _) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (provider.error != null) {
+      return Center(child: Text('Error: ${provider.error}'));
+    } else if (provider.stats.isEmpty) {
+      return const Center(child: Text('No stats found'));
+    }
 
-                   return SingleChildScrollView(
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: provider.categories
-        .map((cat) => _buildSection(cat.name, cat.description))
-        .toList(),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: provider.stats.map((stat) {
+          return _buildStatItem(stat);
+        }).toList(),
+      ),
+    );
+  },
+),
   ),
-);
-
-
-                      },
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -140,6 +153,30 @@ class CoCurricularActivitiesPage extends StatelessWidget {
       ),
     );
   }
+
+Widget _buildStatItem(CoCurricularStat stat) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          stat.activityName,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Color(0xFF2E3192),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text("Category: ${stat.categoryName}"),
+        Text("Class: ${stat.className}"),
+        // Text("Enrollments: ${stat.enrollmentCount}"),
+        const Divider(),
+      ],
+    ),
+  );
+}
 
   Widget _buildSection(String title, String description) {
   return Padding(
