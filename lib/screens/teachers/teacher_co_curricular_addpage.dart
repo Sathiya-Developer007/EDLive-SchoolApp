@@ -7,12 +7,16 @@ import 'package:http/http.dart' as http;
 
 import '/models/class_section.dart';
 import '/services/class_section_service.dart';
-import '/models/teacher_class_student.dart';
-import 'package:school_app/services/teacher_class_student_list.dart';
-import 'package:school_app/services/cocurricular_activity_service.dart';
-import 'package:school_app/models/cocurricular_activity_model.dart';
-import 'package:school_app/services/co_curricular_cateogries_service.dart';
-import 'package:school_app/services/co_curricular_activities_service.dart';
+import '/services/cocurricular_activity_service.dart';
+import '/models/cocurricular_activity_model.dart';
+import '/services/co_curricular_cateogries_service.dart';
+import '/services/co_curricular_activities_service.dart';
+import '/models/teacher_student_classsection.dart';
+import 'package:school_app/services/teacher_student_classsection.dart';
+import 'package:school_app/services/teacher_class_service.dart';
+
+
+
 
 class AddCoCurricularActivityPage extends StatefulWidget {
   const AddCoCurricularActivityPage({super.key});
@@ -24,13 +28,17 @@ class AddCoCurricularActivityPage extends StatefulWidget {
 
 class _AddCoCurricularActivityPageState
     extends State<AddCoCurricularActivityPage> {
-  List<ClassSection> classSections = [];
-  ClassSection? selectedClass;
-  List<Student> students = [];
-  Student? selectedStudent;
+ List<TeacherClass> classSections = [];
+TeacherClass? selectedClass;
+
+  
+
+  List<StudentClassSection> students = [];
+  StudentClassSection? selectedStudent;
 
   List<CoCurricularCategory> categories = [];
   CoCurricularCategory? selectedCategoryObj;
+
   List<CoCurricularActivity> allActivities = [];
   List<String> activityNames = [];
   String? selectedActivity;
@@ -46,39 +54,49 @@ class _AddCoCurricularActivityPageState
     loadClassSections();
   }
 
-  Future<void> loadClassSections() async {
-    try {
-      final service = ClassService();
-      final sections = await service.fetchClassSections();
-      setState(() {
-        classSections = sections;
-        selectedClass = sections.isNotEmpty ? sections.first : null;
-        isLoadingClasses = false;
-      });
+ Future<void> loadClassSections() async {
+  try {
+    final service = TeacherClassService();
+    final sections = await service.fetchTeacherClasses(); // returns List<TeacherClass>
 
-      await loadStudents();
-      await loadCategories();
+    setState(() {
+      classSections = sections; // ✅ assign directly
+      selectedClass = classSections.isNotEmpty ? classSections.first : null;
+      isLoadingClasses = false;
+    });
 
-      if (selectedCategoryObj != null) {
-        await loadActivitiesByCategory(selectedCategoryObj!.id);
-      }
-    } catch (e) {
-      setState(() => isLoadingClasses = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load classes')),
-      );
+    await loadStudents(classId: selectedClass?.id);
+    await loadCategories();
+
+    if (selectedCategoryObj != null) {
+      await loadActivitiesByCategory(selectedCategoryObj!.id);
     }
+  } catch (e) {
+    setState(() => isLoadingClasses = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to load teacher classes: $e')),
+    );
   }
+}
 
-  Future<void> loadStudents() async {
+  Future<void> loadStudents({int? classId}) async {
     setState(() => isLoadingStudents = true);
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
-      final data = await StudentService.fetchStudents(token);
+
+final service = StudentService();
+final data = await service.fetchStudents();
+
+      List<StudentClassSection> filteredStudents = data;
+      if (classId != null) {
+        filteredStudents = data.where((s) => s.classId == classId).toList();
+      }
+
       setState(() {
-        students = data;
-        selectedStudent = students.isNotEmpty ? students.first : null;
+        students = filteredStudents;
+        selectedStudent =
+            filteredStudents.isNotEmpty ? filteredStudents.first : null;
         isLoadingStudents = false;
       });
     } catch (e) {
@@ -138,7 +156,6 @@ class _AddCoCurricularActivityPageState
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
-      // Find activity object by name
       final activityObj =
           allActivities.firstWhere((a) => a.name == selectedActivity);
 
@@ -169,8 +186,8 @@ class _AddCoCurricularActivityPageState
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content:
-                  Text('Failed to enroll: ${response.statusCode} ${response.body}')),
+              content: Text(
+                  'Failed to enroll: ${response.statusCode} ${response.body}')),
         );
       }
     } catch (e) {
@@ -236,26 +253,26 @@ class _AddCoCurricularActivityPageState
                         const Text('Class',
                             style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 5),
-                        DropdownButtonFormField<ClassSection>(
-                          value: selectedClass,
-                          items: classSections
-                              .map((c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c.fullName),
-                                  ))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              selectedClass = val;
-                            });
-                          },
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                       DropdownButtonFormField<TeacherClass>(
+  value: selectedClass,
+  items: classSections
+      .map((c) => DropdownMenuItem(
+            value: c,
+            child: Text(c.fullName),
+          ))
+      .toList(),
+  onChanged: (val) async {
+    setState(() {
+      selectedClass = val;
+      selectedStudent = null;
+      students = [];
+    });
+    if (val != null) {
+      await loadStudents(classId: val.id);
+    }
+  },
+),
+   const SizedBox(height: 16),
 
                         // Student Dropdown
                         const Text('Student Name',
@@ -263,12 +280,12 @@ class _AddCoCurricularActivityPageState
                         const SizedBox(height: 5),
                         isLoadingStudents
                             ? const Center(child: CircularProgressIndicator())
-                            : DropdownButtonFormField<Student>(
+                            : DropdownButtonFormField<StudentClassSection>(
                                 value: selectedStudent,
                                 items: students
                                     .map((s) => DropdownMenuItem(
                                           value: s,
-                                          child: Text(s.studentName),
+                                          child: Text(s.name),
                                         ))
                                     .toList(),
                                 onChanged: (val) {
