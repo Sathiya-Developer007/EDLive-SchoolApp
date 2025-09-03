@@ -4,6 +4,7 @@ import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '/models/class_section.dart';
 import '/models/cocurricular_activity_model.dart';
@@ -237,12 +238,62 @@ class _AddCoCurricularActivityPageState
     return Scaffold(
       appBar: TeacherAppBar(),
       drawer: MenuDrawer(),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: const Color(0xFFDBD88A),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+   body: Container(
+  width: double.infinity,
+  height: double.infinity,
+  color: const Color(0xFFDBD88A),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ✅ Back button at top
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: const Text(
+            '< Back',
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // ✅ Add Activity title just below Back
+       Row(
+  children: [
+    // ✅ Icon with background color
+    Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E3192),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: SvgPicture.asset(
+        'assets/icons/co_curricular.svg',
+        width: 20,
+        height: 20,
+        color: Colors.white, // make icon visible on dark bg
+      ),
+    ),
+    const SizedBox(width: 8),
+
+    // ✅ Text
+    const Text(
+      'Add Activity',
+      style: TextStyle(
+        color: Color(0xFF2E3192),
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+    ),
+  ],
+),
+        const SizedBox(height: 12),
+
+        // ✅ White container for form content
+        Expanded(
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -258,57 +309,52 @@ class _AddCoCurricularActivityPageState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              GestureDetector(
-                                onTap: () => Navigator.pop(context),
-                                child: const Text(
-                                  '< Back',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Add Activity',
-                                style: TextStyle(
-                                  color: Color(0xFF2E3192),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
+                              // 🔽 Only keep form fields inside the white container
+                           const Text(
+  'Class',
+  style: TextStyle(fontWeight: FontWeight.bold),
+),
+const SizedBox(height: 5),
 
-                              // Class Dropdown
-                              const Text('Class',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 5),
-                              DropdownButtonFormField<TeacherClass>(
-                                value: selectedClass,
-                                items: classSections
-                                    .map((c) => DropdownMenuItem(
-                                          value: c,
-                                          child: Text(c.fullName),
-                                        ))
-                                    .toList(),
-                                onChanged: (val) async {
-                                  setState(() {
-                                    selectedClass = val;
-                                    selectedStudent = null;
-                                    students = [];
-                                  });
-                                  if (val != null) {
-                                    await loadStudents(classId: val.id);
-                                  }
-                                },
-                              ),
+DropdownButtonFormField<TeacherClass>(
+  value: selectedClass,
+  items: classSections
+      .map((c) => DropdownMenuItem(
+            value: c,
+            child: Text(c.fullName),
+          ))
+      .toList(),
+  onChanged: (val) async {
+    setState(() {
+      selectedClass = val;
+      selectedStudent = null;
+      students = [];
+    });
+    if (val != null) {
+      await loadStudents(classId: val.id);
+    }
+  },
+  decoration: InputDecoration(
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8), // rounded corners
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.grey.shade400, width: 1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFF2E3192), width: 2), // active border color
+      borderRadius: BorderRadius.circular(8),
+    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  ),
+),
+
                               const SizedBox(height: 16),
 
                               // Student Dropdown
                               const Text('Student Name',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 5),
                               isLoadingStudents
                                   ? const Center(
@@ -328,16 +374,16 @@ class _AddCoCurricularActivityPageState
                                       },
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8)),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
                                       ),
                                     ),
                               const SizedBox(height: 16),
 
                               // Category Dropdown
                               const Text('Category Name',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 5),
                               DropdownButtonFormField<CoCurricularCategory>(
                                 value: selectedCategoryObj,
@@ -357,15 +403,15 @@ class _AddCoCurricularActivityPageState
                                 },
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 16),
 
                               // Activity Dropdown
                               const Text('Activity Name',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 5),
                               DropdownButtonFormField<CoCurricularActivity>(
                                 value: (selectedActivity == null ||
@@ -378,8 +424,8 @@ class _AddCoCurricularActivityPageState
                                 items: allActivities
                                     .map((a) => DropdownMenuItem(
                                           value: a,
-                                          child:
-                                              Text("${a.name} – ${a.description}"),
+                                          child: Text(
+                                              "${a.name} – ${a.description}"),
                                         ))
                                     .toList(),
                                 onChanged: (val) {
@@ -389,22 +435,23 @@ class _AddCoCurricularActivityPageState
                                 },
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 16),
 
                               // Remarks
                               const Text('Remarks',
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 5),
                               TextField(
                                 controller: remarksController,
                                 maxLines: 3,
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               ),
                             ],
@@ -419,7 +466,7 @@ class _AddCoCurricularActivityPageState
                           children: [
                             Expanded(
                               child: GestureDetector(
-                                onTap: () => Navigator.pop(context),
+                                onTap: removeStudentEnrollment,
                                 child: Container(
                                   height: 48,
                                   decoration: BoxDecoration(
@@ -445,7 +492,7 @@ class _AddCoCurricularActivityPageState
                                 child: Container(
                                   height: 48,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF29ABE2),
+                                    color: Color(0xFF29ABE2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Center(
@@ -476,7 +523,11 @@ class _AddCoCurricularActivityPageState
                   ),
           ),
         ),
-      ),
-    );
-  }
-}
+      ],
+    ),
+  ),
+),
+             
+    
+  );}
+    }
