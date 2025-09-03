@@ -78,14 +78,19 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
       backgroundColor: const Color(0xFFA7D7A7),
       drawer: MenuDrawer(),
       appBar: TeacherAppBar(),
-      body: _loadingClasses
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+    body: _loadingClasses
+    ? const Center(child: CircularProgressIndicator())
+    : Stack(
+        children: [
+          // Main content
+          Padding(
+            padding: const EdgeInsets.only(top: 10.0), // leave space for button
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 🔙 Back
                 Padding(
-                  padding: const EdgeInsets.only(left: 16.0, top: 12),
+                  padding: const EdgeInsets.only(left: 15.0, top: 0),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -120,7 +125,7 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
                       const Text(
                         'Syllabus',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2E3192),
                         ),
@@ -128,9 +133,9 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
                     ],
                   ),
                 ),
-
+const SizedBox(height: 10,)
                 // 🔹 Class Dropdown
-                Padding(
+            ,    Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Container(
                     padding: const EdgeInsets.all(12),
@@ -143,7 +148,9 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
                         const Text(
                           'Class',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black),
                         ),
                         const SizedBox(width: 16),
                         Container(
@@ -182,97 +189,95 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
                 const SizedBox(height: 12),
 
                 // 🔹 Subject List
-              // 🔹 Subject List
-Expanded(   // 👈 Wrap pannunga
+               // 🔹 Subject List
+Expanded(
   child: Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16.0),
     child: Container(
-      margin: const EdgeInsets.only(bottom: 50), // 👈 Bottom fixed space
+      margin: const EdgeInsets.only(bottom: 20), // 👈 add 20px bottom space
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                child: const Icon(Icons.add_circle_outline,
-                    color: Color(0xFF29ABE2), size: 22),
-              ),
-              const SizedBox(width: 8),
-              const Text("Add a subject",
-                  style: TextStyle(color: Color(0xFF29ABE2), fontSize: 16)),
-              const Spacer(),
-              IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-            ],
-          ),
-          const Divider(height: 1),
-
-          _loadingSubjects
-              ? const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              : Expanded(   // 👈 Makes subject list scrollable inside container
-                  child: ListView.builder(
-                    itemCount: _subjects.length,
-                    itemBuilder: (context, index) {
-                      final subject = _subjects[index];
-                      return InkWell(
-                        onTap: () {
-                          if (_selectedClass == null) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SyllabusDetailPage(
-                                classId: _selectedClass!.id,
-                                subjectId: subject.id,
-                                selectedClass: _selectedClass!.fullName,
-                                subject: subject.name,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 20, horizontal: 12),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              bottom:
-                                  BorderSide(color: Color(0xFF999999), width: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(subject.name,
-                                  style: const TextStyle(
-                                      color: Color(0xFF2E3192),
-                                      fontWeight: FontWeight.w500)),
-                              SvgPicture.asset(
-                                'assets/icons/arrow_right.svg',
-                                height: 18,
-                                width: 18,
-                                color: Colors.grey,
-                              ),
-                            ],
-                          ),
+      child: _loadingSubjects
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: _subjects.length,
+              itemBuilder: (context, index) {
+                final subject = _subjects[index];
+                return InkWell(
+                  onTap: () {
+                    if (_selectedClass == null) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SyllabusDetailPage(
+                          classId: _selectedClass!.id,
+                          subjectId: subject.id,
+                          selectedClass: _selectedClass!.fullName,
+                          subject: subject.name,
                         ),
-                      );
-                    },
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 20, horizontal: 12),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                            color: Color(0xFF999999), width: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(subject.name,
+                            style: const TextStyle(
+                                color: Color(0xFF2E3192),
+                                fontWeight: FontWeight.w500)),
+                        SvgPicture.asset(
+                          'assets/icons/arrow_right.svg',
+                          height: 18,
+                          width: 18,
+                          color: Colors.grey,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-        ],
-      ),
+                );
+              },
+            ),
     ),
   ),
 ),
-  ],
+ ],
             ),
+          ),
+
+          // 🔹 Add button at top-right aligned with title
+        Positioned(
+  top: 50, // adjust to align with title row
+  right: 16,
+  child: ElevatedButton.icon(
+    onPressed: () {
+      // Add action
+    },
+    icon: const Icon(Icons.add, size: 20),
+    label: const Text("Add a subject"),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF29ABE2),
+      foregroundColor: Colors.white, // 👈 text and icon color
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    ),
+  ),
+),
+
+        ],
+      ),
     );
   }
 }
