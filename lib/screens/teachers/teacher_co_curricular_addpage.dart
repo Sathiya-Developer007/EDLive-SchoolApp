@@ -155,17 +155,15 @@ Future<void> loadStudents({int? classId}) async {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
 
-      final activityObj =
-          allActivities.firstWhere((a) => a.name == selectedActivity);
+     final body = jsonEncode({
+  "studentId": selectedStudent!.id,
+  "activityId": int.parse(selectedActivity!),
+  "classId": selectedClass!.id,
+  "categoryId": selectedCategoryObj!.id,
+  "academicYear": "2025-2026",
+  "remarks": remarksController.text,
+});
 
-      final body = jsonEncode({
-        "studentId": selectedStudent!.id,
-        "activityId": activityObj.id,
-        "classId": selectedClass!.id,
-        "categoryId": selectedCategoryObj!.id,
-        "academicYear": "2025-2026",
-        "remarks": remarksController.text,
-      });
 
       final response = await http.post(
         Uri.parse(
@@ -329,23 +327,29 @@ Future<void> loadStudents({int? classId}) async {
                         const Text('Activity Name',
                             style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 5),
-                        DropdownButtonFormField<String>(
-                          value: selectedActivity,
-                          items: activityNames
-                              .map((a) =>
-                                  DropdownMenuItem(value: a, child: Text(a)))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              selectedActivity = val;
-                            });
-                          },
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                   DropdownButtonFormField<CoCurricularActivity>(
+  value: (selectedActivity == null || allActivities.isEmpty)
+      ? null
+      : allActivities.firstWhere(
+          (a) => a.id.toString() == selectedActivity,
+          orElse: () => allActivities.first, // fallback to first activity
+        ),
+  items: allActivities
+      .map((a) => DropdownMenuItem(
+            value: a,
+            child: Text("${a.name} – ${a.description}"),
+          ))
+      .toList(),
+  onChanged: (val) {
+    setState(() {
+      selectedActivity = val?.id.toString();
+    });
+  },
+  decoration: InputDecoration(
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  ),
+),
+   const SizedBox(height: 16),
 
                         // Remarks
                         const Text('Remarks',
