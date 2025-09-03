@@ -13,7 +13,7 @@ import '/services/co_curricular_cateogries_service.dart';
 import '/services/co_curricular_activities_service.dart';
 import '/models/teacher_student_classsection.dart';
 import 'package:school_app/services/teacher_student_classsection.dart';
-import 'package:school_app/services/teacher_class_service.dart';
+import 'package:school_app/services/teacher_class_section_service.dart';
 
 
 
@@ -79,33 +79,28 @@ TeacherClass? selectedClass;
   }
 }
 
-  Future<void> loadStudents({int? classId}) async {
-    setState(() => isLoadingStudents = true);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
+Future<void> loadStudents({int? classId}) async {
+  setState(() => isLoadingStudents = true);
+  try {
+    final service = StudentService();
+    final data = await service.fetchStudents();
 
-final service = StudentService();
-final data = await service.fetchStudents();
+    // Just take all students (or filter by admissionNo prefix if needed)
+    List<StudentClassSection> filteredStudents = data;
 
-      List<StudentClassSection> filteredStudents = data;
-      if (classId != null) {
-        filteredStudents = data.where((s) => s.classId == classId).toList();
-      }
-
-      setState(() {
-        students = filteredStudents;
-        selectedStudent =
-            filteredStudents.isNotEmpty ? filteredStudents.first : null;
-        isLoadingStudents = false;
-      });
-    } catch (e) {
-      setState(() => isLoadingStudents = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load students')),
-      );
-    }
+    setState(() {
+      students = filteredStudents;
+      selectedStudent =
+          filteredStudents.isNotEmpty ? filteredStudents.first : null;
+      isLoadingStudents = false;
+    });
+  } catch (e) {
+    setState(() => isLoadingStudents = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Failed to load students')),
+    );
   }
+}
 
   Future<void> loadCategories() async {
     try {
@@ -281,24 +276,23 @@ final data = await service.fetchStudents();
                         isLoadingStudents
                             ? const Center(child: CircularProgressIndicator())
                             : DropdownButtonFormField<StudentClassSection>(
-                                value: selectedStudent,
-                                items: students
-                                    .map((s) => DropdownMenuItem(
-                                          value: s,
-                                          child: Text(s.name),
-                                        ))
-                                    .toList(),
-                                onChanged: (val) {
-                                  setState(() {
-                                    selectedStudent = val;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                        const SizedBox(height: 16),
+  value: selectedStudent,
+  items: students
+      .map((s) => DropdownMenuItem(
+            value: s,
+            child: Text("${s.name} "),
+          ))
+      .toList(),
+  onChanged: (val) {
+    setState(() {
+      selectedStudent = val;
+    });
+  },
+  decoration: InputDecoration(
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+  ),
+),
+   const SizedBox(height: 16),
 
                         // Category Dropdown
                         const Text('Category Name',

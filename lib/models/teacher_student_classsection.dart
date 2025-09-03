@@ -3,22 +3,23 @@
 class StudentClassSection {
   final int id;
   final String name;
-  final int classId;
+  final String admissionNo;
 
   StudentClassSection({
     required this.id,
     required this.name,
-    required this.classId,
+    required this.admissionNo,
   });
 
   factory StudentClassSection.fromJson(Map<String, dynamic> json) {
     return StudentClassSection(
       id: json['id'],
       name: json['student_name'] ?? '',
-      classId: json['class_id'] ?? 0,
+      admissionNo: json['admission_no'] ?? '',
     );
   }
 }
+
 
 
 // models/teacher_student_classsection.dart
