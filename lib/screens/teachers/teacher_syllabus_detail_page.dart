@@ -60,36 +60,54 @@ Widget build(BuildContext context) {
         const SizedBox(height: 8),
 
         // Header
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2E3192),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: SvgPicture.asset(
-                  'assets/icons/syllabus.svg',
-                  height: 24,
-                  width: 24,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Syllabus',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E3192),
-                ),
-              ),
-            ],
-          ),
+      // Header row with Add button
+Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+  child: Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2E3192),
+          borderRadius: BorderRadius.circular(6),
         ),
-
+        child: SvgPicture.asset(
+          'assets/icons/syllabus.svg',
+          height: 24,
+          width: 24,
+          color: Colors.white,
+        ),
+      ),
+      const SizedBox(width: 8),
+      const Text(
+        'Syllabus',
+        style: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF2E3192),
+        ),
+      ),
+      const Spacer(), // Pushes button to the right
+      ElevatedButton.icon(
+        onPressed: () {
+          // Add action here
+        },
+        icon: const Icon(Icons.add, size: 20),
+        label: const Text("Add"),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF29ABE2),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+      ),
+    ],
+  ),
+),
+  
         const SizedBox(height: 16),
 
         // White Container (fixed height, full screen minus appbar + header)
@@ -124,33 +142,33 @@ Widget build(BuildContext context) {
                   const SizedBox(height: 10),
 
                   // Divider row with Add + Pencil
-                  Container(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: Color(0xFF999999), width: 0.5),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.add_circle_outline,
-                            color: Color(0xFF29ABE2)),
-                        const SizedBox(width: 4),
-                        const Text('Add',
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF29ABE2),
-                                fontWeight: FontWeight.w500)),
-                        const Spacer(),
-                        // SvgPicture.asset(
-                        //   'assets/icons/pencil.svg',
-                        //   height: 18,
-                        //   width: 18,
-                        //   color: Colors.black,
-                        // ),
-                      ],
-                    ),
-                  ),
+                  // Container(
+                  //   padding: const EdgeInsets.only(bottom: 8),
+                  //   decoration: const BoxDecoration(
+                  //     border: Border(
+                  //       bottom: BorderSide(color: Color(0xFF999999), width: 0.5),
+                  //     ),
+                  //   ),
+                  //   child: Row(
+                  //     children: [
+                  //       const Icon(Icons.add_circle_outline,
+                  //           color: Color(0xFF29ABE2)),
+                  //       const SizedBox(width: 4),
+                  //       const Text('Add',
+                  //           style: TextStyle(
+                  //               fontSize: 14,
+                  //               color: Color(0xFF29ABE2),
+                  //               fontWeight: FontWeight.w500)),
+                  //       const Spacer(),
+                  //       // SvgPicture.asset(
+                  //       //   'assets/icons/pencil.svg',
+                  //       //   height: 18,
+                  //       //   width: 18,
+                  //       //   color: Colors.black,
+                  //       // ),
+                  //     ],
+                  //   ),
+                  // ),
 
                   const SizedBox(height: 16),
 
