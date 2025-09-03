@@ -15,6 +15,12 @@ import '/models/teacher_student_classsection.dart';
 import 'package:school_app/services/teacher_student_classsection.dart';
 import 'package:school_app/services/teacher_class_section_service.dart';
 
+// Keep this (model)
+import '/models/cocurricular_activity_model.dart';
+
+// Keep this (service)
+import '/services/co_curricular_activities_service.dart';
+
 
 
 
@@ -116,23 +122,21 @@ Future<void> loadStudents({int? classId}) async {
     }
   }
 
-  Future<void> loadActivitiesByCategory(int categoryId) async {
-    try {
-      final activities =
-          await CoCurricularService.fetchActivitiesByCategory(categoryId);
+ Future<void> loadActivitiesByCategory(int categoryId) async {
+  try {
+    final activities = await CoCurricularService.fetchActivitiesByCategory(categoryId);
 
-      setState(() {
-        allActivities = activities;
-        activityNames = activities.map((e) => e.name).toList();
-        selectedActivity =
-            activityNames.isNotEmpty ? activityNames.first : null;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load activities')),
-      );
-    }
+    setState(() {
+      allActivities = activities;
+      activityNames = activities.map((e) => e.name).toList();
+      selectedActivity = activityNames.isNotEmpty ? activityNames.first : null;
+    });
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Failed to load activities')),
+    );
   }
+}
 
   Future<void> enrollStudent() async {
     if (selectedStudent == null ||

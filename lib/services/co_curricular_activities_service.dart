@@ -20,7 +20,7 @@ class CoCurricularActivity {
       id: json['id'],
       categoryId: json['category_id'],
       name: json['name'],
-      description: json['description'] ?? '',
+      description: json['description']?.toString() ?? '',
     );
   }
 }
@@ -30,6 +30,10 @@ class CoCurricularService {
       int categoryId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
+
+    if (token.isEmpty) {
+      throw Exception("Auth token not found");
+    }
 
     final url = Uri.parse(
         'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/co-curricular/activities?categoryId=$categoryId');
@@ -43,10 +47,16 @@ class CoCurricularService {
     );
 
     if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
-      return data.map((e) => CoCurricularActivity.fromJson(e)).toList();
+      final body = jsonDecode(response.body);
+      if (body is List) {
+        return body
+            .map((e) => CoCurricularActivity.fromJson(e))
+            .toList();
+      } else {
+        throw Exception('Invalid response format: expected a list');
+      }
     } else {
-      throw Exception('Failed to load activities');
+      throw Exception('Failed to load activities: ${response.statusCode}');
     }
   }
 }
