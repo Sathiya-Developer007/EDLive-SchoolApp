@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/library_book_copy.dart';
+import '../models/teacher_library_book_copy.dart';
 
 class LibraryCopyService {
   final String baseUrl = "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api";

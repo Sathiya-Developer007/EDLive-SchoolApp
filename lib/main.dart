@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:school_app/providers/library_copy_provider.dart';
+import 'package:school_app/providers/teacher_library_copy_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/login_page.dart';
@@ -34,9 +34,9 @@ import 'providers/teacher_timetable_provider.dart';
 import 'providers/student_timetable_provider.dart';
 import 'providers/teacher_attendance_provider.dart';
 import 'providers/teacher_achievement_provider.dart';
-import 'providers/library_provider.dart';
-import 'providers/library_copy_provider.dart';
-import 'providers/library_member_provider.dart';
+import 'providers/teacher_library_provider.dart';
+import 'providers/teacher_library_copy_provider.dart';
+import 'providers/teacher_library_member_provider.dart';
 
 import 'dart:convert';
 

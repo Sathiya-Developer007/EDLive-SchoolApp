@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/library_book.dart';
-import '../services/library_service.dart';
+import '../models/teacher_library_book.dart';
+import '../services/teacher_library_service.dart';
 
 class LibraryProvider with ChangeNotifier {
   final LibraryService _service = LibraryService();

@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import '../models/library_book_copy.dart';
-import '../services/library_copy_service.dart';
+import '../models/teacher_library_member.dart';
+import '../services/teacher_library_member_service.dart';
 
-class LibraryCopyProvider with ChangeNotifier {
-  final LibraryCopyService _service = LibraryCopyService();
+class LibraryMemberProvider with ChangeNotifier {
+  final LibraryMemberService _service = LibraryMemberService();
 
   bool isLoading = false;
   String? error;
 
-  Future<bool> addCopy(LibraryBookCopy copy) async {
+  Future<bool> addMember(LibraryMember member) async {
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
-      await _service.addCopy(copy);
+      await _service.addMember(member);
       isLoading = false;
       notifyListeners();
       return true;

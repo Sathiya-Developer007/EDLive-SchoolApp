@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/library_book.dart';
+import '../models/teacher_library_book.dart';
 
 class LibraryService {
   static const String baseUrl =

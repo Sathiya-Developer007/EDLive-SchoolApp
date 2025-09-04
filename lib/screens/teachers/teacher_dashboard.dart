@@ -24,7 +24,7 @@ import 'teacher_co_curricular_page.dart';
 import 'teacher_notifiction_page.dart';
 // import 'teacher_achievement_page.dart';
 import 'teacher_achivement_page.dart';
-import 'add_library_book_page.dart';
+import 'teacher_add_library_book_page.dart';
 
 class TeacherDashboardPage extends StatefulWidget {
   const TeacherDashboardPage({super.key});
