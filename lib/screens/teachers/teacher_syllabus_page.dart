@@ -12,8 +12,8 @@ import 'teacher_syllabus_detail_page.dart';
 import 'package:school_app/models/class_section.dart';
 import 'package:school_app/services/class_section_service.dart';
 import 'package:school_app/services/teacher_class_section_service.dart';
-import 'package:school_app/services/subject_service.dart';
-import 'package:school_app/models/subject_model.dart';
+import 'package:school_app/services/teacher_syllabus_subject_service.dart';
+import 'package:school_app/models/teacher_syllabus_subject_model.dart';
 import '../../models/teacher_syllabus_model.dart';
 import '../../services/teacher_syllabus_service.dart';
 

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/subject_model.dart';
+import '../models/teacher_syllabus_subject_model.dart';
 
 class SubjectService {
   Future<List<SubjectModel>> fetchSubjects() async {
