@@ -425,7 +425,7 @@ DropdownButtonFormField<TeacherClass>(
                                     .map((a) => DropdownMenuItem(
                                           value: a,
                                           child: Text(
-                                              "${a.name} – ${a.description}"),
+                                              "${a.name} "),
                                         ))
                                     .toList(),
                                 onChanged: (val) {

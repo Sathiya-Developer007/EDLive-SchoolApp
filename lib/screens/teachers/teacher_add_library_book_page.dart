@@ -9,6 +9,9 @@ import '../../models/teacher_library_member.dart';
 import '../../providers/teacher_library_provider.dart';
 import '../../providers/teacher_library_copy_provider.dart';
 import '../../providers/teacher_library_member_provider.dart';
+import 'package:school_app/providers/library_status_provider.dart';
+import 'package:school_app/providers/library_books_list_provider.dart';
+import 'package:school_app/providers/library_book_detail_provider.dart';
 
 import '../../../widgets/teacher_app_bar.dart';
 import '../teachers/teacher_menu_drawer.dart';
@@ -21,6 +24,8 @@ class AddLibraryBookPage extends StatefulWidget {
 }
 
 class _AddLibraryBookPageState extends State<AddLibraryBookPage> {
+
+   int? selectedBookId;
   /// Form keys
   final _formKeyBook = GlobalKey<FormState>();
   final _formKeyCopy = GlobalKey<FormState>();
@@ -48,6 +53,7 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage> {
   final _membershipStartController = TextEditingController();
   final _membershipEndController = TextEditingController();
   final _maxBooksController = TextEditingController();
+
 
   @override
   void dispose() {
@@ -196,6 +202,10 @@ Widget build(BuildContext context) {
   final bookProvider = Provider.of<LibraryProvider>(context);
   final copyProvider = Provider.of<LibraryCopyProvider>(context);
   final memberProvider = Provider.of<LibraryMemberProvider>(context);
+    final statusProvider = Provider.of<LibraryStatusProvider>(context);
+final booksListProvider = Provider.of<LibraryBooksListProvider>(context);
+final bookDetailProvider = Provider.of<LibraryBookDetailProvider>(context);
+
 
   return Scaffold(
     appBar: TeacherAppBar(),
@@ -343,6 +353,223 @@ Widget build(BuildContext context) {
               ),
             ),
           ),
+
+/// BOOK DETAIL CARD
+Card(
+  elevation: 2,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+  ),
+  margin: const EdgeInsets.only(bottom: 24),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: const [
+            Icon(Icons.menu_book, color: Color(0xFF2E3192)),
+            SizedBox(width: 8),
+            Text(
+              "Book Details",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3192),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        if (bookDetailProvider.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (bookDetailProvider.error != null)
+          Text("Error: ${bookDetailProvider.error}")
+        else if (bookDetailProvider.bookDetail != null)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Title: ${bookDetailProvider.bookDetail!['title']}"),
+              Text("Author: ${bookDetailProvider.bookDetail!['author']}"),
+              Text("ISBN: ${bookDetailProvider.bookDetail!['isbn']}"),
+              Text("Publisher: ${bookDetailProvider.bookDetail!['publisher']}"),
+              Text("Available Qty: ${bookDetailProvider.bookDetail!['available_quantity']}"),
+              const SizedBox(height: 12),
+              const Text(
+                "Copies:",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              ...((bookDetailProvider.bookDetail!['copies'] as List<dynamic>)
+                  .map((copy) => ListTile(
+                        leading: const Icon(Icons.qr_code,
+                            color: Color(0xFF2E3192)),
+                        title: Text("Barcode: ${copy['barcode']}"),
+                        subtitle: Text("Condition: ${copy['condition']}"),
+                        trailing: Text(copy['status']),
+                      ))),
+            ],
+          )
+        else
+          const Text("No book details available"),
+
+        const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: () {
+            int? selectedBookId; // 👈 currently selected book id
+// 👈 replace with dynamic ID
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E3192),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text("Fetch Book Details"),
+        ),
+      ],
+    ),
+  ),
+),
+
+
+/// BOOKS LIST CARD
+Card(
+  elevation: 2,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+  ),
+  margin: const EdgeInsets.only(bottom: 24),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child:Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Row(
+      children: const [
+        Icon(Icons.library_books, color: Color(0xFF2E3192)),
+        SizedBox(width: 8),
+        Text(
+          "All Active Books",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2E3192),
+          ),
+        ),
+      ],
+    ),
+    const SizedBox(height: 16),
+
+    if (booksListProvider.isLoading)
+      const Center(child: CircularProgressIndicator())
+    else if (booksListProvider.error != null)
+      Text("Error: ${booksListProvider.error}")
+    else if (booksListProvider.books.isNotEmpty)
+      Column(
+        children: booksListProvider.books.map((book) {
+          return ListTile(
+            leading: const Icon(Icons.book_outlined, color: Color(0xFF2E3192)),
+            title: Text(book["title"]),
+            subtitle: Text("Author: ${book["author"]}"),
+            trailing: Text("Qty: ${book["available_quantity"]}"),
+            onTap: () {
+              /// store selected bookId
+              setState(() {
+                selectedBookId = book["id"];
+              });
+
+              /// fetch book details
+              final bookDetailProvider = Provider.of<LibraryBookDetailProvider>(
+                context,
+                listen: false,
+              );
+              bookDetailProvider.fetchBook(book["id"]);
+            },
+          );
+        }).toList(),
+      )
+    else
+      const Text("No books available"),
+
+    const SizedBox(height: 12),
+    ElevatedButton(
+      onPressed: () {
+        booksListProvider.fetchBooks(); // fetch all books
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF2E3192),
+        foregroundColor: Colors.white,
+      ),
+      child: const Text("Fetch Books"),
+    ),
+  ],
+)
+ ),
+),
+
+
+
+/// MEMBER STATUS CARD
+Card(
+  elevation: 2,
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(16),
+  ),
+  margin: const EdgeInsets.only(bottom: 24),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: const [
+            Icon(Icons.info, color: Color(0xFF2E3192)),
+            SizedBox(width: 8),
+            Text(
+              "Member Status",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3192),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Data display
+        if (statusProvider.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (statusProvider.error != null)
+          Text("Error: ${statusProvider.error}")
+        else if (statusProvider.statusData != null)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Member: ${statusProvider.statusData!['member']['student_name']}"),
+              Text("Membership #: ${statusProvider.statusData!['member']['membership_number']}"),
+              Text("Checkouts: ${statusProvider.statusData!['checkoutCount']}"),
+              Text("Reservations: ${statusProvider.statusData!['reservationCount']}"),
+              Text("Fines: ₹${statusProvider.statusData!['fineAmount']}"),
+            ],
+          )
+        else
+          const Text("No status data available"),
+        
+        const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: () {
+            statusProvider.fetchStatus(); // fetch latest
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E3192),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text("Fetch Status"),
+        ),
+      ],
+    ),
+  ),
+),
 
           /// COPY FORM CARD
           Card(
@@ -504,3 +731,4 @@ Widget build(BuildContext context) {
     );
   }
 }
+
