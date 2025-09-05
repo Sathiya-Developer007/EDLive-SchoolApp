@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+
 
 import '../../models/teacher_library_book.dart';
 import '../../models/teacher_library_book_copy.dart';
@@ -12,6 +18,8 @@ import '../../providers/teacher_library_member_provider.dart';
 import 'package:school_app/providers/library_status_provider.dart';
 import 'package:school_app/providers/library_books_list_provider.dart';
 import 'package:school_app/providers/library_book_detail_provider.dart';
+
+import 'package:school_app/services/library_book_search_service.dart';
 
 import '../../../widgets/teacher_app_bar.dart';
 import '../teachers/teacher_menu_drawer.dart';
@@ -26,6 +34,9 @@ class AddLibraryBookPage extends StatefulWidget {
 class _AddLibraryBookPageState extends State<AddLibraryBookPage> {
 
    int? selectedBookId;
+
+   List<dynamic> searchResults = [];
+
   /// Form keys
   final _formKeyBook = GlobalKey<FormState>();
   final _formKeyCopy = GlobalKey<FormState>();
@@ -168,6 +179,107 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage> {
     }
   }
 
+
+// static Future<bool> addBook(Map<String, dynamic> bookData) async {
+//   SharedPreferences prefs = await SharedPreferences.getInstance();
+//   final token = prefs.getString("auth_token");
+//   // Add at the top of the file or in a constants file
+// const String baseUrl = "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api";
+
+
+//   final response = await http.post(
+//     Uri.parse("$baseUrl/books"), // now baseUrl is defined
+//     headers: {
+//       "accept": "application/json",
+//       "Content-Type": "application/json",
+//       "Authorization": "Bearer $token",
+//     },
+//     body: jsonEncode(bookData),
+//   );
+
+//   return response.statusCode == 201;
+// }
+
+
+
+void _showSearchDialog(BuildContext context) {
+  final titleController = TextEditingController();
+  final authorController = TextEditingController();
+  final isbnController = TextEditingController();
+  final genreController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text("Search Books"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTextField(titleController, "Title"),
+              _buildTextField(authorController, "Author"),
+              _buildTextField(isbnController, "ISBN"),
+              _buildTextField(genreController, "Genre"),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E3192),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              try {
+                final books = await LibraryApiService.searchBooks(
+                  title: titleController.text,
+                  author: authorController.text,
+                  isbn: isbnController.text,
+                  genre: genreController.text,
+                );
+
+                Navigator.pop(context); // close popup
+
+                if (books.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("No books found ❌")),
+                  );
+                } else {
+                  // Store in state to display
+                setState(() {
+  searchResults = books;
+});
+
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Found ${books.length} books ✅")),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Error: $e")),
+                );
+              }
+            },
+            child: const Text("Search"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
+
   /// Clear Book fields
   void _clearBookFields() {
     _titleController.clear();
@@ -289,6 +401,69 @@ final bookDetailProvider = Provider.of<LibraryBookDetailProvider>(context);
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
+        ElevatedButton(
+  onPressed: () {
+    _showSearchDialog(context);
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFF2E3192),
+    foregroundColor: Colors.white,
+  ),
+  child: const Text("Search Books"),
+),
+
+/// 👉 Add search results card here
+if (searchResults.isNotEmpty)
+  Card(
+    elevation: 2,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+    margin: const EdgeInsets.only(top: 16, bottom: 24),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Search Results",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E3192),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...searchResults.map((book) {
+            return ListTile(
+              leading: const Icon(Icons.book, color: Color(0xFF2E3192)),
+              title: Text(book["title"] ?? "Untitled"),
+              subtitle: Text("Author: ${book["author"] ?? "Unknown"}"),
+              trailing: Text("Qty: ${book["available_quantity"] ?? 0}"),
+              onTap: () {
+                setState(() {
+                  selectedBookId = book["id"];
+                });
+
+                final bookDetailProvider =
+                    Provider.of<LibraryBookDetailProvider>(
+                  context,
+                  listen: false,
+                );
+                bookDetailProvider.fetchBook(book["id"]);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Selected: ${book["title"]}")),
+                );
+              },
+            );
+          }).toList(),
+        ],
+      ),
+    ),
+  ),
+
           /// BOOK FORM CARD
           Card(
             elevation: 2,
@@ -414,11 +589,16 @@ Card(
           const Text("No book details available"),
 
         const SizedBox(height: 12),
-        ElevatedButton(
-          onPressed: () {
-            int? selectedBookId; // 👈 currently selected book id
-// 👈 replace with dynamic ID
-          },
+     ElevatedButton(
+  onPressed: () {
+    if (selectedBookId != null) {
+      bookDetailProvider.fetchBook(selectedBookId!);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a book first")),
+      );
+    }
+  },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2E3192),
             foregroundColor: Colors.white,
