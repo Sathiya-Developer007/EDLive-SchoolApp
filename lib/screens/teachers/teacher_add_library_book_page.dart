@@ -37,6 +37,17 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage> {
 
    List<dynamic> searchResults = [];
 
+
+  // new flag
+  bool showSearchForm = false;
+
+
+// Book Search
+   final _searchTitleController = TextEditingController();
+  final _searchAuthorController = TextEditingController();
+  final _searchIsbnController = TextEditingController();
+  final _searchGenreController = TextEditingController();
+
   /// Form keys
   final _formKeyBook = GlobalKey<FormState>();
   final _formKeyCopy = GlobalKey<FormState>();
@@ -68,6 +79,15 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage> {
 
   @override
   void dispose() {
+
+    // search
+
+    _searchTitleController.dispose();
+_searchAuthorController.dispose();
+_searchIsbnController.dispose();
+_searchGenreController.dispose();
+
+
     // Book
     _titleController.dispose();
     _authorController.dispose();
@@ -180,103 +200,84 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage> {
   }
 
 
-// static Future<bool> addBook(Map<String, dynamic> bookData) async {
-//   SharedPreferences prefs = await SharedPreferences.getInstance();
-//   final token = prefs.getString("auth_token");
-//   // Add at the top of the file or in a constants file
-// const String baseUrl = "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api";
 
 
-//   final response = await http.post(
-//     Uri.parse("$baseUrl/books"), // now baseUrl is defined
-//     headers: {
-//       "accept": "application/json",
-//       "Content-Type": "application/json",
-//       "Authorization": "Bearer $token",
+
+// void _showSearchDialog(BuildContext context) {
+//   final titleController = TextEditingController();
+//   final authorController = TextEditingController();
+//   final isbnController = TextEditingController();
+//   final genreController = TextEditingController();
+
+//   showDialog(
+//     context: context,
+//     builder: (context) {
+//       return AlertDialog(
+//         shape: RoundedRectangleBorder(
+//           borderRadius: BorderRadius.circular(16),
+//         ),
+//         title: const Text("Search Books"),
+//         content: SingleChildScrollView(
+//           child: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               _buildTextField(titleController, "Title"),
+//               _buildTextField(authorController, "Author"),
+//               _buildTextField(isbnController, "ISBN"),
+//               _buildTextField(genreController, "Genre"),
+//             ],
+//           ),
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: const Text("Cancel"),
+//           ),
+//           ElevatedButton(
+//             style: ElevatedButton.styleFrom(
+//               backgroundColor: const Color(0xFF2E3192),
+//               foregroundColor: Colors.white,
+//             ),
+//             onPressed: () async {
+//               try {
+//                 final books = await LibraryApiService.searchBooks(
+//                   title: titleController.text,
+//                   author: authorController.text,
+//                   isbn: isbnController.text,
+//                   genre: genreController.text,
+//                 );
+
+//                 Navigator.pop(context); // close popup
+
+//                 if (books.isEmpty) {
+//                   ScaffoldMessenger.of(context).showSnackBar(
+//                     const SnackBar(content: Text("No books found ❌")),
+//                   );
+//                 } else {
+//                   // Store in state to display
+//                 setState(() {
+//   searchResults = books;
+// });
+
+
+//                   ScaffoldMessenger.of(context).showSnackBar(
+//                     SnackBar(content: Text("Found ${books.length} books ✅")),
+//                   );
+//                 }
+//               } catch (e) {
+//                 Navigator.pop(context);
+//                 ScaffoldMessenger.of(context).showSnackBar(
+//                   SnackBar(content: Text("Error: $e")),
+//                 );
+//               }
+//             },
+//             child: const Text("Search"),
+//           ),
+//         ],
+//       );
 //     },
-//     body: jsonEncode(bookData),
 //   );
-
-//   return response.statusCode == 201;
 // }
-
-
-
-void _showSearchDialog(BuildContext context) {
-  final titleController = TextEditingController();
-  final authorController = TextEditingController();
-  final isbnController = TextEditingController();
-  final genreController = TextEditingController();
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text("Search Books"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTextField(titleController, "Title"),
-              _buildTextField(authorController, "Author"),
-              _buildTextField(isbnController, "ISBN"),
-              _buildTextField(genreController, "Genre"),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E3192),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              try {
-                final books = await LibraryApiService.searchBooks(
-                  title: titleController.text,
-                  author: authorController.text,
-                  isbn: isbnController.text,
-                  genre: genreController.text,
-                );
-
-                Navigator.pop(context); // close popup
-
-                if (books.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("No books found ❌")),
-                  );
-                } else {
-                  // Store in state to display
-                setState(() {
-  searchResults = books;
-});
-
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Found ${books.length} books ✅")),
-                  );
-                }
-              } catch (e) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Error: $e")),
-                );
-              }
-            },
-            child: const Text("Search"),
-          ),
-        ],
-      );
-    },
-  );
-}
 
 
 
@@ -379,7 +380,7 @@ final bookDetailProvider = Provider.of<LibraryBookDetailProvider>(context);
 ),
 
       /// WHITE CONTAINER
-    Expanded(
+   Expanded(
   child: Container(
     decoration: BoxDecoration(
       color: Colors.white,
@@ -396,209 +397,253 @@ final bookDetailProvider = Provider.of<LibraryBookDetailProvider>(context);
         ),
       ],
     ),
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+    padding: const EdgeInsets.all(16),
     child: SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-        ElevatedButton(
-  onPressed: () {
-    _showSearchDialog(context);
-  },
-  style: ElevatedButton.styleFrom(
-    backgroundColor: const Color(0xFF2E3192),
-    foregroundColor: Colors.white,
-  ),
-  child: const Text("Search Books"),
-),
-
-/// 👉 Add search results card here
-if (searchResults.isNotEmpty)
-  Card(
-    elevation: 2,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
+         /// SEARCH BUTTON (toggles form)
+SizedBox(
+  width: double.infinity,
+  child: ElevatedButton.icon(
+    icon: const Icon(Icons.search),
+    label: const Text("Search Books"),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF2E3192),
+      foregroundColor: Colors.white,
     ),
-    margin: const EdgeInsets.only(top: 16, bottom: 24),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Search Results",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2E3192),
-            ),
+    onPressed: () {
+      setState(() {
+        showSearchForm = !showSearchForm;
+      });
+    },
+  ),
+),
+const SizedBox(height: 16),
+
+/// SEARCH FORM (shows only if toggled)
+if (showSearchForm) _buildSearchForm(),
+
+/// SEARCH RESULTS (if available)
+if (searchResults.isNotEmpty) _buildSearchResults(),
+
+
+          /// ACCORDION STYLE SECTIONS
+          ExpansionTile(
+            leading: const Icon(Icons.add_box, color: Color(0xFF2E3192)),
+            title: const Text("Add New Book",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192))),
+            children: [_buildAddBookForm(bookProvider)],
           ),
-          const SizedBox(height: 12),
-          ...searchResults.map((book) {
-            return ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF2E3192)),
-              title: Text(book["title"] ?? "Untitled"),
-              subtitle: Text("Author: ${book["author"] ?? "Unknown"}"),
-              trailing: Text("Qty: ${book["available_quantity"] ?? 0}"),
-              onTap: () {
-                setState(() {
-                  selectedBookId = book["id"];
-                });
 
-                final bookDetailProvider =
-                    Provider.of<LibraryBookDetailProvider>(
-                  context,
-                  listen: false,
-                );
-                bookDetailProvider.fetchBook(book["id"]);
+          ExpansionTile(
+            leading: const Icon(Icons.menu_book, color: Color(0xFF2E3192)),
+            title: const Text("Book Details",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192))),
+            children: [_buildBookDetails(bookDetailProvider)],
+          ),
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Selected: ${book["title"]}")),
-                );
-              },
-            );
-          }).toList(),
+          ExpansionTile(
+            leading: const Icon(Icons.library_books, color: Color(0xFF2E3192)),
+            title: const Text("All Active Books",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192))),
+            children: [_buildBooksList(booksListProvider)],
+          ),
+
+          ExpansionTile(
+            leading: const Icon(Icons.info, color: Color(0xFF2E3192)),
+            title: const Text("Member Status",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192))),
+            children: [_buildMemberStatus(statusProvider)],
+          ),
+
+          ExpansionTile(
+            leading: const Icon(Icons.qr_code, color: Color(0xFF2E3192)),
+            title: const Text("Add Book Copy",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192))),
+            children: [_buildAddCopyForm(copyProvider)],
+          ),
+
+          ExpansionTile(
+            leading: const Icon(Icons.person_add, color: Color(0xFF2E3192)),
+            title: const Text("Add Library Member",
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192))),
+            children: [_buildAddMemberForm(memberProvider)],
+          ),
         ],
       ),
     ),
   ),
+),
 
-          /// BOOK FORM CARD
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            margin: const EdgeInsets.only(bottom: 24),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKeyBook,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.book, color: Color(0xFF2E3192)),
-                        SizedBox(width: 8),
-                        Text(
-                          "Add New Book",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E3192),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(_titleController, "Book Title"),
-                    _buildTextField(_authorController, "Author"),
-                    _buildTextField(_isbnController, "ISBN"),
-                    _buildTextField(_publisherController, "Publisher"),
-                    _buildTextField(_yearController, "Publication Year",
-                        keyboard: TextInputType.number),
-                    _buildTextField(_genreController, "Genre"),
-                    _buildTextField(_quantityController, "Quantity",
-                        keyboard: TextInputType.number),
-                    _buildTextField(_locationController, "Location"),
-                    const SizedBox(height: 16),
-                    bookProvider.isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _submitBook,
-                              icon: const Icon(Icons.add),
-                              label: const Text("Add Book"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2E3192),
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-/// BOOK DETAIL CARD
-Card(
-  elevation: 2,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(16),
+ ],
   ),
-  margin: const EdgeInsets.only(bottom: 24),
-  child: Padding(
-    padding: const EdgeInsets.all(16),
+),
+);
+}
+// ----------------- Helper widgets (paste inside _AddLibraryBookPageState) -----------------
+
+
+
+Widget _buildSearchForm() {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 16),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    child: Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTextField(_searchTitleController, "Title"),
+          _buildTextField(_searchAuthorController, "Author"),
+          _buildTextField(_searchIsbnController, "ISBN"),
+          _buildTextField(_searchGenreController, "Genre"),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E3192),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              try {
+                final books = await LibraryApiService.searchBooks(
+                  title: _searchTitleController.text,
+                  author: _searchAuthorController.text,
+                  isbn: _searchIsbnController.text,
+                  genre: _searchGenreController.text,
+                );
+
+                setState(() {
+                  searchResults = books;
+                });
+
+                if (books.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("No books found ❌")),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Found ${books.length} books ✅")),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Error: $e")),
+                );
+              }
+            },
+            child: const Text("Search"),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
+
+Widget _buildAddBookForm(LibraryProvider provider) {
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: Form(
+      key: _formKeyBook,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTextField(_titleController, "Book Title"),
+          _buildTextField(_authorController, "Author"),
+          _buildTextField(_isbnController, "ISBN"),
+          _buildTextField(_publisherController, "Publisher"),
+          _buildTextField(_yearController, "Publication Year", keyboard: TextInputType.number),
+          _buildTextField(_genreController, "Genre"),
+          _buildTextField(_quantityController, "Quantity", keyboard: TextInputType.number),
+          _buildTextField(_locationController, "Location"),
+          const SizedBox(height: 12),
+          provider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _submitBook,
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add Book"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E3192),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildBookDetails(LibraryBookDetailProvider bookDetailProvider) {
+  final detail = bookDetailProvider.bookDetail;
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: const [
-            Icon(Icons.menu_book, color: Color(0xFF2E3192)),
-            SizedBox(width: 8),
-            Text(
-              "Book Details",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E3192),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
         if (bookDetailProvider.isLoading)
           const Center(child: CircularProgressIndicator())
         else if (bookDetailProvider.error != null)
           Text("Error: ${bookDetailProvider.error}")
-        else if (bookDetailProvider.bookDetail != null)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Title: ${bookDetailProvider.bookDetail!['title']}"),
-              Text("Author: ${bookDetailProvider.bookDetail!['author']}"),
-              Text("ISBN: ${bookDetailProvider.bookDetail!['isbn']}"),
-              Text("Publisher: ${bookDetailProvider.bookDetail!['publisher']}"),
-              Text("Available Qty: ${bookDetailProvider.bookDetail!['available_quantity']}"),
-              const SizedBox(height: 12),
-              const Text(
-                "Copies:",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              ...((bookDetailProvider.bookDetail!['copies'] as List<dynamic>)
-                  .map((copy) => ListTile(
-                        leading: const Icon(Icons.qr_code,
-                            color: Color(0xFF2E3192)),
-                        title: Text("Barcode: ${copy['barcode']}"),
-                        subtitle: Text("Condition: ${copy['condition']}"),
-                        trailing: Text(copy['status']),
-                      ))),
-            ],
-          )
-        else
+        else if (detail != null) ...[
+          Text("Title: ${detail['title'] ?? '-'}"),
+          Text("Author: ${detail['author'] ?? '-'}"),
+          Text("ISBN: ${detail['isbn'] ?? '-'}"),
+          Text("Publisher: ${detail['publisher'] ?? '-'}"),
+          Text("Available Qty: ${detail['available_quantity'] ?? 0}"),
+          const SizedBox(height: 12),
+          const Text("Copies:", style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          // copies list
+          ...(((detail['copies'] ?? []) as List<dynamic>).map((copy) {
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.qr_code, color: Color(0xFF2E3192)),
+              title: Text("Barcode: ${copy['barcode'] ?? '-'}"),
+              subtitle: Text("Condition: ${copy['condition'] ?? '-'}"),
+              trailing: Text(copy['status'] ?? '-'),
+            );
+          }).toList()),
+        ] else
           const Text("No book details available"),
-
         const SizedBox(height: 12),
-     ElevatedButton(
-  onPressed: () {
-    if (selectedBookId != null) {
-      bookDetailProvider.fetchBook(selectedBookId!);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a book first")),
-      );
-    }
-  },
+        ElevatedButton(
+          onPressed: () {
+            if (selectedBookId != null) {
+              bookDetailProvider.fetchBook(selectedBookId!);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Please select a book first")),
+              );
+            }
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2E3192),
             foregroundColor: Colors.white,
@@ -607,139 +652,77 @@ Card(
         ),
       ],
     ),
-  ),
-),
+  );
+}
 
-
-/// BOOKS LIST CARD
-Card(
-  elevation: 2,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(16),
-  ),
-  margin: const EdgeInsets.only(bottom: 24),
-  child: Padding(
-    padding: const EdgeInsets.all(16),
-    child:Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Row(
-      children: const [
-        Icon(Icons.library_books, color: Color(0xFF2E3192)),
-        SizedBox(width: 8),
-        Text(
-          "All Active Books",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2E3192),
-          ),
-        ),
-      ],
-    ),
-    const SizedBox(height: 16),
-
-    if (booksListProvider.isLoading)
-      const Center(child: CircularProgressIndicator())
-    else if (booksListProvider.error != null)
-      Text("Error: ${booksListProvider.error}")
-    else if (booksListProvider.books.isNotEmpty)
-      Column(
-        children: booksListProvider.books.map((book) {
-          return ListTile(
-            leading: const Icon(Icons.book_outlined, color: Color(0xFF2E3192)),
-            title: Text(book["title"]),
-            subtitle: Text("Author: ${book["author"]}"),
-            trailing: Text("Qty: ${book["available_quantity"]}"),
-            onTap: () {
-              /// store selected bookId
-              setState(() {
-                selectedBookId = book["id"];
-              });
-
-              /// fetch book details
-              final bookDetailProvider = Provider.of<LibraryBookDetailProvider>(
-                context,
-                listen: false,
-              );
-              bookDetailProvider.fetchBook(book["id"]);
-            },
-          );
-        }).toList(),
-      )
-    else
-      const Text("No books available"),
-
-    const SizedBox(height: 12),
-    ElevatedButton(
-      onPressed: () {
-        booksListProvider.fetchBooks(); // fetch all books
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2E3192),
-        foregroundColor: Colors.white,
-      ),
-      child: const Text("Fetch Books"),
-    ),
-  ],
-)
- ),
-),
-
-
-
-/// MEMBER STATUS CARD
-Card(
-  elevation: 2,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(16),
-  ),
-  margin: const EdgeInsets.only(bottom: 24),
-  child: Padding(
-    padding: const EdgeInsets.all(16),
+Widget _buildBooksList(LibraryBooksListProvider booksListProvider) {
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: const [
-            Icon(Icons.info, color: Color(0xFF2E3192)),
-            SizedBox(width: 8),
-            Text(
-              "Member Status",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E3192),
-              ),
-            ),
-          ],
+        if (booksListProvider.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (booksListProvider.error != null)
+          Text("Error: ${booksListProvider.error}")
+        else if (booksListProvider.books.isNotEmpty)
+          Column(
+            children: booksListProvider.books.map((book) {
+              return ListTile(
+                leading: const Icon(Icons.book_outlined, color: Color(0xFF2E3192)),
+                title: Text(book["title"] ?? '-'),
+                subtitle: Text("Author: ${book["author"] ?? '-'}"),
+                trailing: Text("Qty: ${book["available_quantity"] ?? 0}"),
+                onTap: () {
+                  setState(() {
+                    selectedBookId = book["id"];
+                  });
+                  final bookDetailProvider = Provider.of<LibraryBookDetailProvider>(context, listen: false);
+                  bookDetailProvider.fetchBook(book["id"]);
+                },
+              );
+            }).toList(),
+          )
+        else
+          const Text("No books available"),
+        const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: () {
+            booksListProvider.fetchBooks();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E3192),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text("Fetch Books"),
         ),
-        const SizedBox(height: 16),
+      ],
+    ),
+  );
+}
 
-        // Data display
+Widget _buildMemberStatus(LibraryStatusProvider statusProvider) {
+  final d = statusProvider.statusData;
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         if (statusProvider.isLoading)
           const Center(child: CircularProgressIndicator())
         else if (statusProvider.error != null)
           Text("Error: ${statusProvider.error}")
-        else if (statusProvider.statusData != null)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Member: ${statusProvider.statusData!['member']['student_name']}"),
-              Text("Membership #: ${statusProvider.statusData!['member']['membership_number']}"),
-              Text("Checkouts: ${statusProvider.statusData!['checkoutCount']}"),
-              Text("Reservations: ${statusProvider.statusData!['reservationCount']}"),
-              Text("Fines: ₹${statusProvider.statusData!['fineAmount']}"),
-            ],
-          )
-        else
+        else if (d != null) ...[
+          Text("Member: ${d['member']?['student_name'] ?? '-'}"),
+          Text("Membership #: ${d['member']?['membership_number'] ?? '-'}"),
+          Text("Checkouts: ${d['checkoutCount'] ?? 0}"),
+          Text("Reservations: ${d['reservationCount'] ?? 0}"),
+          Text("Fines: ₹${d['fineAmount'] ?? 0}"),
+        ] else
           const Text("No status data available"),
-        
         const SizedBox(height: 12),
         ElevatedButton(
-          onPressed: () {
-            statusProvider.fetchStatus(); // fetch latest
-          },
+          onPressed: () => statusProvider.fetchStatus(),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2E3192),
             foregroundColor: Colors.white,
@@ -748,167 +731,125 @@ Card(
         ),
       ],
     ),
-  ),
-),
+  );
+}
 
-          /// COPY FORM CARD
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            margin: const EdgeInsets.only(bottom: 24),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKeyCopy,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.qr_code, color: Color(0xFF2E3192)),
-                        SizedBox(width: 8),
-                        Text(
-                          "Add Book Copy",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E3192),
-                          ),
-                        ),
-                      ],
+Widget _buildAddCopyForm(LibraryCopyProvider copyProvider) {
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: Form(
+      key: _formKeyCopy,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTextField(_bookIdController, "Book ID", keyboard: TextInputType.number),
+          _buildTextField(_barcodeController, "Barcode"),
+          _buildTextField(_conditionController, "Condition (e.g., new/good/old)"),
+          const SizedBox(height: 12),
+          copyProvider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _submitCopy,
+                    icon: const Icon(Icons.add),
+                    label: const Text("Add Copy"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    const SizedBox(height: 16),
-                    _buildTextField(_bookIdController, "Book ID",
-                        keyboard: TextInputType.number),
-                    _buildTextField(_barcodeController, "Barcode"),
-                    _buildTextField(
-                        _conditionController, "Condition (e.g., new/good/old)"),
-                    const SizedBox(height: 16),
-                    copyProvider.isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _submitCopy,
-                              icon: const Icon(Icons.add),
-                              label: const Text("Add Copy"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.teal,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
-
-          /// MEMBER FORM CARD
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            margin: const EdgeInsets.only(bottom: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKeyMember,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.person, color: Color(0xFF2E3192)),
-                        SizedBox(width: 8),
-                        Text(
-                          "Add Library Member",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E3192),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(_userIdController, "User ID",
-                        keyboard: TextInputType.number),
-                    _buildTextField(
-                        _userTypeController, "User Type (student/teacher)"),
-                    _buildTextField(
-                        _membershipNumberController, "Membership Number"),
-                    _buildTextField(_membershipStartController,
-                        "Membership Start (YYYY-MM-DD)"),
-                    _buildTextField(_membershipEndController,
-                        "Membership End (YYYY-MM-DD)"),
-                    _buildTextField(_maxBooksController, "Max Books",
-                        keyboard: TextInputType.number),
-                    const SizedBox(height: 16),
-                    memberProvider.isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _submitMember,
-                              icon: const Icon(Icons.person_add),
-                              label: const Text("Add Member"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     ),
-  ),
-)
-
- ],
-  ),
-),
-);
+  );
 }
 
-  /// Reusable TextField Builder
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboard = TextInputType.text}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboard,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        validator: (val) {
-          if (val == null || val.isEmpty) {
-            return "Please enter $label";
-          }
-          return null;
-        },
+Widget _buildAddMemberForm(LibraryMemberProvider memberProvider) {
+  return Padding(
+    padding: const EdgeInsets.all(8.0),
+    child: Form(
+      key: _formKeyMember,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildTextField(_userIdController, "User ID", keyboard: TextInputType.number),
+          _buildTextField(_userTypeController, "User Type (student/teacher)"),
+          _buildTextField(_membershipNumberController, "Membership Number"),
+          _buildTextField(_membershipStartController, "Membership Start (YYYY-MM-DD)"),
+          _buildTextField(_membershipEndController, "Membership End (YYYY-MM-DD)"),
+          _buildTextField(_maxBooksController, "Max Books", keyboard: TextInputType.number),
+          const SizedBox(height: 12),
+          memberProvider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _submitMember,
+                    icon: const Icon(Icons.person_add),
+                    label: const Text("Add Member"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+// ----------------- end of helper widgets -----------------
+
+
+Widget _buildSearchResults() {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 16),
+    child: Column(
+      children: searchResults.map((book) {
+       return ListTile(
+  leading: const Icon(Icons.book, color: Color(0xFF2E3192)),
+  title: Text(book["title"] ?? "Untitled"),
+  subtitle: Text("Author: ${book["author"] ?? "Unknown"}"),
+  trailing: Text("Qty: ${book["available_quantity"] ?? 0}"),
+  onTap: () {
+    setState(() {
+      selectedBookId = book["id"];
+    });
+  },
+);
+ }).toList(),
+    ),
+  );
+}
+
+
+  /// Reusable TextField Builder
+Widget _buildTextField(TextEditingController controller, String label,
+    {TextInputType keyboard = TextInputType.text, bool required = true}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+      controller: controller,
+      keyboardType: keyboard,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      validator: (val) {
+        if (required && (val == null || val.isEmpty)) {
+          return "Please enter $label";
+        }
+        return null;
+      },
+    ),
+  );
+}
 }
 
