@@ -23,6 +23,10 @@ import 'student_achievement_page.dart';
 import 'student_messages_page.dart';
 import 'student_notifiction_page.dart';
 import 'student_cocurricular_page.dart';
+import 'student_library_page.dart';
+
+
+
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
   const StudentDashboardPage({super.key, required this.childData});
@@ -317,7 +321,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                 ),
 
                 const SizedBox(height: 12),
-              DashboardTile(
+             // Library
+
+// Reports
+DashboardTile(
   title: 'Reports',
   subtitle: 'Progress report updated',
   iconPath: 'assets/icons/reports.svg',
@@ -334,6 +341,24 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
 ),
 
 const SizedBox(height: 12),
+
+DashboardTile(
+  title: 'Library',
+  subtitle: 'View overdue books',
+  iconPath: 'assets/icons/library.svg',
+  color: const Color(0xFFA5D6F9),
+  badgeCount: 1,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const StudentLibraryPage(),
+      ),
+    );
+  },
+),
+const SizedBox(height: 12),
+
 
 // New Food Section
 DashboardTile(
