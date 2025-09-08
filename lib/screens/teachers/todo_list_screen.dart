@@ -282,7 +282,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'My to-do list',
+                          'To-Do List',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
