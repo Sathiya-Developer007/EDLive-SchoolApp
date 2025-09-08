@@ -30,7 +30,8 @@ class _StudentLibraryPageState extends State<StudentLibraryPage> {
       appBar: StudentAppBar(),
       drawer: StudentMenuDrawer(),
       body: Container(
-        color: Colors.blue, // 🔹 full background blue
+       color: Color(0xFFACCFE2),
+
         child: Stack(
           children: [
             // 🔹 Back Button (top-left corner)
@@ -92,7 +93,9 @@ class _StudentLibraryPageState extends State<StudentLibraryPage> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
+                
                 child: Column(
+                  
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(

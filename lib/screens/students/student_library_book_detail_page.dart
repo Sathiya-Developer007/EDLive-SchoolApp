@@ -80,7 +80,8 @@ class _StudentBookDetailPageState extends State<StudentBookDetailPage> {
       appBar: const StudentAppBar(),
       drawer: StudentMenuDrawer(),
       body: Container(
-        color: Colors.blue,
+       color: Color(0xFFACCFE2),
+
         child: Stack(
           children: [
             // 🔹 Back Button
