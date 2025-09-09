@@ -10,6 +10,7 @@ import 'student_exams_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:school_app/providers/student_task_provider.dart';
+import 'package:school_app/providers/student_notification_dashboard_provider.dart';
 
 import 'student_syllabus_page.dart';
 import 'select_child_page.dart';
@@ -27,6 +28,8 @@ import 'student_library_page.dart';
 
 
 
+
+
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
   const StudentDashboardPage({super.key, required this.childData});
@@ -36,11 +39,24 @@ class StudentDashboardPage extends StatefulWidget {
 }
 
 class _StudentDashboardPageState extends State<StudentDashboardPage> {
-  @override
-  void initState() {
-    super.initState();
-    // _loadStudentTodos();
+
+
+  
+@override
+void initState() {
+  super.initState();
+  _loadCounts();
+}
+
+Future<void> _loadCounts() async {
+  final prefs = await SharedPreferences.getInstance();
+  final studentId = prefs.getInt("student_id");
+  if (studentId != null) {
+    Provider.of<DashboardCountsProvider>(context, listen: false)
+        .fetchDashboardCounts(studentId);
   }
+}
+
 
   // Future<void> _loadStudentTodos() async {
   //   final prefs = await SharedPreferences.getInstance();
@@ -69,6 +85,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   Widget build(BuildContext context) {
     final child = widget.childData;
     final settings = Provider.of<StudentSettingsProvider>(context);
+    final counts = Provider.of<DashboardCountsProvider>(context);
 
     return Column(
       children: [
@@ -110,64 +127,46 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                   DashboardTile(
+                  DashboardTile(
   title: 'Notification',
   subtitle: 'A note from teacher',
   iconPath: 'assets/icons/notification.svg',
   color: const Color(0xFFF9F7A5),
-  badgeCount: 1,
+  badgeCount: counts.notifications, // ✅ dynamic
   onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => StudentNotifictionPage(),
-      ),
-    );
+    Navigator.push(context,
+      MaterialPageRoute(builder: (context) => StudentNotifictionPage()));
   },
 ),
-
                     if (settings.showAchievements)
-                  DashboardTile(
+                 DashboardTile(
   title: 'Achievements',
   subtitle: 'Will appear only if there is any achievement',
   iconPath: 'assets/icons/achievements.svg',
   color: const Color(0xFFF7EB7C),
-  badgeCount: 1,
-  onClose: () => settings.updateVisibility('Achievements', false),
+  badgeCount: counts.achievements, // ✅ dynamic
   onTap: () async {
-  final prefs = await SharedPreferences.getInstance();
-  final classId = prefs.getInt('class_id') ?? 0; // fallback if missing
-
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => StudentAchievementPage(
-        classId: classId,
-      ),
-    ),
-  );
-},
-
-)
-,
-                   DashboardTile(
+    final prefs = await SharedPreferences.getInstance();
+    final classId = prefs.getInt('class_id') ?? 0;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => StudentAchievementPage(classId: classId)),
+    );
+  },
+),
+                  DashboardTile(
   title: 'My To-Do List',
   subtitle: 'Check your tasks',
   iconPath: 'assets/icons/todo.svg',
   color: const Color(0xFF8FD8E5),
-  badgeCount: context.watch<StudentTaskProvider>().newTaskCount,
+  badgeCount: counts.todo, // ✅ dynamic
   onTap: () {
-    Navigator.pushNamed(
-      context,
-      '/student-todo',
-      arguments: {
-        'studentId': child['studentId'],  // 🔄 pass studentId here
-        'child': child,
-      },
-    );
+    Navigator.pushNamed(context, '/student-todo', arguments: {
+      'studentId': child['studentId'],
+      'child': child,
+    });
   },
 ),
-
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -228,13 +227,14 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   }
 },
-   child: DashboardTile(
-                          title: 'Payments',
-                          subtitle: 'Fee Rs. 2500\nDue on Mar. 2018',
-                          iconPath: 'assets/icons/payments.svg',
-                          color: const Color(0xFFC0DD94),
-                          centerContent: true,
-                        ),
+   child:DashboardTile(
+  title: 'Payments',
+  subtitle: 'Fee Rs. 2500\nDue on Mar. 2018',
+  iconPath: 'assets/icons/payments.svg',
+  color: const Color(0xFFC0DD94),
+  badgeCount: counts.payments, // ✅ dynamic
+  centerContent: true,
+),
                       ),
                     ),
                   ],
@@ -330,34 +330,36 @@ DashboardTile(
   iconPath: 'assets/icons/reports.svg',
   color: const Color(0xFFFFCCCC),
   badgeCount: 1,
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const StudentReportPage(),
-      ),
-    );
+  onTap: () async {
+    final prefs = await SharedPreferences.getInstance();
+    final studentId = prefs.getInt('student_id') ?? 0; // Replace with actual key
+    if (studentId != 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StudentReportPage(studentId: studentId),
+        ),
+      );
+    }
   },
 ),
 
 const SizedBox(height: 12),
 
+// Library
 DashboardTile(
   title: 'Library',
   subtitle: 'View overdue books',
   iconPath: 'assets/icons/library.svg',
   color: const Color(0xFFA5D6F9),
-  badgeCount: 1,
+  badgeCount: counts.library, // ✅ dynamic
   onTap: () {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const StudentLibraryPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const StudentLibraryPage()),
     );
   },
-),
-const SizedBox(height: 12),
+),const SizedBox(height: 12),
 
 
 // New Food Section
@@ -405,29 +407,14 @@ DashboardTile(
       const SizedBox(width: 12),
     if (settings.showMessage)
   Expanded(
-  child: DashboardTile(
-    title: 'Message',
-    iconPath: 'assets/icons/message.svg',
-    color: const Color(0xFFA3D3A7),
-    centerContent: true,
-    onTap: () async {
-      final studentId = await _getStudentId();
-      if (studentId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No student ID found, please login again')),
-        );
-        return;
-      }
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => StudentMessagesPage(studentId: studentId),
-        ),
-      );
-    },
-    onClose: () => settings.updateVisibility('Message', false),
-  ),
-)
+  child: // Messages
+DashboardTile(
+  title: 'Message',
+  iconPath: 'assets/icons/message.svg',
+  color: const Color(0xFFA3D3A7),
+  badgeCount: counts.messages, // ✅ dynamic
+  centerContent: true,
+),)
 
   ],
 ),
