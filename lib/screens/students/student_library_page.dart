@@ -14,7 +14,8 @@ class StudentLibraryPage extends StatefulWidget {
   State<StudentLibraryPage> createState() => _StudentLibraryPageState();
 }
 
-class _StudentLibraryPageState extends State<StudentLibraryPage> {
+class _StudentLibraryPageState extends State<StudentLibraryPage>
+    with SingleTickerProviderStateMixin {
   final StudentLibraryCheckoutService _service = StudentLibraryCheckoutService();
   late Future<List<StudentLibraryBook>> _allBooks;
 
@@ -30,23 +31,18 @@ class _StudentLibraryPageState extends State<StudentLibraryPage> {
       appBar: StudentAppBar(),
       drawer: StudentMenuDrawer(),
       body: Container(
-       color: Color(0xFFACCFE2),
-
+        color: const Color(0xFFACCFE2),
         child: Stack(
           children: [
-            // 🔹 Back Button (top-left corner)
+            // 🔹 Back Button
             Positioned(
               top: 12,
               left: 20,
-              
               child: GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: const Text(
                   "< Back",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.black),
                 ),
               ),
             ),
@@ -55,19 +51,17 @@ class _StudentLibraryPageState extends State<StudentLibraryPage> {
             Positioned(
               top: 45,
               left: 16,
-             
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF2E3192), // dark blue background
-                      // shape: BoxShape.circle,
+                      color: Color(0xFF2E3192),
                     ),
                     child: SvgPicture.asset(
-                      "assets/icons/library.svg", // 👈 your library icon path
+                      "assets/icons/library.svg",
                       height: 28,
-                      color: Colors.white, // icon white
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -76,94 +70,121 @@ class _StudentLibraryPageState extends State<StudentLibraryPage> {
                     style: TextStyle(
                       fontSize: 29,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E3192), // dark blue text
+                      color: Color(0xFF2E3192),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // 🔹 White container
+            // 🔹 White container with Tabs
             Padding(
               padding: const EdgeInsets.all(20),
               child: Container(
-                margin: const EdgeInsets.only(top: 90), // space for back+title
+                margin: const EdgeInsets.only(top: 90),
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                
-                child: Column(
-                  
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: FutureBuilder<List<StudentLibraryBook>>(
-                        future: _allBooks,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          }
-                          if (snapshot.hasError) {
-                            return Center(
-                                child: Text("Error: ${snapshot.error}"));
-                          }
-                          final books = snapshot.data ?? [];
-                          if (books.isEmpty) {
-                            return const Center(
-                                child: Text("No books found."));
-                          }
-                          return ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: books.length,
-                            itemBuilder: (context, index) {
-                              final book = books[index];
-                              return Card(
-                                elevation: 3,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                margin: const EdgeInsets.only(bottom: 16),
-                                child: ListTile(
-                                  leading: const Icon(Icons.menu_book,
-                                      color: Colors.green),
-                                  title: Text(
-                                    book.title,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Text(
-                                    "Author: ${book.author}\n"
-                                    "Genre: ${book.genre}\n"
-                                    "Location: ${book.location}",
-                                  ),
-                                  trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                          "Available: ${book.availableQuantity}/${book.quantity}"),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => StudentBookDetailPage(
-                                            bookId: book.id),
+                child: DefaultTabController(
+                  length: 3,
+                  child: Column(
+                    children: [
+                      // TabBar
+                      TabBar(
+                        labelColor: const Color(0xFF2E3192),
+                        unselectedLabelColor: Colors.grey,
+                        indicatorColor: const Color(0xFF2E3192),
+                        tabs: const [
+                          Tab(text: "All Books"),
+                          Tab(text: "My Books"),
+                          Tab(text: "History"),
+                        ],
+                      ),
+
+                      // Tab Views
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            // 🔹 Tab 1: All Books (API data)
+                            FutureBuilder<List<StudentLibraryBook>>(
+                              future: _allBooks,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                }
+                                if (snapshot.hasError) {
+                                  return Center(
+                                      child: Text("Error: ${snapshot.error}"));
+                                }
+                                final books = snapshot.data ?? [];
+                                if (books.isEmpty) {
+                                  return const Center(
+                                      child: Text("No books found."));
+                                }
+                                return ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: books.length,
+                                  itemBuilder: (context, index) {
+                                    final book = books[index];
+                                    return Card(
+                                      elevation: 3,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      margin:
+                                          const EdgeInsets.only(bottom: 16),
+                                      child: ListTile(
+                                        leading: const Icon(Icons.menu_book,
+                                            color: Colors.green),
+                                        title: Text(
+                                          book.title,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        subtitle: Text(
+                                          "Author: ${book.author}\n"
+                                          "Genre: ${book.genre}\n"
+                                          "Location: ${book.location}",
+                                        ),
+                                        trailing: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                                "Available: ${book.availableQuantity}/${book.quantity}"),
+                                          ],
+                                        ),
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  StudentBookDetailPage(
+                                                      bookId: book.id),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     );
                                   },
-                                ),
-                              );
-                            },
-                          );
-                        },
+                                );
+                              },
+                            ),
+
+                            // 🔹 Tab 2: My Books (placeholder)
+                            const Center(child: Text("My Books list here")),
+
+                            // 🔹 Tab 3: History (placeholder)
+                            const Center(child: Text("History list here")),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
