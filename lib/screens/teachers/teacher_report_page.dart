@@ -2,8 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-final ValueNotifier<String> selectedTerm = ValueNotifier<String>("Final");
+import '../../models/exam_type_model.dart';
+import '../../models/teacher_class_student.dart';
+import '../../services/exam_type_service.dart';
+import '../../services/teacher_class_student_list.dart';
+import 'package:school_app/services/teacher_class_section_service.dart';
+import 'package:school_app/services/teacher_exam_subject_service.dart';
+
+import 'package:provider/provider.dart';
+
+import 'package:school_app/providers/exam_result_provider.dart';
+import 'package:school_app/services/teacher_exam_result_service.dart';
+import '/models/exam_result_model.dart';
+
+
+
+final ValueNotifier<String> selectedTerm = ValueNotifier<String>("");
 
 class TeacherReportPage extends StatefulWidget {
   const TeacherReportPage({super.key});
@@ -13,41 +29,141 @@ class TeacherReportPage extends StatefulWidget {
 }
 
 class _TeacherReportPageState extends State<TeacherReportPage> {
-  String? selectedStudent;
-  Map<String, Map<String, String>> marks = {
-    "John Doe": {
-      "Mathematics": "",
-      "Science": "",
-      "English": "",
-      "History": "",
-      "Tamil": "",
-    },
-    "Jane Smith": {
-      "Mathematics": "",
-      "Science": "",
-      "English": "",
-      "History": "",
-      "Tamil": "",
-    },
-    "Alice Johnson": {
-      "Mathematics": "",
-      "Science": "",
-      "English": "",
-      "History": "",
-      "Tamil": "",
-    },
-  };
+  int? selectedStudentId;
+
+  List<ExamType> examTypes = [];
+  ExamType? selectedExamType;
+  bool isLoadingExamTypes = true;
+
+  List<Student> students = [];
+  bool isLoadingStudents = true;
+
+  List<TeacherClass> teacherClasses = [];
+  TeacherClass? selectedClass;
+  bool isLoadingClasses = true;
+
+  List<String> subjects = [];
+  bool isLoadingSubjects = true;
+
+  // studentId -> subject -> mark
+  Map<int, Map<String, String>> studentMarks = {};
 
   final TextEditingController searchController = TextEditingController();
 
-  List<String> get filteredStudents {
-    if (searchController.text.isEmpty) {
-      return marks.keys.toList();
-    }
-    return marks.keys
-        .where((s) =>
-            s.toLowerCase().contains(searchController.text.toLowerCase()))
+  List<Student> get filteredStudents {
+    if (searchController.text.isEmpty) return students;
+    return students
+        .where((s) => s.studentName
+            .toLowerCase()
+            .contains(searchController.text.toLowerCase()))
         .toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePage();
+  }
+
+
+
+  Future<void> _initializePage() async {
+    await _loadTeacherClasses();
+    await _loadExamTypes();
+  }
+
+  Future<void> _loadTeacherClasses() async {
+    try {
+      final classes = await TeacherClassService().fetchTeacherClasses();
+      setState(() {
+        teacherClasses = classes;
+        isLoadingClasses = false;
+        if (classes.isNotEmpty) selectedClass = classes.first;
+      });
+
+      if (classes.isNotEmpty) {
+        await _loadSubjectsByClass(classes.first.id);
+        await _loadStudentsByClass(classes.first.id);
+      }
+    } catch (e) {
+      setState(() => isLoadingClasses = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load teacher classes: $e")),
+      );
+    }
+  }
+
+  Future<void> _loadExamTypes() async {
+    try {
+      final types = await ExamTypeService().fetchExamTypes();
+      setState(() {
+        examTypes = types;
+        if (types.isNotEmpty) {
+          selectedExamType = types.first;
+          selectedTerm.value = types.first.examType;
+        }
+        isLoadingExamTypes = false;
+      });
+    } catch (e) {
+      setState(() => isLoadingExamTypes = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load exam types: $e")),
+      );
+    }
+  }
+
+Future<void> _loadStudentsByClass(int classId) async {
+  setState(() => isLoadingStudents = true);
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? '';
+
+    final studentList = await StudentService.fetchStudents(token);
+
+    setState(() {
+      students = studentList; // no classId filtering
+      isLoadingStudents = false;
+
+      // Initialize studentMarks for all students
+      for (var st in students) {
+        studentMarks[st.id] =
+            {for (var subj in subjects) subj: studentMarks[st.id]?[subj] ?? ""};
+      }
+    });
+  } catch (e) {
+    setState(() => isLoadingStudents = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to load students: $e")),
+    );
+  }
+}
+
+  Future<void> _loadSubjectsByClass(int classId) async {
+    setState(() => isLoadingSubjects = true);
+    try {
+      final allExams = await TeacherExamService().fetchTeacherExams();
+      final filteredExams = allExams.where((e) =>
+          e.classId == classId &&
+          (selectedExamType == null || e.examType == selectedExamType?.examType));
+      final subjectList = filteredExams.map((e) => e.subject).toSet().toList();
+
+      setState(() {
+        subjects = subjectList;
+        isLoadingSubjects = false;
+
+        // Initialize studentMarks if students already loaded
+        for (var st in students) {
+          studentMarks[st.id] =
+              {for (var s in subjects) s: studentMarks[st.id]?[s] ?? ""};
+        }
+      });
+    } catch (e) {
+      setState(() => isLoadingSubjects = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load subjects: $e")),
+      );
+    }
   }
 
   @override
@@ -63,337 +179,416 @@ class _TeacherReportPageState extends State<TeacherReportPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: TeacherAppBar(),
-      drawer: MenuDrawer(),
+      drawer: const MenuDrawer(),
       body: Container(
         color: const Color(0xFFFDCFD0),
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header + Term dropdown
-          Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    // Title row (icon + title)
-  // Back button + title row
-Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    // Back Button Row
-    GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Row(
-        children: const [
-          // Icon(Icons.arrow_back, color: Color(0xFF2E3192), size: 24),
-          SizedBox(width: 4),
-          Text(
-            "< Back",
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 16,
-              fontWeight: FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    ),
-    const SizedBox(height: 12),
-
-    // Icon + Title Row
-    Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2E3192),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: SvgPicture.asset(
-            "assets/icons/reports.svg",
-            height: 36,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Text(
-          "Teacher Report",
-          style: TextStyle(
-            color: Color(0xFF2E3192),
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    ),
-  ],
-)
-,
-    const SizedBox(height: 16),
-
-    // Bottom row with total class marks on left and term dropdown on right
-    Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Total Class Avg % Box
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade400),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade300,
-                blurRadius: 6,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                "Total Class Avg %",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF666666),
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                "78%",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E3192),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Term Dropdown on right
-        ValueListenableBuilder<String>(
-          valueListenable: selectedTerm,
-          builder: (context, value, _) {
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade400),
-              ),
-              child: DropdownButton<String>(
-                value: value,
-                underline: const SizedBox(),
-                icon: const Icon(Icons.arrow_drop_down, size: 28),
-                items: const [
-                  DropdownMenuItem(value: "Final", child: Text("Final")),
-                  DropdownMenuItem(value: "Mid", child: Text("Mid")),
-                ],
-                onChanged: (newVal) {
-                  if (newVal != null) selectedTerm.value = newVal;
-                },
-                style: const TextStyle(
-                  color: Color(0xFF4D4D4D),
-                  fontSize: 16,
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    ),
-  ],
-),
-
-            const SizedBox(height: 24),
-
-            Expanded(
-              child: isWide
-                  ? Row(
-                      children: [
-                        // Left: Student list with search
-                        SizedBox(
-                          width: 300,
-                          child: Column(
-                            children: [
-                              TextField(
-                                controller: searchController,
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.search),
-                                  hintText: "Search students",
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                ),
-                                onChanged: (val) {
-                                  setState(() {});
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              
-                              Expanded(
-                                child: ListView.builder(
-                                  itemCount: filteredStudents.length,
-                                  itemBuilder: (context, index) {
-                                    final student = filteredStudents[index];
-                                    final isSelected = student == selectedStudent;
-                                    return Card(
-                                      color: isSelected
-                                          ? const Color(0xFFEAEAEA)
-                                          : Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        side: BorderSide(
-                                          color: isSelected
-                                              ? const Color(0xFF2E3192)
-                                              : Colors.grey.shade300,
-                                          width: isSelected ? 2 : 1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      margin:
-                                          const EdgeInsets.symmetric(vertical: 6),
-                                      child: ListTile(
-                                        title: Text(
-                                          student,
-                                          style: TextStyle(
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                            color: isSelected
-                                                ? const Color(0xFF2E3192)
-                                                : Colors.black87,
-                                          ),
-                                        ),
-                                        trailing: isSelected
-                                            ? const Icon(Icons.edit,
-                                                color: Color(0xFF2E3192))
-                                            : null,
-                                        onTap: () {
-                                          setState(() {
-                                            selectedStudent = student;
-                                          });
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
+            // Back button + Title
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Row(
+                    children: const [
+                      SizedBox(width: 4),
+                      Text(
+                        "< Back",
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF2E3192),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SvgPicture.asset(
+                        "assets/icons/reports.svg",
+                        height: 36,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      "Teacher Report",
+                      style: TextStyle(
+                        color: Color(0xFF2E3192),
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-                        const SizedBox(width: 24),
-
-                        // Right: Mark entry form
-                        Expanded(
-                          child: selectedStudent == null
-                              ? Center(
-                                  child: Text(
-                                    "Select a student to enter marks",
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.grey.shade700,
-                                    ),
-                                  ),
-                                )
-                              : MarkEntryCard(
-                                  student: selectedStudent!,
-                                  subjectsMarks: marks[selectedStudent!]!,
-                                  onSave: (updatedMarks) {
-                                    setState(() {
-                                      marks[selectedStudent!] = updatedMarks;
-                                    });
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content:
-                                              Text("Marks saved for $selectedStudent")),
-                                    );
-                                  },
-                                ),
+            // Avg + Dropdowns
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Class Average
+                SizedBox(
+                  width: 135,
+                  height: 100,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade400),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.shade300,
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
                         ),
                       ],
-                    )
-                  : Column(
-                      children: [
-                        // On narrow screens, stacked layout:
-                        TextField(
-                          controller: searchController,
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search),
-                            hintText: "Search students",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          "Total Class Avg %",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF666666),
                           ),
-                          onChanged: (val) {
-                            setState(() {});
-                          },
                         ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: filteredStudents.length,
-                            itemBuilder: (context, index) {
-                              final student = filteredStudents[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 6),
-                                child: ListTile(
-                                  title: Text(student),
-                                  trailing: const Icon(Icons.edit, color: Color(0xFF2E3192)),
-                                  onTap: () {
-                                    setState(() {
-                                      selectedStudent = student;
-                                    });
-                                    showModalBottomSheet(
-                                      context: context,
-                                      isScrollControlled: true,
-                                      backgroundColor: Colors.white,
-                                      shape: const RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(20)),
-                                      ),
-                                      builder: (_) => Padding(
-                                        padding: EdgeInsets.only(
-                                          bottom: MediaQuery.of(context)
-                                              .viewInsets
-                                              .bottom,
-                                          left: 16,
-                                          right: 16,
-                                          top: 16,
-                                        ),
-                                        child: MarkEntryCard(
-                                          student: student,
-                                          subjectsMarks: marks[student]!,
-                                          onSave: (updatedMarks) {
-                                            setState(() {
-                                              marks[student] = updatedMarks;
-                                            });
-                                            Navigator.pop(context);
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                  content: Text(
-                                                      "Marks saved for $student")),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              );
-                            },
+                        SizedBox(height: 4),
+                        Text(
+                          "78%",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2E3192),
                           ),
                         ),
                       ],
                     ),
+                  ),
+                ),
+
+                // Right side → Dropdowns
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Class Dropdown
+                    isLoadingClasses
+                        ? const SizedBox(
+                            height: 42,
+                            width: 42,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Container(
+                            height: 42,
+                            width: 220,
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade400),
+                            ),
+                            child: DropdownButton<TeacherClass>(
+                              value: selectedClass,
+                              isExpanded: true,
+                              underline: const SizedBox(),
+                              icon: const Icon(Icons.arrow_drop_down,
+                                  size: 28, color: Colors.black),
+                              hint: const Text("Select Class"),
+                              items: teacherClasses.map((cls) {
+                                return DropdownMenuItem(
+                                  value: cls,
+                                  child: Text(cls.fullName),
+                                );
+                              }).toList(),
+                              onChanged: (newClass) async {
+                                if (newClass != null) {
+                                  setState(() {
+                                    selectedClass = newClass;
+                                    isLoadingStudents = true;
+                                    isLoadingSubjects = true;
+                                  });
+                                  await _loadSubjectsByClass(newClass.id);
+                                  await _loadStudentsByClass(newClass.id);
+                                }
+                              },
+                            ),
+                          ),
+
+                    const SizedBox(height: 12),
+
+                    // Exam Dropdown
+                    ValueListenableBuilder<String>(
+                      valueListenable: selectedTerm,
+                      builder: (context, value, _) {
+                        if (isLoadingExamTypes) {
+                          return const SizedBox(
+                            height: 42,
+                            width: 42,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        }
+                        if (examTypes.isEmpty) {
+                          return const Text("No Exam Types");
+                        }
+                        return Container(
+                          height: 42,
+                          width: 220,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade400),
+                          ),
+                          child: DropdownButton<ExamType>(
+                            value: selectedExamType,
+                            isExpanded: true,
+                            underline: const SizedBox(),
+                            icon: const Icon(Icons.arrow_drop_down,
+                                size: 28, color: Colors.black),
+                            items: examTypes.map((exam) {
+                              return DropdownMenuItem(
+                                value: exam,
+                                child: Text(exam.examType),
+                              );
+                            }).toList(),
+                            onChanged: (newVal) async {
+                              if (newVal != null) {
+                                setState(() {
+                                  selectedExamType = newVal;
+                                  selectedTerm.value = newVal.examType;
+                                  isLoadingSubjects = true;
+                                });
+                                if (selectedClass != null) {
+                                  await _loadSubjectsByClass(selectedClass!.id);
+                                }
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Student + Marks
+            Expanded(
+              child: isLoadingStudents
+                  ? const Center(child: CircularProgressIndicator())
+                  : isWide
+                      ? Row(
+                          children: [
+                            // Student List
+                            SizedBox(
+                              width: 300,
+                              child: Column(
+                                children: [
+                                  TextField(
+                                    controller: searchController,
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(Icons.search),
+                                      hintText: "Search students",
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                    onChanged: (val) => setState(() {}),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Expanded(
+                                    child: ListView.builder(
+                                      itemCount: filteredStudents.length,
+                                      itemBuilder: (context, index) {
+                                        final student = filteredStudents[index];
+                                        final isSelected =
+                                            student.id == selectedStudentId;
+                                        return Card(
+                                          color: isSelected
+                                              ? const Color(0xFFEAEAEA)
+                                              : Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            side: BorderSide(
+                                              color: isSelected
+                                                  ? const Color(0xFF2E3192)
+                                                  : Colors.grey.shade300,
+                                              width: isSelected ? 2 : 1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          margin: const EdgeInsets.symmetric(
+                                              vertical: 6),
+                                          child: ListTile(
+                                            title: Text(
+                                              "${student.studentName} (${student.className})",
+                                              style: TextStyle(
+                                                fontWeight: isSelected
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                                color: isSelected
+                                                    ? const Color(0xFF2E3192)
+                                                    : Colors.black87,
+                                              ),
+                                            ),
+                                            trailing: isSelected
+                                                ? const Icon(Icons.edit,
+                                                    color: Color(0xFF2E3192))
+                                                : null,
+                                            onTap: () {
+                                              setState(() {
+                                                selectedStudentId = student.id;
+                                              });
+                                            },
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+
+                            // Mark Entry
+                            Expanded(
+                              child: selectedStudentId == null
+                                  ? Center(
+                                      child: Text(
+                                        "Select a student to enter marks",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    )
+                                  : MarkEntryCard(
+                                      student: students.firstWhere(
+                                          (s) => s.id == selectedStudentId),
+                                      subjectsMarks:
+                                          studentMarks[selectedStudentId!]!,
+                                      onSave: (updatedMarks) {
+                                        setState(() {
+                                          studentMarks[selectedStudentId!] =
+                                              updatedMarks;
+                                        });
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              "Marks saved for ${students.firstWhere((s) => s.id == selectedStudentId).studentName}",
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            TextField(
+                              controller: searchController,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.search),
+                                hintText: "Search students",
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                              onChanged: (val) => setState(() {}),
+                            ),
+                            const SizedBox(height: 12),
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: filteredStudents.length,
+                                itemBuilder: (context, index) {
+                                  final student = filteredStudents[index];
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 6),
+                                    child: ListTile(
+                                      title: Text(
+                                          "${student.studentName} (${student.className})"),
+                                      trailing: const Icon(Icons.edit,
+                                          color: Color(0xFF2E3192)),
+                                      onTap: () {
+                                        setState(() {
+                                          selectedStudentId = student.id;
+                                        });
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.white,
+                                          shape:
+                                              const RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.vertical(
+                                                top: Radius.circular(20)),
+                                          ),
+                                          builder: (_) => Padding(
+                                            padding: EdgeInsets.only(
+                                              bottom: MediaQuery.of(context)
+                                                  .viewInsets
+                                                  .bottom,
+                                              left: 16,
+                                              right: 16,
+                                              top: 16,
+                                            ),
+                                            child: MarkEntryCard(
+                                              student: student,
+                                              subjectsMarks:
+                                                  studentMarks[student.id]!,
+                                              onSave: (updatedMarks) {
+                                                setState(() {
+                                                  studentMarks[student.id] =
+                                                      updatedMarks;
+                                                });
+                                                Navigator.pop(context);
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      "Marks saved for ${student.studentName}",
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
             ),
           ],
         ),
@@ -403,7 +598,7 @@ Column(
 }
 
 class MarkEntryCard extends StatefulWidget {
-  final String student;
+  final Student student;
   final Map<String, String> subjectsMarks;
   final void Function(Map<String, String>) onSave;
 
@@ -438,13 +633,52 @@ class _MarkEntryCardState extends State<MarkEntryCard> {
     super.dispose();
   }
 
-  void _save() {
-    final updatedMarks = {
-      for (var entry in controllers.entries) entry.key: entry.value.text.trim(),
-    };
-    widget.onSave(updatedMarks);
-  }
+ void _save() async {
+  final updatedMarks = {
+    for (var entry in controllers.entries) entry.key: entry.value.text.trim(),
+  };
+  
+  widget.onSave(updatedMarks);
 
+  final provider = Provider.of<ExamResultProvider>(context, listen: false);
+
+  // Loop through each subject and send to backend
+  for (var entry in updatedMarks.entries) {
+    final marks = int.tryParse(entry.value) ?? 0;
+    final percentage = marks.toDouble(); // Or calculate if needed
+    final grade = _calculateGrade(marks); // simple grade function
+    final examResult = ExamResult(
+      examId: widget.student.id, // replace with actual examId
+      studentId: widget.student.id,
+      marks: marks,
+      percentage: percentage,
+      grade: grade,
+      term: selectedTerm.value,
+      isFinal: true,
+      classRank: 1, // optionally calculate class rank
+    );
+
+    try {
+      await provider.saveResult(examResult);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Marks saved for ${widget.student.studentName}")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save marks: $e")),
+      );
+    }
+  }
+}
+
+// Example grade calculation
+String _calculateGrade(int marks) {
+  if (marks >= 90) return "A+";
+  if (marks >= 80) return "A";
+  if (marks >= 70) return "B";
+  if (marks >= 60) return "C";
+  return "D";
+}
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -462,7 +696,7 @@ class _MarkEntryCardState extends State<MarkEntryCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Enter Marks for ${widget.student}",
+                  "Enter Marks for ${widget.student.studentName} (${widget.student.className})",
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 22,
@@ -491,7 +725,7 @@ class _MarkEntryCardState extends State<MarkEntryCard> {
                   child: ElevatedButton(
                     onPressed: _save,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:  Colors.grey,
+                      backgroundColor: Colors.grey,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -499,7 +733,10 @@ class _MarkEntryCardState extends State<MarkEntryCard> {
                     ),
                     child: const Text(
                       "Save Marks",
-                      style: TextStyle(fontSize: 18,  color: Color(0xFF2E3192),),
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFF2E3192),
+                      ),
                     ),
                   ),
                 )
@@ -508,37 +745,6 @@ class _MarkEntryCardState extends State<MarkEntryCard> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ReportStat extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const _ReportStat({required this.title, required this.value, super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Color(0xFF2E3192),
-          ),
-        ),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF666666),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -41,6 +41,7 @@ import 'providers/library_status_provider.dart';
 import 'providers/library_books_list_provider.dart';
 import 'providers/library_book_detail_provider.dart';
 import 'providers/student_notification_dashboard_provider.dart';
+import 'providers/exam_result_provider.dart';
 
 import 'dart:convert';
 
@@ -81,6 +82,7 @@ void main() async {
                   ChangeNotifierProvider(create: (_) => LibraryBooksListProvider()),
  ChangeNotifierProvider(create: (_) => LibraryBookDetailProvider()),
   ChangeNotifierProvider(create: (_) => DashboardCountsProvider()), 
+  ChangeNotifierProvider(create: (_) => ExamResultProvider()),
       ],
       child: MyApp(
         token: token,
