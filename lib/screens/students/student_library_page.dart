@@ -72,49 +72,57 @@ class _StudentLibraryPageState extends State<StudentLibraryPage>
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                setState(() {
-                  _isSearching = true;
-                  _searchResults = null;
-                });
+  TextButton(
+    onPressed: () => Navigator.pop(context),
+    style: TextButton.styleFrom(
+       foregroundColor: Colors.white,
+      backgroundColor: Colors.blue, // 👈 Text color blue
+    ),
+    child: const Text("Cancel"),
+  ),
+  ElevatedButton(
+    onPressed: () async {
+      Navigator.pop(context);
+      setState(() {
+        _isSearching = true;
+        _searchResults = null;
+      });
 
-                try {
-                  final results = await LibraryApiService.searchBooks(
-                    title: titleController.text.trim().isEmpty
-                        ? null
-                        : titleController.text.trim(),
-                    author: authorController.text.trim().isEmpty
-                        ? null
-                        : authorController.text.trim(),
-                    isbn: isbnController.text.trim().isEmpty
-                        ? null
-                        : isbnController.text.trim(),
-                    genre: genreController.text.trim().isEmpty
-                        ? null
-                        : genreController.text.trim(),
-                  );
-
-                  setState(() {
-                    _searchResults = results;
-                    _tabController.animateTo(0); // 👈 Switch to "All Books"
-                  });
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Error: $e")));
-                } finally {
-                  setState(() => _isSearching = false);
-                }
-              },
-              child: const Text("Search"),
-            ),
-          ],
+      try {
+        final results = await LibraryApiService.searchBooks(
+          title: titleController.text.trim().isEmpty
+              ? null
+              : titleController.text.trim(),
+          author: authorController.text.trim().isEmpty
+              ? null
+              : authorController.text.trim(),
+          isbn: isbnController.text.trim().isEmpty
+              ? null
+              : isbnController.text.trim(),
+          genre: genreController.text.trim().isEmpty
+              ? null
+              : genreController.text.trim(),
         );
+
+        setState(() {
+          _searchResults = results;
+          _tabController.animateTo(0); // 👈 Switch to "All Books"
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $e")));
+      } finally {
+        setState(() => _isSearching = false);
+      }
+    },
+    style: ElevatedButton.styleFrom(
+      foregroundColor: Colors.white, // 👈 Text color inside button
+      backgroundColor: Colors.blue,  // 👈 Button background blue
+    ),
+    child: const Text("Search"),
+  ),
+],
+ );
       },
     );
   }
