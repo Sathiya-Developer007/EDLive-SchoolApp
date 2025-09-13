@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:school_app/models/teacher_student_classsection.dart';
 import '../../models/teacher_library_book.dart';
 import '../../models/teacher_library_book_copy.dart';
 import '../../models/teacher_library_member.dart';
@@ -14,6 +15,9 @@ import 'package:school_app/providers/library_books_list_provider.dart';
 import 'package:school_app/providers/library_book_detail_provider.dart';
 
 import 'package:school_app/services/library_book_search_service.dart';
+import 'package:school_app/services/teacher_student_classsection.dart';
+
+
 import '../../../widgets/teacher_app_bar.dart';
 import '../teachers/teacher_menu_drawer.dart';
 
@@ -30,6 +34,8 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
   List<dynamic> searchResults = [];
 
   late TabController _tabController;
+
+  
 
   // Search controllers
   final _searchTitleController = TextEditingController();
@@ -279,30 +285,76 @@ void initState() {
                           onPressed: () => Navigator.pop(context),
                           child: const Text("Cancel"),
                         ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(context);
-                            try {
-                              final books = await LibraryApiService.searchBooks(
-                                title: _searchTitleController.text,
-                                author: _searchAuthorController.text,
-                                isbn: _searchIsbnController.text,
-                                genre: _searchGenreController.text,
-                              );
-                              setState(() => searchResults = books);
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("Error: $e")),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E3192),
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text("Search"),
-                        ),
-                      ],
+                      ElevatedButton(
+  onPressed: () async {
+    Navigator.pop(context); // close the search dialog first
+    try {
+      final books = await LibraryApiService.searchBooks(
+        title: _searchTitleController.text,
+        author: _searchAuthorController.text,
+        isbn: _searchIsbnController.text,
+        genre: _searchGenreController.text,
+      );
+
+      setState(() => searchResults = books);
+
+      if (books.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No books found")),
+        );
+        return;
+      }
+
+      if (books.length == 1) {
+        // Only one book found → directly show details
+        final book = books.first;
+        selectedBookId = book.id;
+        await Provider.of<LibraryBookDetailProvider>(context, listen: false)
+            .fetchBook(book.id);
+        _tabController.animateTo(1); // go to Book Details tab
+      } else {
+        // Multiple books → show selection dialog
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Select Book"),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: books.length,
+                itemBuilder: (_, index) {
+                  final book = books[index];
+                  return ListTile(
+                    title: Text(book.title ?? '-'),
+                    subtitle: Text(book.author ?? '-'),
+                    onTap: () async {
+                      selectedBookId = book.id;
+                      await Provider.of<LibraryBookDetailProvider>(context, listen: false)
+                          .fetchBook(book.id);
+                      _tabController.animateTo(1);
+                      Navigator.pop(context); // close selection dialog
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFF2E3192),
+    foregroundColor: Colors.white,
+  ),
+  child: const Text("Search"),
+),
+ ],
                     ),
                   );
                 },
@@ -567,73 +619,145 @@ return Container(
     );
   }
 
-  Widget _buildAddCopyForm() {
-    final provider = Provider.of<LibraryCopyProvider>(context);
-    return Form(
-      key: _formKeyCopy,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildTextField(_bookIdController, "Book ID",
-              keyboard: TextInputType.number),
-          _buildTextField(_barcodeController, "Barcode"),
-          _buildTextField(_conditionController, "Condition"),
-          const SizedBox(height: 12),
-          provider.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : ElevatedButton.icon(
-                  onPressed: _submitCopy,
-                  icon: const Icon(Icons.add),
-                  label: const Text("Add Copy"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-        ],
-      ),
-    );
+Widget _buildAddCopyForm() {
+  final provider = Provider.of<LibraryCopyProvider>(context);
+  final booksProvider = Provider.of<LibraryBooksListProvider>(context);
+
+  // Ensure books list is fetched
+  if (booksProvider.books.isEmpty && !booksProvider.isLoading) {
+    booksProvider.fetchBooks();
   }
 
-  Widget _buildAddMemberForm() {
-    final provider = Provider.of<LibraryMemberProvider>(context);
-    return Form(
-      key: _formKeyMember,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildTextField(_userIdController, "User ID",
-              keyboard: TextInputType.number),
-          _buildTextField(_userTypeController, "User Type"),
-          _buildTextField(_membershipNumberController, "Membership Number"),
-          _buildTextField(
-              _membershipStartController, "Membership Start (YYYY-MM-DD)"),
-          _buildTextField(
-              _membershipEndController, "Membership End (YYYY-MM-DD)"),
-          _buildTextField(_maxBooksController, "Max Books",
-              keyboard: TextInputType.number),
-          const SizedBox(height: 12),
-          provider.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : ElevatedButton.icon(
-                  onPressed: _submitMember,
-                  icon: const Icon(Icons.person_add),
-                  label: const Text("Add Member"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+  return Form(
+    key: _formKeyCopy,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        booksProvider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : DropdownButtonFormField<int>(
+                decoration: InputDecoration(
+                  labelText: "Select Book",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-        ],
-      ),
-    );
-  }
+                items: booksProvider.books.map((book) {
+                  return DropdownMenuItem<int>(
+                    value: book["id"],
+                    child: Text(book["title"] ?? "Untitled"),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    _bookIdController.text = value.toString();
+                  }
+                },
+                validator: (val) {
+                  if (val == null) return "Please select a book";
+                  return null;
+                },
+              ),
+        const SizedBox(height: 12),
+        _buildTextField(_barcodeController, "Barcode"),
+        _buildTextField(_conditionController, "Condition"),
+        const SizedBox(height: 12),
+        provider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ElevatedButton.icon(
+                onPressed: _submitCopy,
+                icon: const Icon(Icons.add),
+                label: const Text("Add Copy"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+      ],
+    ),
+  );
+}
+
+Widget _buildAddMemberForm() {
+  final provider = Provider.of<LibraryMemberProvider>(context);
+
+  return FutureBuilder<List<StudentClassSection>>(
+    future: StudentService().fetchStudents(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      if (snapshot.hasError) {
+        return Center(child: Text("Error: ${snapshot.error}"));
+      }
+
+      final students = snapshot.data ?? [];
+
+      return Form(
+        key: _formKeyMember,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<int>(
+              decoration: InputDecoration(
+                labelText: "Select Student",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              items: students.map((student) {
+                return DropdownMenuItem<int>(
+                  value: student.id,
+                  child: Text(
+                    "${student.name} (${student.admissionNo})",
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  _userIdController.text = value.toString();
+                  _userTypeController.text = "student"; // default type
+                }
+              },
+              validator: (val) {
+                if (val == null) return "Please select a student";
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildTextField(_membershipNumberController, "Membership Number"),
+            _buildTextField(
+                _membershipStartController, "Membership Start (YYYY-MM-DD)"),
+            _buildTextField(
+                _membershipEndController, "Membership End (YYYY-MM-DD)"),
+            _buildTextField(_maxBooksController, "Max Books",
+                keyboard: TextInputType.number),
+            const SizedBox(height: 12),
+            provider.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ElevatedButton.icon(
+                    onPressed: _submitMember,
+                    icon: const Icon(Icons.person_add),
+                    label: const Text("Add Member"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   /// Reusable TextField Builder
   Widget _buildTextField(TextEditingController controller, String label,
