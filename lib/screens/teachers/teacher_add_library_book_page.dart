@@ -353,9 +353,9 @@ void initState() {
                     TabBar(
                       controller: _tabController,
                       isScrollable: true,
-                      labelColor: const Color(0xFF2E3192),
+                      labelColor:  Colors.blue,
                       unselectedLabelColor: Colors.grey,
-                      indicatorColor: const Color(0xFF2E3192),
+                      indicatorColor:  Colors.blue,
                       tabs: const [
                         Tab(text: "Add Book"),
                         Tab(text: "Book Details"),
@@ -408,36 +408,36 @@ void initState() {
 
   // ----------------- Helper widgets -----------------
 
-  Widget _buildBooksList() {
-    final provider = Provider.of<LibraryBooksListProvider>(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (provider.isLoading)
-          const Center(child: CircularProgressIndicator())
-        else if (provider.error != null)
-          Text("Error: ${provider.error}")
-        else if (provider.books.isNotEmpty)
-          ...provider.books.map((book) => ListTile(
-                leading:
-                    const Icon(Icons.book_outlined, color: Color(0xFF2E3192)),
-                title: Text(book["title"] ?? '-'),
-                subtitle: Text("Author: ${book["author"] ?? '-'}"),
-                trailing: Text("Qty: ${book["available_quantity"] ?? 0}"),
-                onTap: () {
-                  setState(() {
-                    selectedBookId = book["id"];
-                  });
-                  Provider.of<LibraryBookDetailProvider>(context,
-                          listen: false)
-                      .fetchBook(book["id"]);
-                },
-              ))
-        else
-          const Text("No books available"),
-      ],
-    );
-  }
+Widget _buildBooksList() {
+  final provider = Provider.of<LibraryBooksListProvider>(context);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (provider.isLoading)
+        const Center(child: CircularProgressIndicator())
+      else if (provider.error != null)
+        Text("Error: ${provider.error}")
+      else if (provider.books.isNotEmpty)
+        ...provider.books.map((book) => ListTile(
+              leading:
+                  const Icon(Icons.book_outlined, color: Color(0xFF2E3192)),
+              title: Text(book["title"] ?? '-'),
+              subtitle: Text("Author: ${book["author"] ?? '-'}"),
+              trailing: Text("Qty: ${book["available_quantity"] ?? 0}"),
+              onTap: () {
+                setState(() {
+                  selectedBookId = book["id"];
+                });
+                Provider.of<LibraryBookDetailProvider>(context, listen: false)
+                    .fetchBook(book["id"]);
+                _tabController.animateTo(1); // 🔥 switch to Book Details
+              },
+            ))
+      else
+        const Text("No books available"),
+    ],
+  );
+}
 
   Widget _buildBookDetails() {
     final provider = Provider.of<LibraryBookDetailProvider>(context);
