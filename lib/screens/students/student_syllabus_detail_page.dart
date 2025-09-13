@@ -133,13 +133,14 @@ class _SyllabusDetailPageState extends State<SyllabusDetailPage> {
                 final item = entry.value;
 
                 return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    "$itemIndex. ${item.title}", // 👉 show number before title
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(item.description),
-                );
+  contentPadding: EdgeInsets.zero,
+  title: Text(
+    "$itemIndex. ${item.title.isNotEmpty ? item.title : 'No title'}",
+    style: const TextStyle(fontWeight: FontWeight.w600),
+  ),
+  subtitle: Text(item.description.isNotEmpty ? item.description : "No description"),
+);
+
               },
             ),
           ],
