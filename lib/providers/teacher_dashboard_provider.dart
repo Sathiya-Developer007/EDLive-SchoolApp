@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/dashboard_counts.dart';
+import '../models/teacher_dashboard_counts.dart';
 
 class DashboardProvider with ChangeNotifier {
   DashboardCounts? _counts;

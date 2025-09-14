@@ -42,7 +42,7 @@ import 'providers/library_books_list_provider.dart';
 import 'providers/library_book_detail_provider.dart';
 import 'providers/student_notification_dashboard_provider.dart';
 import 'providers/exam_result_provider.dart';
-import 'providers/dashboard_provider.dart';
+import 'providers/teacher_dashboard_provider.dart';
 
 import 'dart:convert';
 
