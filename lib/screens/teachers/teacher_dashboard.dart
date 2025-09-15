@@ -44,48 +44,6 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
         Provider.of<DashboardProvider>(context, listen: false).fetchCounts());
   }
 
-  /// MARK DASHBOARD ITEM AS VIEWED
-  Future<void> markItemViewed(String itemType, int itemId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
-
-      final url = Uri.parse(
-          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed');
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'item_type': itemType,
-          'item_id': itemId,
-        }),
-      );
-
-      if (response.statusCode != 200) {
-        print('Failed to mark $itemType viewed: ${response.body}');
-      }
-    } catch (e) {
-      print('Error marking $itemType viewed: $e');
-    }
-  }
-
-  /// HELPER FUNCTION TO WRAP NAVIGATION + MARK VIEWED
-  void navigateAndMark({
-    required String itemType,
-    required int itemId,
-    required Widget page,
-  }) async {
-    await markItemViewed(itemType, itemId);
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => page),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -112,11 +70,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                       iconPath: 'assets/icons/notification.svg',
                       color: const Color(0xFFF9F7A5),
                       badgeCount: counts?.notifications,
-                      onTap: () => navigateAndMark(
-                        itemType: 'notifications',
-                        itemId: 1,
-                        page:  NotificationPage(),
-                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>  NotificationPage()),
+                        );
+                      },
                     ),
                     if (settings.showAchievements)
                       DashboardTile(
@@ -127,11 +87,14 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         badgeCount: counts?.achievements,
                         onClose: () =>
                             settings.updateVisibility('Achievements', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'achievements',
-                          itemId: 2,
-                          page: const TeacherAchievementPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const TeacherAchievementPage()),
+                          );
+                        },
                       ),
                     if (settings.showTodo)
                       DashboardTile(
@@ -142,22 +105,26 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         badgeCount: counts?.todo,
                         onClose: () =>
                             settings.updateVisibility('My to-do list', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'todo',
-                          itemId: 3,
-                          page: const ToDoListPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ToDoListPage()),
+                          );
+                        },
                       ),
                     DashboardTile(
                       title: 'Reports',
                       subtitle: 'Progress report updated',
                       iconPath: 'assets/icons/reports.svg',
                       color: const Color(0xFFFFCCCC),
-                      onTap: () => navigateAndMark(
-                        itemType: 'reports',
-                        itemId: 4,
-                        page: const TeacherReportPage(),
-                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const TeacherReportPage()),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -172,11 +139,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         iconPath: 'assets/icons/attendance.svg',
                         color: const Color(0xFFFFCCCC),
                         centerContent: true,
-                        onTap: () => navigateAndMark(
-                          itemType: 'attendance',
-                          itemId: 5,
-                          page: const TeacherAttendancePage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TeacherAttendancePage()),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -204,11 +173,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         color: const Color(0xFFC0DD94),
                         badgeCount: counts?.payments,
                         centerContent: true,
-                        onTap: () => navigateAndMark(
-                          itemType: 'payments',
-                          itemId: 6,
-                          page: const TeacherPaymentsPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TeacherPaymentsPage()),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -217,13 +188,15 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         title: 'Exams',
                         iconPath: 'assets/icons/exams.svg',
                         color: const Color(0xFFAAE5C8),
-                        badgeCount: 2,
+                        badgeCount: 2, // placeholder
                         centerContent: true,
-                        onTap: () => navigateAndMark(
-                          itemType: 'exams',
-                          itemId: 7,
-                          page: const TeacherExamPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TeacherExamPage()),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -239,11 +212,12 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         iconPath: 'assets/icons/transport.svg',
                         color: const Color(0xFFCCCCFF),
                         centerContent: true,
-                        onTap: () => navigateAndMark(
-                          itemType: 'transport',
-                          itemId: 8,
-                          page: const TransportPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TransportPage()),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -254,11 +228,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         color: const Color(0xFFE8B3DE),
                         badgeCount: counts?.messages,
                         centerContent: true,
-                        onTap: () => navigateAndMark(
-                          itemType: 'messages',
-                          itemId: 9,
-                          page: const TeacherMessagePage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TeacherMessagePage()),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -275,12 +251,14 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                       subtitle: '16 Jan 2019, Pongal',
                       iconPath: 'assets/icons/events.svg',
                       color: const Color(0xFFF9AFD2),
-                      onTap: () => navigateAndMark(
-                        itemType: 'events',
-                        itemId: 10,
-                        page: const TeacherEventsHolidaysPage(
-                            startInMonthView: true),
-                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const TeacherEventsHolidaysPage(
+                                  startInMonthView: true)),
+                        );
+                      },
                     ),
                     if (settings.showPTA)
                       DashboardTile(
@@ -289,11 +267,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         iconPath: 'assets/icons/pta.svg',
                         color: const Color(0xFFDBC0B6),
                         onClose: () => settings.updateVisibility('PTA', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'pta',
-                          itemId: 11,
-                          page: const TeacherPTAPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TeacherPTAPage()),
+                          );
+                        },
                       ),
                     if (settings.showLibrary)
                       DashboardTile(
@@ -304,11 +284,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         badgeCount: counts?.library,
                         onClose: () =>
                             settings.updateVisibility('Library', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'library',
-                          itemId: 12,
-                          page: const AddLibraryBookPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AddLibraryBookPage()),
+                          );
+                        },
                       ),
                     if (settings.showSyllabus)
                       DashboardTile(
@@ -318,11 +300,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         color: const Color(0xFFA3D3A7),
                         onClose: () =>
                             settings.updateVisibility('Syllabus', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'syllabus',
-                          itemId: 13,
-                          page: const TeacherSyllabusPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TeacherSyllabusPage()),
+                          );
+                        },
                       ),
                     if (settings.showSpecialCare)
                       DashboardTile(
@@ -332,11 +316,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         color: const Color(0xFFFFD399),
                         onClose: () =>
                             settings.updateVisibility('Special care', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'special_care',
-                          itemId: 14,
-                          page: const SpecialCarePage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SpecialCarePage()),
+                          );
+                        },
                       ),
                     if (settings.showCoCurricular)
                       DashboardTile(
@@ -346,11 +332,14 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         color: const Color(0xFFDBD88A),
                         onClose: () => settings.updateVisibility(
                             'Co curricular activities', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'co_curricular',
-                          itemId: 15,
-                          page: const CoCurricularActivitiesPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const CoCurricularActivitiesPage()),
+                          );
+                        },
                       ),
                     if (settings.showQuickNotes)
                       DashboardTile(
@@ -360,11 +349,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         color: const Color(0xFFE6E6E6),
                         onClose: () =>
                             settings.updateVisibility('Quick notes', false),
-                        onTap: () => navigateAndMark(
-                          itemType: 'quick_notes',
-                          itemId: 16,
-                          page: const TeacherQuickNotesPage(),
-                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const TeacherQuickNotesPage()),
+                          );
+                        },
                       ),
                     DashboardTile(
                       title: 'Resources',
@@ -373,11 +364,13 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                       color: const Color(0xFFD8CAD8),
                       onClose: () =>
                           settings.updateVisibility('Resources', false),
-                      onTap: () => navigateAndMark(
-                        itemType: 'resources',
-                        itemId: 17,
-                        page: const TeacherResourcePage(),
-                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const TeacherResourcePage()),
+                        );
+                      },
                     ),
                   ],
                 ),

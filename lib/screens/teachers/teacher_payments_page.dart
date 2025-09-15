@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 
 import 'package:school_app/models/teacher_payment_model.dart';
 import 'package:school_app/services/teacher_payment_service.dart';
+
+
+import 'package:school_app/providers/teacher_dashboard_provider.dart';
 
 class TeacherPaymentsPage extends StatefulWidget {
   const TeacherPaymentsPage({super.key});
@@ -86,6 +90,14 @@ Future<void> fetchPayments() async {
       payments = data;
       isLoading = false;
     });
+
+    // ✅ Step 3: After loading payments, mark as viewed in Dashboard
+    final dashboardProvider =
+        Provider.of<DashboardProvider>(context, listen: false);
+
+    for (var payment in data) {
+      dashboardProvider.markDashboardItemViewed(payment.id);
+    }
   } catch (e) {
     setState(() => isLoading = false);
     print("Error: $e");
@@ -180,120 +192,105 @@ Future<void> fetchPayments() async {
     );
   }
 
- Widget _buildPaymentTile(PaymentAssignment item) {
-  return Card(
-    elevation: 3,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-    margin: const EdgeInsets.symmetric(vertical: 8),
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          /// Fee Name & Class
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  item.feeName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E3192),
-                  ),
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'Class ${item.className}-${item.section}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    color: Color(0xFF2E3192),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          /// Amount and Due Date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Amount: ₹${item.baseAmount}",
-                style: const TextStyle(fontSize: 15),
-              ),
-              Text(
-                "Due: ${item.dueDate.split('T')[0]}",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.redAccent,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10),
-
-          /// Pending Students
-          if (item.pendingCount > 0)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+Widget _buildPaymentTile(PaymentAssignment item) {
+  return GestureDetector(
+    onTap: () {
+      // ✅ Call the provider’s method instead of local method
+      final dashboardProvider =
+          Provider.of<DashboardProvider>(context, listen: false);
+      dashboardProvider.markDashboardItemViewed(item.id);
+    },
+    child: Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// Fee Name & Class
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Pending Students (${item.pendingCount}):",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                Expanded(
+                  child: Text(
+                    item.feeName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2E3192),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                ...item.pendingStudents.map((s) => Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 2),
-                      child: Text(
-                        "- ${s.fullName} (${s.admissionNo})",
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    )),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Class ${item.className}-${item.section}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: Color(0xFF2E3192),
+                    ),
+                  ),
+                ),
               ],
             ),
 
-          /// Pay Button
-          // const SizedBox(height: 10),
-          // if (item.upiLink != null && item.upiLink!.isNotEmpty)
-          //   Align(
-          //     alignment: Alignment.centerRight,
-          //     child: ElevatedButton.icon(
-          //       onPressed: () {
-          //         // Add functionality to launch UPI URL
-          //       },
-          //       icon: const Icon(Icons.payment),
-          //       label: const Text("Pay Now"),
-          //       style: ElevatedButton.styleFrom(
-          //         backgroundColor: const Color(0xFF2E3192),
-          //         foregroundColor: Colors.white,
-          //         padding: const EdgeInsets.symmetric(
-          //             horizontal: 20, vertical: 12),
-          //         shape: RoundedRectangleBorder(
-          //           borderRadius: BorderRadius.circular(8),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-        ],
+            const SizedBox(height: 12),
+
+            /// Amount and Due Date
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Amount: ₹${item.baseAmount}",
+                  style: const TextStyle(fontSize: 15),
+                ),
+                Text(
+                  "Due: ${item.dueDate.split('T')[0]}",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.redAccent,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            /// Pending Students
+            if (item.pendingCount > 0)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Pending Students (${item.pendingCount}):",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...item.pendingStudents.map((s) => Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 2),
+                        child: Text(
+                          "- ${s.fullName} (${s.admissionNo})",
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      )),
+                ],
+              ),
+          ],
+        ),
       ),
     ),
   );

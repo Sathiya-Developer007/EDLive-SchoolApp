@@ -43,4 +43,33 @@ class DashboardProvider with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+Future<void> markDashboardItemViewed(int itemId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    if (token == null) return;
+
+    final response = await http.post(
+      Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed'),
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "item_type": "payments",
+        "item_id": itemId, // 👈 dynamic from API
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print("Marked payment $itemId as viewed ✅");
+    } else {
+      print("Failed to mark payment $itemId viewed: ${response.body}");
+    }
+  } catch (e) {
+    print("Error marking payment viewed: $e");
+  }
+}
 }
