@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:school_app/models/achievement_model.dart';
 import 'package:school_app/services/teacher_achievement_service.dart';
@@ -8,24 +9,23 @@ class AchievementProvider with ChangeNotifier {
 
   bool get loading => _loading;
 
-  Future<void> addAchievement(Achievement achievement) async {
+  /// Add Achievement
+  /// Returns the created Achievement object
+  Future<Achievement> addAchievement(Achievement achievement) async {
     _loading = true;
     notifyListeners();
 
     try {
-      // Log payload
-      print("Sending Achievement: ${achievement.toJson()}");
+      // Send the Achievement object directly
+      final createdAchievement = await _service.createAchievement(achievement);
 
-      // Call backend
-      final response = await _service.createAchievement(achievement);
+      print("Achievement created: ${createdAchievement.toJson()}");
 
-      // Log backend response
-      print("Backend response: $response");
-
+      return createdAchievement;
     } catch (e, stack) {
-      // Only log error to console; do not show UI
       print("Error adding achievement: $e");
       print(stack);
+      rethrow;
     } finally {
       _loading = false;
       notifyListeners();

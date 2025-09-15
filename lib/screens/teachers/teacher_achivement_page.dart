@@ -99,7 +99,38 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
     futureAchievements = fetchAchievements();
   }
 
-  Future<List<Achievement>> fetchAchievements() async {
+//   Future<void> _markAchievementViewed(int achievementId) async {
+//   try {
+//     final prefs = await SharedPreferences.getInstance();
+//     final token = prefs.getString('auth_token');
+
+//     final response = await http.post(
+//       Uri.parse(
+//         'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed',
+//       ),
+//       headers: {
+//         'accept': 'application/json',
+//         'Content-Type': 'application/json',
+//         if (token != null) 'Authorization': 'Bearer $token',
+//       },
+//       body: jsonEncode({
+//         "item_type": "achievements",
+//         "item_id": achievementId,
+//       }),
+//     );
+
+//     if (response.statusCode == 200) {
+//       print("✅ Marked achievement $achievementId as viewed");
+//     } else {
+//       print("❌ Failed to mark viewed: ${response.body}");
+//     }
+//   } catch (e) {
+//     print("⚠️ Error marking achievement viewed: $e");
+//   }
+// }
+
+
+ Future<List<Achievement>> fetchAchievements() async {
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('auth_token') ?? '';
 
@@ -116,20 +147,58 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
     final achievements =
         jsonData.map((e) => Achievement.fromJson(e)).toList();
 
+    // 🔽 Mark each fetched achievement as viewed
+    for (var achievement in achievements) {
+      _markAchievementViewed(achievement.id);
+    }
+
     // 🔽 sort by created_at instead of achievement_date
     achievements.sort((a, b) {
       final dateA = DateTime.tryParse((jsonData
-              .firstWhere((x) => x['id'] == a.id)['created_at'])
-          .toString()) ?? DateTime(1900);
+                  .firstWhere((x) => x['id'] == a.id)['created_at'])
+              .toString()) ??
+          DateTime(1900);
       final dateB = DateTime.tryParse((jsonData
-              .firstWhere((x) => x['id'] == b.id)['created_at'])
-          .toString()) ?? DateTime(1900);
+                  .firstWhere((x) => x['id'] == b.id)['created_at'])
+              .toString()) ??
+          DateTime(1900);
       return dateB.compareTo(dateA); // latest created_at first
     });
 
     return achievements;
   } else {
     throw Exception('Failed to load achievements');
+  }
+}
+
+// ---------------- Helper function ----------------
+Future<void> _markAchievementViewed(int achievementId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    final response = await http.post(
+      Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed',
+      ),
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "item_type": "achievements",
+        "item_id": achievementId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print("✅ Marked achievement $achievementId as viewed");
+    } else {
+      print("❌ Failed to mark viewed: ${response.body}");
+    }
+  } catch (e) {
+    print("⚠️ Error marking achievement viewed: $e");
   }
 }
 
