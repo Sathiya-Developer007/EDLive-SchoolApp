@@ -13,6 +13,8 @@ import 'package:school_app/widgets/teacher_app_bar.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
 
+
+import 'package:school_app/providers/teacher_dashboard_provider.dart';
 class ToDoListPage extends StatefulWidget {
   const ToDoListPage({Key? key}) : super(key: key);
 
@@ -42,17 +44,60 @@ class _ToDoListPageState extends State<ToDoListPage> {
     _loadTokenAndData();
   }
 
-  Future<void> _loadTokenAndData() async {
+
+Future<void> _markTodoViewed(String todoId) async {
+  try {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
 
-    // Pass the token directly (it can be null)
-    Provider.of<TeacherTaskProvider>(context, listen: false).setAuthToken(token);
+    final response = await http.post(
+      Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed',
+      ),
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "item_type": "todo",
+        "item_id": todoId, // now stays String
+      }),
+    );
 
-    setState(() => _authToken = token);
-    _fetchClassList();
-    Provider.of<TeacherTaskProvider>(context, listen: false).fetchTodos();
+    if (response.statusCode == 200) {
+      print("✅ Marked todo $todoId as viewed");
+    } else {
+      print("❌ Failed: ${response.body}");
+    }
+  } catch (e) {
+    print("⚠️ Error: $e");
   }
+}
+
+
+
+
+  Future<void> _loadTokenAndData() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+
+  Provider.of<TeacherTaskProvider>(context, listen: false).setAuthToken(token);
+
+  setState(() => _authToken = token);
+
+  _fetchClassList();
+
+  final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
+  await provider.fetchTodos();
+
+  // ✅ Mark all fetched todos as viewed
+  for (var task in provider.tasks) {
+    if (task.id != null) {
+      _markTodoViewed(task.id!);
+    }
+  }
+}
 
   Future<void> _fetchClassList() async {
     final url = Uri.parse(
