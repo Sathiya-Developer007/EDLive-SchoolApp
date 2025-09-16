@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import 'package:school_app/models/teacher_student_classsection.dart';
 import '../../models/teacher_library_book.dart';
@@ -34,6 +39,8 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
   List<dynamic> searchResults = [];
 
   late TabController _tabController;
+
+    String? _authToken;
 
   
 
@@ -74,16 +81,24 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
 void initState() {
   super.initState();
   _tabController = TabController(length: 6, vsync: this);
+  _loadTokenAndData();
 
-  _tabController.addListener(() {
+  _tabController.addListener(() async {
     if (!_tabController.indexIsChanging) {
-      // Auto-fetch when All Books tab is selected
+      // When All Books tab is selected
       if (_tabController.index == 2) {
-        Provider.of<LibraryBooksListProvider>(context, listen: false)
-            .fetchBooks();
+        final provider = Provider.of<LibraryBooksListProvider>(context, listen: false);
+        await provider.fetchBooks();
+
+        // ✅ Mark each book as viewed only when All Books tab is opened
+        for (var book in provider.books) {
+          if (book["id"] != null) {
+            _markLibraryViewed(book["id"].toString());
+          }
+        }
       }
 
-      // Auto-fetch when Member Status tab is selected
+      // When Member Status tab is selected
       if (_tabController.index == 3) {
         Provider.of<LibraryStatusProvider>(context, listen: false)
             .fetchStatus();
@@ -91,7 +106,6 @@ void initState() {
     }
   });
 }
-
 
   @override
   void dispose() {
@@ -124,6 +138,53 @@ void initState() {
 
     super.dispose();
   }
+
+
+  Future<void> _markLibraryViewed(String bookId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    final response = await http.post(
+      Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed',
+      ),
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "item_type": "library", // 👈 use library
+        "item_id": bookId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print("✅ Marked book $bookId as viewed");
+    } else {
+      print("❌ Failed: ${response.body}");
+    }
+  } catch (e) {
+    print("⚠️ Error: $e");
+  }
+}
+
+
+Future<void> _loadTokenAndData() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+  setState(() => _authToken = token);
+
+  // ❌ remove auto-marking books here
+  // final provider = Provider.of<LibraryBooksListProvider>(context, listen: false);
+  // await provider.fetchBooks();
+  // for (var book in provider.books) {
+  //   if (book["id"] != null) {
+  //     _markLibraryViewed(book["id"].toString());
+  //   }
+  // }
+}
 
   /// Submit Book
   Future<void> _submitBook() async {
