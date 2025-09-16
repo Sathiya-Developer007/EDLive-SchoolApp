@@ -121,22 +121,31 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    DashboardTile(
-                      title: 'Notification',
-                      subtitle: 'A note from teacher',
-                      iconPath: 'assets/icons/notification.svg',
-                      color: const Color(0xFFF9F7A5),
-                      badgeCount: counts.notifications, // ✅ dynamic
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => StudentNotifictionPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    if (settings.showAchievements)
+                  DashboardTile(
+  title: 'Notification',
+  subtitle: 'A note from teacher',
+  iconPath: 'assets/icons/notification.svg',
+  color: const Color(0xFFF9F7A5),
+  badgeCount: counts.notifications, // dynamic
+  onTap: () async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? studentId = prefs.getString('studentId');
+
+    if (studentId != null && studentId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StudentNotificationPage(studentId: studentId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Student ID not found. Please login again.')),
+      );
+    }
+  },
+),
+ if (settings.showAchievements)
                       DashboardTile(
                         title: 'Achievements',
                         subtitle:
