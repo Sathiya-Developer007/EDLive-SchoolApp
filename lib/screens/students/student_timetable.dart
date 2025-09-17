@@ -1,19 +1,49 @@
 // ignore_for_file: constant_identifier_names
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '/providers/student_timetable_provider.dart';
 import '/widgets/student_app_bar.dart';
 import 'student_menu_drawer.dart';
-import 'package:school_app/models/student_timetable_model.dart';
 
+// ----------------- MODEL -----------------
+class StudentTimetableItem {
+  final String subject;
+  final Map<String, String?> dayPeriods; // { "monday": "09:00 - 10:00", ... }
+
+  StudentTimetableItem({
+    required this.subject,
+    required this.dayPeriods,
+  });
+
+  factory StudentTimetableItem.fromJson(Map<String, dynamic> json) {
+    return StudentTimetableItem(
+      subject: json['subject'] ?? '',
+      dayPeriods: {
+        "monday": json['monday'],
+        "tuesday": json['tuesday'],
+        "wednesday": json['wednesday'],
+        "thursday": json['thursday'],
+        "friday": json['friday'],
+        "saturday": json['saturday'],
+      },
+    );
+  }
+}
+
+// ----------------- PAGE -----------------
 class StudentTimeTablePage extends StatefulWidget {
   final String academicYear;
-  const StudentTimeTablePage({super.key, required this.academicYear})
-      : assert(academicYear != '');
+  final String studentId; // 👈 you must pass Student ID
+
+  const StudentTimeTablePage({
+    super.key,
+    required this.academicYear,
+    required this.studentId,
+  });
 
   @override
   State<StudentTimeTablePage> createState() => _StudentTimeTablePageState();
@@ -24,7 +54,9 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
   late DateTime _startDate;
   final _scroll = ScrollController();
 
-  late final String academicYear;
+  List<StudentTimetableItem> _timetable = [];
+  bool _loading = true;
+  String? _error;
 
   static const _MONTHS = [
     '',
@@ -35,22 +67,56 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
   @override
   void initState() {
     super.initState();
-    academicYear = widget.academicYear;
     _centerDate = DateTime.now();
     _startDate = _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final prefs = await SharedPreferences.getInstance();
-      final studentId = prefs.getString('studentId');
-
-      if (studentId != null) {
-        context.read<StudentTimetableProvider>().load(studentId, academicYear);
-      }
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _centerCurrentDate();
     });
+    _fetchTimetable();
   }
 
+  // -------- API CALL --------
+  Future<void> _fetchTimetable() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token == null) {
+        setState(() {
+          _error = "No token found. Please login again.";
+          _loading = false;
+        });
+        return;
+      }
+
+      final url =
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/student/students/timetable/${widget.studentId}/${widget.academicYear}";
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _timetable =
+              data.map((json) => StudentTimetableItem.fromJson(json)).toList();
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _error = "Failed to load timetable (${response.statusCode})";
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = "Error: $e";
+        _loading = false;
+      });
+    }
+  }
+
+  // -------- DATE HELPERS --------
   List<DateTime> get _visibleDates =>
       List.generate(30, (i) => _startDate.add(Duration(days: i)));
 
@@ -79,8 +145,6 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
 
   @override
   Widget build(BuildContext context) {
-    final timetable = context.watch<StudentTimetableProvider>();
-
     return Scaffold(
       backgroundColor: const Color(0xFFE8B3DE),
       drawer: const StudentMenuDrawer(),
@@ -91,13 +155,14 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
           children: [
             _header(),
             const SizedBox(height: 8),
-            _whiteCard(timetable),
+            _whiteCard(),
           ],
         ),
       ),
     );
   }
 
+  // -------- HEADER --------
   Widget _header() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -143,7 +208,8 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     );
   }
 
-  Widget _whiteCard(StudentTimetableProvider timetable) {
+  // -------- WHITE CARD --------
+  Widget _whiteCard() {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -160,13 +226,25 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
             const SizedBox(height: 16),
             _dayTitle(),
             const SizedBox(height: 12),
-            Expanded(child: _periodList(timetable)),
+            Expanded(child: _buildContent()),
           ],
         ),
       ),
     );
   }
 
+  // -------- CONTENT (API / LOADING / ERROR) --------
+  Widget _buildContent() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text(_error!));
+    }
+    return _periodList();
+  }
+
+  // -------- DATE ROW --------
   Widget _monthRow() {
     return Row(
       children: [
@@ -323,48 +401,36 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     );
   }
 
-  Widget _periodList(StudentTimetableProvider timetable) {
-    if (timetable.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (timetable.error != null) {
-      return Center(
-        child: Text(
-          timetable.error!,
-          style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-        ),
-      );
-    }
+  // -------- PERIOD LIST (Filtered by selected day) --------
+  Widget _periodList() {
+    final weekday = DateFormat('EEEE').format(_centerDate).toLowerCase();
 
-    final dayName = DateFormat('EEEE').format(_centerDate).toLowerCase();
-    final entries = timetable.entriesForDay(dayName);
+    final dayPeriods = _timetable
+        .where((item) => item.dayPeriods[weekday] != null)
+        .map((item) => {
+              "time": item.dayPeriods[weekday]!,
+              "subject": item.subject,
+            })
+        .toList();
 
-    debugPrint("📅 Selected day: $dayName");
-    debugPrint("📌 Available subjects: ${timetable.allEntries.map((e) => e.subject).toList()}");
-
-    if (entries.isEmpty) {
-      debugPrint("❌ No entries for $dayName");
-      return const Center(child: Text('No classes today'));
-    }
-
-    for (var e in entries) {
-      debugPrint("➡ ${e.subject} @ ${e.timesByDay[dayName]}");
+    if (dayPeriods.isEmpty) {
+      return const Center(child: Text("No classes for this day"));
     }
 
     return ListView.builder(
-      itemCount: entries.length,
+      itemCount: dayPeriods.length,
       itemBuilder: (_, i) {
-        final item = entries[i];
-        final time = item.timesByDay[dayName];
+        final item = dayPeriods[i];
         return _PeriodRow(
-          time: time ?? '-',
-          subject: item.subject,
+          time: item["time"]!,
+          subject: item["subject"]!,
         );
       },
     );
   }
 }
 
+// ----------------- ROW WIDGET -----------------
 class _PeriodRow extends StatelessWidget {
   final String time;
   final String subject;

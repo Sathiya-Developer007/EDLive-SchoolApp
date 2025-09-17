@@ -44,6 +44,8 @@ import 'providers/student_notification_dashboard_provider.dart';
 import 'providers/exam_result_provider.dart';
 import 'providers/teacher_dashboard_provider.dart';
 
+import 'screens/students/student_timetable.dart';
+
 import 'dart:convert';
 
 void main() async {
@@ -185,10 +187,18 @@ class MyApp extends StatelessWidget {
               builder: (_) => StudentProfilePage(studentId: id),
             );
           case '/timetable':
-            final year = '2024-2025'; // Or dynamically fetch this
-            return MaterialPageRoute(
-              builder: (_) => StudentTimeTablePage(academicYear: year),
-            );
+  final args = settings.arguments as Map<String, dynamic>;
+  final year = args['year'] as String;
+  final studentId = args['studentId'] as String;
+
+  return MaterialPageRoute(
+    builder: (_) => StudentTimeTablePage(
+      academicYear: year,
+      studentId: studentId,
+    ),
+  );
+
+
           case '/student-settings':
             return MaterialPageRoute(builder: (_) => const StudentSettingsPage());
 

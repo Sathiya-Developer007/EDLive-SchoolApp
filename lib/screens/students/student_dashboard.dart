@@ -8,6 +8,7 @@ import 'student_timetable.dart';
 import 'student_attendance_page.dart';
 import 'student_exams_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 import 'package:school_app/providers/student_task_provider.dart';
 import 'package:school_app/providers/student_notification_dashboard_provider.dart';
@@ -254,22 +255,36 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   children: [
                     Expanded(
                       child: DashboardTile(
-                        title: 'Time table',
-                        iconPath: 'assets/icons/class_time.svg',
-                        color: const Color(0xFFE8B3DE),
-                        centerContent: true,
-                        onTap: () {
-                          // Wherever you navigate to the timetable page ⬇
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => StudentTimeTablePage(
-                                academicYear: '2024-2025',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+  title: 'Time table',
+  iconPath: 'assets/icons/class_time.svg',
+  color: const Color(0xFFE8B3DE),
+  centerContent: true,
+  onTap: () async {
+    final prefs = await SharedPreferences.getInstance();
+    final selectedChildString = prefs.getString('selected_child');
+
+    if (selectedChildString == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No child selected. Please select a child.")),
+      );
+      return;
+    }
+
+    final selectedChild = jsonDecode(selectedChildString);
+    final studentId = selectedChild['id'].toString(); // 👈 backend needs string
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentTimeTablePage(
+          academicYear: '2024-2025',
+          studentId: studentId,
+        ),
+      ),
+    );
+  },
+)
+
                     ),
                     const SizedBox(width: 12),
                     Expanded(

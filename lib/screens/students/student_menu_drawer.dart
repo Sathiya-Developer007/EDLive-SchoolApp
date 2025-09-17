@@ -112,15 +112,15 @@ if (item['label'] == 'Logout') {
   }
  else if (item['label'] == 'Timetable') {
                           final prefs = await SharedPreferences.getInstance();
-                          final year =
-                              prefs.getString('academic_year') ?? '2024-2025';
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  StudentTimeTablePage(academicYear: year),
-                            ),
-                          );
+                          // final year =
+                          //     prefs.getString('academic_year') ?? '2024-2025';
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (_) =>
+                          //         StudentTimeTablePage(academicYear: year),
+                          //   ),
+                          // );
                         } else if (item['label'] == 'Attendance') {
                           final prefs = await SharedPreferences.getInstance();
                           final studentId = prefs.getInt('student_id');
