@@ -74,7 +74,7 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
     }
   }
 
- Future<void> _fetchNotifications() async {
+Future<void> _fetchNotifications() async {
   try {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("auth_token");
@@ -88,9 +88,8 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
       return;
     }
 
-    // TEMP WORKAROUND: use a date that is known to work
-    final formattedDate = "2025-08-01"; // <-- fixed working date
-    // final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate); // original
+    // ✅ Use the selected date from UI
+    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
     final url =
         "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?studentId=$studentId&date=$formattedDate";
@@ -179,76 +178,74 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                       : _notifications.isEmpty
                           ? const Center(child: Text("No notifications found."))
                           : ListView.builder(
-                              itemCount: _notifications.length,
-                              itemBuilder: (context, index) {
-                                final item = _notifications[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.type,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                  color: Color(0xFF2E3192),
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          DateFormat('dd/MM/yyyy HH:mm')
-                                              .format(item.dateTime),
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.black54),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          item.title,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          item.subtitle,
-                                          style: const TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.grey),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          "Module: ${item.moduleType}",
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              fontStyle: FontStyle.italic,
-                                              color: Colors.black87),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+  itemCount: _notifications.length,
+  itemBuilder: (context, index) {
+    final item = _notifications[index];
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    item.type,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(0xFF2E3192),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  item.moduleType,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              item.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              item.subtitle,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  },
+)
+   ),
           ],
         ),
       ),
