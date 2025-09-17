@@ -76,6 +76,16 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     return '$startYear-${startYear + 1}';
   }
 
+String getPastAcademicYear() {
+  final now = DateTime.now();
+  // If current month >= June, academic year started last year
+  if (now.month >= 6) {
+    return "${now.year - 1}-${now.year}";
+  } else {
+    return "${now.year - 2}-${now.year - 1}";
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     final child = widget.childData;
@@ -254,7 +264,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: DashboardTile(
+                      child:DashboardTile(
   title: 'Time table',
   iconPath: 'assets/icons/class_time.svg',
   color: const Color(0xFFE8B3DE),
@@ -271,13 +281,16 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     }
 
     final selectedChild = jsonDecode(selectedChildString);
-    final studentId = selectedChild['id'].toString(); // 👈 backend needs string
+    final studentId = selectedChild['id'].toString();
+
+    // ✅ Use past academic year dynamically
+    final academicYear = getPastAcademicYear();
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => StudentTimeTablePage(
-          academicYear: '2024-2025',
+          academicYear: academicYear, // 2024-2025 if today is 2025
           studentId: studentId,
         ),
       ),

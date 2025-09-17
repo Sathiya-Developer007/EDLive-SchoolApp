@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:convert';
 
  import 'package:restart_app/restart_app.dart';
 
@@ -21,6 +22,17 @@ class StudentMenuDrawer extends StatefulWidget {
 
 class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
   int? selectedIndex;
+
+  String getPastAcademicYear() {
+  final now = DateTime.now();
+  // If current month >= June, academic year started last year
+  if (now.month >= 6) {
+    return "${now.year - 1}-${now.year}";
+  } else {
+    return "${now.year - 2}-${now.year - 1}";
+  }
+}
+
 
   final List<Map<String, String>> _menuItems = const [
     {'icon': 'todo.svg', 'label': 'My to do list', 'route': '/student-todo'},
@@ -88,118 +100,103 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
                         item['label'] ?? '',
                         style: const TextStyle(color: Colors.white),
                       ),
-                      onTap: () async {
-                        setState(() {
-                          selectedIndex = index;
-                        });
+                    onTap: () async {
+  setState(() {
+    selectedIndex = index;
+  });
 
-                       
-if (item['label'] == 'Logout') {
-    // 1. Clear ALL cached data (not just auth_token)
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.clear(); // Clear everything instead of just 'auth_token'
-
-  // 2. Reset any state management (e.g., Provider, Riverpod, GetX)
-  // Example: If using Provider/Riverpod
-  // context.read<AuthProvider>().logout(); 
-
-  // 3. Navigate to login and COMPLETELY reset the navigation stack
-  Navigator.pushNamedAndRemoveUntil(
-    context,
-    '/', // Ensure this is your login route
-    (route) => false,
-  );
-  }
- else if (item['label'] == 'Timetable') {
-                          final prefs = await SharedPreferences.getInstance();
-                          // final year =
-                          //     prefs.getString('academic_year') ?? '2024-2025';
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (_) =>
-                          //         StudentTimeTablePage(academicYear: year),
-                          //   ),
-                          // );
-                        } else if (item['label'] == 'Attendance') {
-                          final prefs = await SharedPreferences.getInstance();
-                          final studentId = prefs.getInt('student_id');
-
-                          if (studentId != null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    StudentAttendancePage(studentId: studentId),
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Student ID not found. Please login again.",
-                                ),
-                              ),
-                            );
-                          }
-                        } else if (item['label'] == 'My to do list') {
-                          Navigator.pushNamed(context, '/student-todo');
-                      } else if (item['label'] == 'Exams') {
   final prefs = await SharedPreferences.getInstance();
 
-  // ✅ Safely retrieve the stored student ID
-  final studentIdInt = prefs.getInt('student_id');
+  if (item['label'] == 'Logout') {
+    await prefs.clear(); // clear all saved data
+    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+  } 
+  else if (item['label'] == 'Timetable') {
+    final selectedChildString = prefs.getString('selected_child');
+    if (selectedChildString == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No child selected. Please select a child.")),
+      );
+      return;
+    }
 
-  if (studentIdInt == null) {
-    // ✅ Show error if student_id not found
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Student ID not found')),
+    final selectedChild = jsonDecode(selectedChildString);
+    final studentId = selectedChild['id'].toString();
+    final academicYear = getPastAcademicYear();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentTimeTablePage(
+          academicYear: academicYear,
+          studentId: studentId,
+        ),
+      ),
     );
-    return;
+  } 
+  else if (item['label'] == 'Attendance') {
+    final studentId = prefs.getInt('student_id');
+    if (studentId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentAttendancePage(studentId: studentId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Student ID not found. Please login again.")),
+      );
+    }
+  } 
+  else if (item['label'] == 'My to do list') {
+    Navigator.pushNamed(context, '/student-todo');
+  } 
+  else if (item['label'] == 'Exams') {
+    final studentIdInt = prefs.getInt('student_id');
+    if (studentIdInt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Student ID not found')),
+      );
+      return;
+    }
+    final studentId = studentIdInt.toString();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentExamsScreen(studentId: studentId),
+      ),
+    );
+  } 
+  else if (item['label'] == 'Syllabus') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const StudentSyllabusPage(),
+      ),
+    );
+  } 
+  else if (item['label'] == 'Events & Holidays') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const EventsHolidaysPage(startInMonthView: true),
+      ),
+    );
+  } 
+  else if (item['label'] == 'School bus') {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const StudentSchoolBusPage(),
+      ),
+    );
+  } 
+  else if (item['label'] == 'Settings') {
+    Navigator.pushNamed(context, '/student-settings');
   }
-
-  final studentId = studentIdInt.toString(); // ✅ Convert to String
-
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => StudentExamsScreen(studentId: studentId), // ✅ Pass studentId
-    ),
-  );
-}
- else if (item['label'] == 'Syllabus') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const StudentSyllabusPage(),
-                            ),
-                          );
-                        } else if (item['label'] == 'Events & Holidays') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const EventsHolidaysPage(
-                                startInMonthView: true,
-                              ),
-                            ),
-                          );
-                        }
-                        else if (item['label'] == 'School bus') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const StudentSchoolBusPage(),
-    ),
-  );
-}
-else if (item['label'] == 'Settings') {
-  Navigator.pushNamed(context, '/student-settings');
-}
-
-
-                        ;
-                      },
-                    ),
+},
+ ),
                   );
                 },
               ),
