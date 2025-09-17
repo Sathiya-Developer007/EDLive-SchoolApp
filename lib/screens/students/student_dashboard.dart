@@ -420,17 +420,36 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       ),
                     if (settings.showSchoolBus && settings.showMessage)
                       const SizedBox(width: 12),
-                    if (settings.showMessage)
-                      Expanded(
-                        child: // Messages
-                        DashboardTile(
-                          title: 'Message',
-                          iconPath: 'assets/icons/message.svg',
-                          color: const Color(0xFFA3D3A7),
-                          badgeCount: counts.messages, // ✅ dynamic
-                          centerContent: true,
-                        ),
-                      ),
+                 if (settings.showMessage)
+  Expanded(
+    child: DashboardTile(
+      title: 'Message',
+      iconPath: 'assets/icons/message.svg',
+      color: const Color(0xFFA3D3A7),
+      badgeCount: counts.messages, // ✅ dynamic
+      centerContent: true,
+      onTap: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final studentIdInt = prefs.getInt('student_id');
+
+        if (studentIdInt == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Student ID not found')),
+          );
+          return;
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StudentMessagesPage(studentId: studentIdInt),
+          ),
+        );
+      },
+      onClose: () => settings.updateVisibility('Message', false),
+    ),
+  ),
+
                   ],
                 ),
 
