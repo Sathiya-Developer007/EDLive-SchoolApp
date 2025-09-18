@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
+import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -135,8 +137,8 @@ Future<void> _fetchNotifications() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const TeacherAppBar(),
-      drawer: const MenuDrawer(),
+      appBar: const StudentAppBar(),
+      drawer: const StudentMenuDrawer(),
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),

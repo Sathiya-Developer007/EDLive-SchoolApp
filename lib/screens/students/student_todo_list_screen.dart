@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -28,45 +29,86 @@ class _StudentToDoListPageState extends State<StudentToDoListPage> {
     _fetchClassList();
   }
 
-  Future<void> _fetchTasks() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      final studentId = prefs.getInt('student_id'); // ✅ Save this during login
+  /// ✅ Fetch student tasks
+/// ✅ Fetch student tasks
+Future<void> _fetchTasks() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final studentId = prefs.getInt('student_id'); // saved during login
 
-      if (token == null || studentId == null) {
-        print("⚠️ Missing token or studentId");
-        return;
+    if (token == null || studentId == null) {
+      print("⚠️ Missing token or studentId");
+      return;
+    }
+
+    final url = Uri.parse(
+      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student/$studentId',
+    );
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+
+      setState(() {
+        _tasks = List<Map<String, dynamic>>.from(data);
+        _isLoading = false;
+      });
+
+      // ✅ Mark dashboard as viewed for each todo item
+      for (var task in _tasks) {
+        if (task['id'] != null) {
+          await _markDashboardViewed(studentId, token, task['id']);
+        }
       }
-
-      final url = Uri.parse(
-        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student/$studentId',
-      );
-
-      final response = await http.get(
-        url,
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          _tasks = List<Map<String, dynamic>>.from(data);
-          _isLoading = false;
-        });
-      } else {
-        print("❌ Failed to fetch todos: ${response.statusCode}");
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      print("❌ Error fetching todos: $e");
+    } else {
+      print("❌ Failed to fetch todos: ${response.statusCode}");
       setState(() => _isLoading = false);
     }
+  } catch (e) {
+    print("❌ Error fetching todos: $e");
+    setState(() => _isLoading = false);
   }
+}
 
+/// ✅ Mark dashboard item as viewed
+Future<void> _markDashboardViewed(
+    int studentId, String token, int todoId) async {
+  try {
+    final url = Uri.parse(
+      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed?studentId=$studentId',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "item_type": "todo",
+        "item_id": todoId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print("✅ Todo $todoId marked as viewed");
+    } else {
+      print("❌ Failed to mark todo $todoId viewed: ${response.statusCode}");
+    }
+  } catch (e) {
+    print("❌ Error marking todo $todoId viewed: $e");
+  }
+}
+
+  /// ✅ Fetch class list
   Future<void> _fetchClassList() async {
     final url = Uri.parse(
       'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes',
