@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
-import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
-import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -14,9 +12,10 @@ class StudentNotificationItem {
   final int id;
   final String title;
   final String subtitle;
-  final String moduleType;
+  final String moduleType; // ✅ real item_type from backend
   final DateTime dateTime;
   final String type;
+  final bool hasReplies;
 
   StudentNotificationItem({
     required this.id,
@@ -25,6 +24,7 @@ class StudentNotificationItem {
     required this.moduleType,
     required this.dateTime,
     required this.type,
+    required this.hasReplies,
   });
 
   factory StudentNotificationItem.fromJson(Map<String, dynamic> json) {
@@ -32,9 +32,10 @@ class StudentNotificationItem {
       id: json['id'] ?? 0,
       title: json['title'] ?? '',
       subtitle: json['content'] ?? '',
-      moduleType: json['module_type'] ?? '',
+      moduleType: json['module_type'] ?? '', // ✅ take from backend
       dateTime: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
       type: json['type'] ?? '',
+      hasReplies: json['has_replies'] ?? false,
     );
   }
 }
@@ -44,7 +45,8 @@ class StudentNotificationPage extends StatefulWidget {
   const StudentNotificationPage({super.key});
 
   @override
-  State<StudentNotificationPage> createState() => _StudentNotificationPageState();
+  State<StudentNotificationPage> createState() =>
+      _StudentNotificationPageState();
 }
 
 class _StudentNotificationPageState extends State<StudentNotificationPage> {
@@ -76,64 +78,160 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
     }
   }
 
-Future<void> _fetchNotifications() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("auth_token");
-    final studentId = prefs.getInt("student_id");
+  Future<void> _fetchNotifications() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+      final studentId = prefs.getInt("student_id");
 
-    if (token == null || studentId == null) {
-      setState(() {
-        _loading = false;
-        _error = "Missing token or student ID. Please login again.";
-      });
-      return;
-    }
-
-    // ✅ Use the selected date from UI
-    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
-
-    final url =
-        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?studentId=$studentId&date=$formattedDate";
-
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['success'] == true) {
-        final List list = data['notifications'] ?? [];
+      if (token == null || studentId == null) {
         setState(() {
-          _notifications =
-              list.map((e) => StudentNotificationItem.fromJson(e)).toList();
           _loading = false;
-          _error = null;
+          _error = "Missing token or student ID. Please login again.";
         });
+        return;
+      }
+
+      final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+      final url =
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?studentId=$studentId&date=$formattedDate";
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          final List list = data['notifications'] ?? [];
+          setState(() {
+            _notifications =
+                list.map((e) => StudentNotificationItem.fromJson(e)).toList();
+            _loading = false;
+            _error = null;
+          });
+        } else {
+          setState(() {
+            _loading = false;
+            _error = "Failed to load notifications.";
+          });
+        }
       } else {
         setState(() {
           _loading = false;
-          _error = "Failed to load notifications.";
+          _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
         });
       }
-    } else {
+    } catch (e) {
       setState(() {
         _loading = false;
-        _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
+        _error = "Something went wrong: $e";
       });
     }
-  } catch (e) {
-    setState(() {
-      _loading = false;
-      _error = "Something went wrong: $e";
-    });
   }
-}
 
+  // ----------------- SEND REPLY -----------------
+  Future<void> _sendReply(
+      int itemId, String messageText, int parentId, String itemType) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+      final studentId = prefs.getInt("student_id");
+
+      if (token == null || studentId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Missing token or student ID. Please login again.")),
+        );
+        return;
+      }
+
+      final url =
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/messages/$itemId/reply?studentId=$studentId";
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "item_type": itemType, // ✅ use dynamic type from backend
+          "message_text": messageText,
+          "parent_id": parentId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data["success"] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Reply sent successfully")),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed: ${data['message']}")),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text("Error ${response.statusCode}: ${response.reasonPhrase}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Something went wrong: $e")),
+      );
+    }
+  }
+
+  // ----------------- REPLY DIALOG -----------------
+  void _showReplyDialog(
+      int itemId, int parentId, String moduleType) {
+    final TextEditingController replyController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Send Reply"),
+          content: TextField(
+            controller: replyController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: "Type your reply...",
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final replyText = replyController.text.trim();
+                if (replyText.isNotEmpty) {
+                  Navigator.pop(context);
+                  _sendReply(itemId, replyText, parentId, moduleType);
+                }
+              },
+              child: const Text("Send"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ----------------- UI -----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,7 +262,8 @@ Future<void> _fetchNotifications() async {
                       color: Color(0xFF2E3192)),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.calendar_today, color: Color(0xFF2E3192)),
+                  icon: const Icon(Icons.calendar_today,
+                      color: Color(0xFF2E3192)),
                   onPressed: _pickDate,
                 ),
               ],
@@ -180,74 +279,95 @@ Future<void> _fetchNotifications() async {
                       : _notifications.isEmpty
                           ? const Center(child: Text("No notifications found."))
                           : ListView.builder(
-  itemCount: _notifications.length,
-  itemBuilder: (context, index) {
-    final item = _notifications[index];
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    item.type,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Color(0xFF2E3192),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Text(
-                  item.moduleType,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black54,
-                  ),
-                ),
-              ],
+                              itemCount: _notifications.length,
+                              itemBuilder: (context, index) {
+                                final item = _notifications[index];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  elevation: 2,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                item.type,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color: Color(0xFF2E3192),
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Text(
+                                              item.moduleType,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.black54,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          DateFormat('dd/MM/yyyy HH:mm')
+                                              .format(item.dateTime),
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.black54),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          item.title,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item.subtitle,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton.icon(
+                                            icon: const Icon(Icons.reply,
+                                                size: 18,
+                                                color: Color(0xFF2E3192)),
+                                            label: const Text("Reply",
+                                                style: TextStyle(
+                                                    color: Color(0xFF2E3192))),
+                                            onPressed: () {
+                                              _showReplyDialog(
+                                                  item.id, item.id, item.moduleType);
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              item.title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item.subtitle,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.grey,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  },
-)
-   ),
           ],
         ),
       ),
