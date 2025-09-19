@@ -75,17 +75,17 @@ void main() async {
         ChangeNotifierProvider(create: (_) => TimetableProvider()),
         ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => StudentSettingsProvider()),
-         ChangeNotifierProvider(create: (_) => AchievementProvider()),
-                 ChangeNotifierProvider(create: (_) => LibraryProvider()),
-                 ChangeNotifierProvider(create: (_) => LibraryCopyProvider()),
-                 ChangeNotifierProvider(create: (_)=> LibraryMemberProvider()),
-                 ChangeNotifierProvider(create: (_) => LibraryStatusProvider()),
-                  ChangeNotifierProvider(create: (_) => LibraryBooksListProvider()),
- ChangeNotifierProvider(create: (_) => LibraryBookDetailProvider()),
-  ChangeNotifierProvider(create: (_) => DashboardCountsProvider()), 
-  ChangeNotifierProvider(create: (_) => ExamResultProvider()),
+        ChangeNotifierProvider(create: (_) => AchievementProvider()),
+        ChangeNotifierProvider(create: (_) => LibraryProvider()),
+        ChangeNotifierProvider(create: (_) => LibraryCopyProvider()),
+        ChangeNotifierProvider(create: (_) => LibraryMemberProvider()),
+        ChangeNotifierProvider(create: (_) => LibraryStatusProvider()),
+        ChangeNotifierProvider(create: (_) => LibraryBooksListProvider()),
+        ChangeNotifierProvider(create: (_) => LibraryBookDetailProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardCountsProvider()),
+        ChangeNotifierProvider(create: (_) => ExamResultProvider()),
 
-  ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
       ],
       child: MyApp(
         token: token,
@@ -133,7 +133,8 @@ class MyApp extends StatelessWidget {
             } else if (userType == 'student' || userType == 'parent') {
               if (selectedChild != null) {
                 return MaterialPageRoute(
-                  builder: (_) => StudentDashboardPage(childData: selectedChild!),
+                  builder: (_) =>
+                      StudentDashboardPage(childData: selectedChild!),
                 );
               } else {
                 return MaterialPageRoute(
@@ -185,20 +186,21 @@ class MyApp extends StatelessWidget {
               builder: (_) => StudentProfilePage(studentId: id),
             );
           case '/timetable':
-  final args = settings.arguments as Map<String, dynamic>;
-  final year = args['year'] as String;
-  final studentId = args['studentId'] as String;
+            final args = settings.arguments as Map<String, dynamic>;
+            final year = args['year'] as String;
+            final studentId = args['studentId'] as String;
 
-  return MaterialPageRoute(
-    builder: (_) => StudentTimeTablePage(
-      academicYear: year,
-      studentId: studentId,
-    ),
-  );
-
+            return MaterialPageRoute(
+              builder: (_) => StudentTimeTablePage(
+                academicYear: year,
+                studentId: studentId,
+              ),
+            );
 
           case '/student-settings':
-            return MaterialPageRoute(builder: (_) => const StudentSettingsPage());
+            return MaterialPageRoute(
+              builder: (_) => const StudentSettingsPage(),
+            );
 
           // Teacher menu routes
           case '/attendance':
@@ -223,5 +225,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-

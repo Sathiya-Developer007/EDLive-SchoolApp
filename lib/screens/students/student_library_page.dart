@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
@@ -7,6 +8,8 @@ import '/services/student_library_book_service.dart';
 import 'student_library_book_detail_page.dart';
 import 'package:school_app/services/student_library_checkout_service.dart';
 import 'package:school_app/services/library_book_search_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StudentLibraryPage extends StatefulWidget {
   const StudentLibraryPage({super.key});
@@ -23,13 +26,57 @@ class _StudentLibraryPageState extends State<StudentLibraryPage>
   List<StudentLibraryBook>? _searchResults;
   bool _isSearching = false;
 
-  late TabController _tabController; // 👈 TabController
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _allBooks = _service.fetchAllBooks();
+    _allBooks = _fetchAndMarkBooks();
     _tabController = TabController(length: 3, vsync: this);
+  }
+
+  Future<List<StudentLibraryBook>> _fetchAndMarkBooks() async {
+    final books = await _service.fetchAllBooks();
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? '';
+    final studentId = prefs.getInt('student_id');
+
+    if (studentId != null) {
+      for (var book in books) {
+        if (book.id != null) {
+          await _markLibraryAsViewed(studentId, book.id!, token);
+        }
+      }
+    }
+    return books;
+  }
+
+  Future<void> _markLibraryAsViewed(
+      int studentId, int bookId, String token) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+            "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed?studentId=$studentId"),
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "item_type": "library",
+          "item_id": bookId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint("✅ Book $bookId marked as viewed");
+      } else {
+        debugPrint("❌ Failed to mark viewed: ${response.body}");
+      }
+    } catch (e) {
+      debugPrint("❌ Error marking viewed: $e");
+    }
   }
 
   @override
@@ -72,57 +119,69 @@ class _StudentLibraryPageState extends State<StudentLibraryPage>
             ),
           ),
           actions: [
-  TextButton(
-    onPressed: () => Navigator.pop(context),
-    style: TextButton.styleFrom(
-       foregroundColor: Colors.white,
-      backgroundColor: Colors.blue, // 👈 Text color blue
-    ),
-    child: const Text("Cancel"),
-  ),
-  ElevatedButton(
-    onPressed: () async {
-      Navigator.pop(context);
-      setState(() {
-        _isSearching = true;
-        _searchResults = null;
-      });
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.blue,
+              ),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                setState(() {
+                  _isSearching = true;
+                  _searchResults = null;
+                });
 
-      try {
-        final results = await LibraryApiService.searchBooks(
-          title: titleController.text.trim().isEmpty
-              ? null
-              : titleController.text.trim(),
-          author: authorController.text.trim().isEmpty
-              ? null
-              : authorController.text.trim(),
-          isbn: isbnController.text.trim().isEmpty
-              ? null
-              : isbnController.text.trim(),
-          genre: genreController.text.trim().isEmpty
-              ? null
-              : genreController.text.trim(),
+                try {
+                  final results = await LibraryApiService.searchBooks(
+                    title: titleController.text.trim().isEmpty
+                        ? null
+                        : titleController.text.trim(),
+                    author: authorController.text.trim().isEmpty
+                        ? null
+                        : authorController.text.trim(),
+                    isbn: isbnController.text.trim().isEmpty
+                        ? null
+                        : isbnController.text.trim(),
+                    genre: genreController.text.trim().isEmpty
+                        ? null
+                        : genreController.text.trim(),
+                  );
+
+                  // Mark search results as viewed also
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('auth_token') ?? '';
+                  final studentId = prefs.getInt('student_id');
+                  if (studentId != null) {
+                    for (var book in results) {
+                      if (book.id != null) {
+                        await _markLibraryAsViewed(studentId, book.id!, token);
+                      }
+                    }
+                  }
+
+                  setState(() {
+                    _searchResults = results;
+                    _tabController.animateTo(0);
+                  });
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error: $e")));
+                } finally {
+                  setState(() => _isSearching = false);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.blue,
+              ),
+              child: const Text("Search"),
+            ),
+          ],
         );
-
-        setState(() {
-          _searchResults = results;
-          _tabController.animateTo(0); // 👈 Switch to "All Books"
-        });
-      } catch (e) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: $e")));
-      } finally {
-        setState(() => _isSearching = false);
-      }
-    },
-    style: ElevatedButton.styleFrom(
-      foregroundColor: Colors.white, // 👈 Text color inside button
-      backgroundColor: Colors.blue,  // 👈 Button background blue
-    ),
-    child: const Text("Search"),
-  ),
-],
- );
       },
     );
   }
@@ -161,8 +220,8 @@ class _StudentLibraryPageState extends State<StudentLibraryPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon:
-                        const Icon(Icons.search, color: Color(0xFF2E3192), size: 40),
+                    icon: const Icon(Icons.search,
+                        color: Color(0xFF2E3192), size: 40),
                     onPressed: _openSearchDialog,
                   ),
                   if (_searchResults != null)
@@ -217,9 +276,9 @@ class _StudentLibraryPageState extends State<StudentLibraryPage>
                   children: [
                     TabBar(
                       controller: _tabController,
-                      labelColor:  Colors.blue,
+                      labelColor: Colors.blue,
                       unselectedLabelColor: Colors.grey,
-                      indicatorColor:  Colors.blue,
+                      indicatorColor: Colors.blue,
                       tabs: const [
                         Tab(text: "All Books"),
                         Tab(text: "My Books"),

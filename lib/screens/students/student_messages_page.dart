@@ -1,14 +1,92 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
-import '../../models/student_message_model.dart';
-import '../../services/student_message_service.dart';
 
+// ---------------- MODEL ----------------
+class StudentMessage {
+  final int id;
+  final int studentId;
+  final String senderName;
+  final String messageText;
+  final String messageType;
+  final bool isAppreciation;
+  final bool isMeetingRequest;
+  final DateTime createdAt;
+
+  StudentMessage({
+    required this.id,
+    required this.studentId,
+    required this.senderName,
+    required this.messageText,
+    required this.messageType,
+    required this.isAppreciation,
+    required this.isMeetingRequest,
+    required this.createdAt,
+  });
+
+  factory StudentMessage.fromJson(Map<String, dynamic> json) {
+    return StudentMessage(
+      id: json['id'],
+      studentId: json['student_id'],
+      senderName: json['sender_name'] ?? 'Unknown',
+      messageText: json['message_text'] ?? '',
+      messageType: json['message_type'] ?? '',
+      isAppreciation: json['is_appreciation'] ?? false,
+      isMeetingRequest: json['is_meeting_request'] ?? false,
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+}
+
+// ---------------- SERVICE ----------------
+class MessageService {
+  static const String baseUrl =
+      "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api";
+
+  static Future<List<StudentMessage>> fetchMessages(int studentId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/messages/$studentId"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => StudentMessage.fromJson(json)).toList();
+    } else {
+      throw Exception("Failed to load messages");
+    }
+  }
+
+  static Future<void> markMessageViewed(int studentId, int messageId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+
+    await http.post(
+      Uri.parse("$baseUrl/dashboard/viewed?studentId=$studentId"),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "item_type": "messages",
+        "item_id": messageId,
+      }),
+    );
+  }
+}
+
+// ---------------- UI PAGE ----------------
 class StudentMessagesPage extends StatefulWidget {
   final int studentId;
   const StudentMessagesPage({Key? key, required this.studentId})
-    : super(key: key);
+      : super(key: key);
 
   @override
   State<StudentMessagesPage> createState() => _StudentMessagesPageState();
@@ -20,7 +98,18 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
   @override
   void initState() {
     super.initState();
-    _messagesFuture = MessageService.fetchMessages(widget.studentId);
+    _messagesFuture = _loadMessages();
+  }
+
+  Future<List<StudentMessage>> _loadMessages() async {
+    final messages = await MessageService.fetchMessages(widget.studentId);
+
+    // ✅ Mark all messages as viewed
+    for (var msg in messages) {
+      MessageService.markMessageViewed(widget.studentId, msg.id);
+    }
+
+    return messages;
   }
 
   @override
@@ -28,67 +117,45 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
     return Scaffold(
       appBar: StudentAppBar(),
       drawer: StudentMenuDrawer(),
-      backgroundColor: const Color(0xFFA3D3A7), // ✅ new page background
+      backgroundColor: const Color(0xFFA3D3A7),
 
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔙 Back button at top-left
-
-          // Inside your build method, above the FutureBuilder:
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🔹 Back Button
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Text(
-                    "< Back",
-                    style: TextStyle(fontSize: 16, color: Colors.black87),
+          // Back + Title
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: const Text("< Back",
+                  style: TextStyle(fontSize: 16, color: Colors.black87)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(color: Color(0xFF2E3192)),
+                  child: SvgPicture.asset(
+                    "assets/icons/message.svg",
+                    height: 20,
+                    width: 20,
+                    color: Colors.white,
                   ),
                 ),
-              ),
-
-              // 🔹 Row with SVG Icon + Title
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12.0,
-                  vertical: 4.0,
-                ),
-                child: Row(
-                  children: [
-                    // Circle background for icon
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2E3192), // background color
-                        // shape: BoxShape.circle,
-                      ),
-                      child: SvgPicture.asset(
-                        "assets/icons/message.svg", // replace with your svg path
-                        height: 20,
-                        width: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      "Messages",
-                      style: TextStyle(
+                const SizedBox(width: 10),
+                const Text("Messages",
+                    style: TextStyle(
                         fontSize: 25,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E3192),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                        color: Color(0xFF2E3192))),
+              ],
+            ),
           ),
 
-          // Messages content (takes remaining space)
+          // Messages List
           Expanded(
             child: FutureBuilder<List<StudentMessage>>(
               future: _messagesFuture,
@@ -124,7 +191,7 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Icon Avatar
+                          // Icon
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
@@ -136,8 +203,7 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                             child: Icon(
                               msg.isAppreciation
                                   ? Icons.thumb_up_alt_rounded
-                                  : Icons
-                                        .chat_bubble_outline, // 👈 received msg bubble
+                                  : Icons.chat_bubble_outline,
                               color: Colors.white,
                               size: 22,
                             ),
@@ -149,59 +215,29 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Sender + Date Row
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
+                                    Text(msg.senderName,
+                                        style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF2E3192))),
                                     Text(
-                                      msg.senderName,
+                                      "${msg.createdAt.toLocal()}"
+                                          .split(" ")[0],
                                       style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2E3192),
-                                      ),
-                                    ),
-                                    Text(
-                                      "${msg.createdAt.toLocal()}".split(
-                                        " ",
-                                      )[0], // only date
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
+                                          fontSize: 12, color: Colors.grey),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 6),
-
-                                // Message Text
-                                Text(
-                                  msg.messageText,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-
-                                // Message Type Tag
-                                // Container(
-                                //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                //   decoration: BoxDecoration(
-                                //     color: Colors.blue.shade50,
-                                //     borderRadius: BorderRadius.circular(8),
-                                //   ),
-                                //   child: Text(
-                                //     msg.messageType,
-                                //     style: const TextStyle(
-                                //       fontSize: 12,
-                                //       fontWeight: FontWeight.w500,
-                                //       color: Color(0xFF2E3192),
-                                //     ),
-                                //   ),
-                                // ),
+                                Text(msg.messageText,
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                        height: 1.4)),
                               ],
                             ),
                           ),
