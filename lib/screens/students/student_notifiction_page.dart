@@ -6,16 +6,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'student_notification_replies_page.dart'; // your replies page
 
 // ----------------- MODEL -----------------
 class StudentNotificationItem {
   final int id;
   final String title;
   final String subtitle;
-  final String moduleType; // ✅ real item_type from backend
+  final String moduleType;
   final DateTime dateTime;
   final String type;
-  final bool hasReplies;
+  final String apiItemType; // for backend API
 
   StudentNotificationItem({
     required this.id,
@@ -24,20 +25,20 @@ class StudentNotificationItem {
     required this.moduleType,
     required this.dateTime,
     required this.type,
-    required this.hasReplies,
+    required this.apiItemType,
   });
 
-  factory StudentNotificationItem.fromJson(Map<String, dynamic> json) {
-    return StudentNotificationItem(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? '',
-      subtitle: json['content'] ?? '',
-      moduleType: json['module_type'] ?? '', // ✅ take from backend
-      dateTime: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
-      type: json['type'] ?? '',
-      hasReplies: json['has_replies'] ?? false,
-    );
-  }
+factory StudentNotificationItem.fromJson(Map<String, dynamic> json) {
+  return StudentNotificationItem(
+    id: json['id'] ?? 0,
+    title: json['title'] ?? '',
+    subtitle: json['content'] ?? '',
+    moduleType: json['module_type'] ?? '',   // keep original for UI if needed
+    dateTime: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+    type: json['type'] ?? '',
+    apiItemType: json['module_type'] ?? '',  // ✅ map module_type for API
+  );
+}
 }
 
 // ----------------- PAGE -----------------
@@ -45,8 +46,7 @@ class StudentNotificationPage extends StatefulWidget {
   const StudentNotificationPage({super.key});
 
   @override
-  State<StudentNotificationPage> createState() =>
-      _StudentNotificationPageState();
+  State<StudentNotificationPage> createState() => _StudentNotificationPageState();
 }
 
 class _StudentNotificationPageState extends State<StudentNotificationPage> {
@@ -135,103 +135,6 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
     }
   }
 
-  // ----------------- SEND REPLY -----------------
-  Future<void> _sendReply(
-      int itemId, String messageText, int parentId, String itemType) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("auth_token");
-      final studentId = prefs.getInt("student_id");
-
-      if (token == null || studentId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Missing token or student ID. Please login again.")),
-        );
-        return;
-      }
-
-      final url =
-          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/messages/$itemId/reply?studentId=$studentId";
-
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "item_type": itemType, // ✅ use dynamic type from backend
-          "message_text": messageText,
-          "parent_id": parentId,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data["success"] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Reply sent successfully")),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Failed: ${data['message']}")),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text("Error ${response.statusCode}: ${response.reasonPhrase}")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Something went wrong: $e")),
-      );
-    }
-  }
-
-  // ----------------- REPLY DIALOG -----------------
-  void _showReplyDialog(
-      int itemId, int parentId, String moduleType) {
-    final TextEditingController replyController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Send Reply"),
-          content: TextField(
-            controller: replyController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: "Type your reply...",
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final replyText = replyController.text.trim();
-                if (replyText.isNotEmpty) {
-                  Navigator.pop(context);
-                  _sendReply(itemId, replyText, parentId, moduleType);
-                }
-              },
-              child: const Text("Send"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ----------------- UI -----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -262,8 +165,7 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                       color: Color(0xFF2E3192)),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.calendar_today,
-                      color: Color(0xFF2E3192)),
+                  icon: const Icon(Icons.calendar_today, color: Color(0xFF2E3192)),
                   onPressed: _pickDate,
                 ),
               ],
@@ -291,12 +193,10 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Expanded(
                                               child: Text(
@@ -321,11 +221,8 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          DateFormat('dd/MM/yyyy HH:mm')
-                                              .format(item.dateTime),
-                                          style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.black54),
+                                          DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
+                                          style: const TextStyle(fontSize: 12, color: Colors.black54),
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
@@ -346,19 +243,24 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 8),
+
+                                        // ✅ View Replies button
                                         Align(
                                           alignment: Alignment.centerRight,
-                                          child: TextButton.icon(
-                                            icon: const Icon(Icons.reply,
-                                                size: 18,
-                                                color: Color(0xFF2E3192)),
-                                            label: const Text("Reply",
-                                                style: TextStyle(
-                                                    color: Color(0xFF2E3192))),
+                                          child: TextButton(
                                             onPressed: () {
-                                              _showReplyDialog(
-                                                  item.id, item.id, item.moduleType);
+                                            Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => NotificationRepliesPage(
+      itemId: item.id,               // backend id
+      itemType: item.apiItemType,    // backend module_type
+    ),
+  ),
+);
+
                                             },
+                                            child: const Text("View Replies"),
                                           ),
                                         ),
                                       ],
