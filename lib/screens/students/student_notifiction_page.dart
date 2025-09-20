@@ -28,17 +28,17 @@ class StudentNotificationItem {
     required this.apiItemType,
   });
 
-factory StudentNotificationItem.fromJson(Map<String, dynamic> json) {
-  return StudentNotificationItem(
-    id: json['id'] ?? 0,
-    title: json['title'] ?? '',
-    subtitle: json['content'] ?? '',
-    moduleType: json['module_type'] ?? '',   // keep original for UI if needed
-    dateTime: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
-    type: json['type'] ?? '',
-    apiItemType: json['module_type'] ?? '',  // ✅ map module_type for API
-  );
-}
+  factory StudentNotificationItem.fromJson(Map<String, dynamic> json) {
+    return StudentNotificationItem(
+      id: json['id'] ?? 0,
+      title: json['title'] ?? '',
+      subtitle: json['content'] ?? '',
+      moduleType: json['module_type'] ?? '',
+      dateTime: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      type: json['type'] ?? '',
+      apiItemType: json['module_type'] ?? '',
+    );
+  }
 }
 
 // ----------------- PAGE -----------------
@@ -46,7 +46,8 @@ class StudentNotificationPage extends StatefulWidget {
   const StudentNotificationPage({super.key});
 
   @override
-  State<StudentNotificationPage> createState() => _StudentNotificationPageState();
+  State<StudentNotificationPage> createState() =>
+      _StudentNotificationPageState();
 }
 
 class _StudentNotificationPageState extends State<StudentNotificationPage> {
@@ -110,8 +111,9 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
         if (data['success'] == true) {
           final List list = data['notifications'] ?? [];
           setState(() {
-            _notifications =
-                list.map((e) => StudentNotificationItem.fromJson(e)).toList();
+            _notifications = list
+                .map((e) => StudentNotificationItem.fromJson(e))
+                .toList();
             _loading = false;
             _error = null;
           });
@@ -146,12 +148,58 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
+            // 🔹 Back button
+            InkWell(
               onTap: () => Navigator.pop(context),
-              child: const Text("< Back",
-                  style: TextStyle(color: Colors.black, fontSize: 16)),
+              borderRadius: BorderRadius.circular(4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                
+                  SizedBox(width: 4),
+                  Text(
+                    "< Back",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                     
+                    ),
+                  ),
+                ],
+              ),
             ),
+
             const SizedBox(height: 12),
+
+            // 🔹 Title row with icon
+            Row(
+              children: [
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2E3192),
+                   
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: SvgPicture.asset(
+                    'assets/icons/notification.svg',
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  "Notifications",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
 
             // Date picker
             Row(
@@ -160,12 +208,16 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                 Text(
                   "Date: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}",
                   style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E3192)),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
+                  ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.calendar_today, color: Color(0xFF2E3192)),
+                  icon: const Icon(
+                    Icons.calendar_today,
+                    color: Color(0xFF2E3192),
+                  ),
                   onPressed: _pickDate,
                 ),
               ],
@@ -193,10 +245,12 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Expanded(
                                               child: Text(
@@ -206,7 +260,8 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                                                   fontSize: 16,
                                                   color: Color(0xFF2E3192),
                                                 ),
-                                                overflow: TextOverflow.ellipsis,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
                                               ),
                                             ),
                                             Text(
@@ -221,8 +276,13 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
-                                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                          DateFormat(
+                                            'dd/MM/yyyy HH:mm',
+                                          ).format(item.dateTime),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.black54,
+                                          ),
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
@@ -249,18 +309,19 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
                                           alignment: Alignment.centerRight,
                                           child: TextButton(
                                             onPressed: () {
-                                            Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => NotificationRepliesPage(
-      itemId: item.id,               // backend id
-      itemType: item.apiItemType,    // backend module_type
-    ),
-  ),
-);
-
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (_) =>
+                                                      NotificationRepliesPage(
+                                                    itemId: item.id,
+                                                    itemType: item.apiItemType,
+                                                  ),
+                                                ),
+                                              );
                                             },
-                                            child: const Text("View Replies"),
+                                            child:
+                                                const Text("View Replies"),
                                           ),
                                         ),
                                       ],

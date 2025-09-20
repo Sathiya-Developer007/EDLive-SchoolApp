@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:school_app/screens/students/student_menu_drawer.dart';
+import 'package:school_app/widgets/student_app_bar.dart';
 import '../../models/student_notification_msg_view_model.dart';
 import '../../services/student_notification_msg_view_service.dart';
 import 'package:intl/intl.dart';
@@ -14,7 +17,8 @@ class NotificationRepliesPage extends StatefulWidget {
   });
 
   @override
-  State<NotificationRepliesPage> createState() => _NotificationRepliesPageState();
+  State<NotificationRepliesPage> createState() =>
+      _NotificationRepliesPageState();
 }
 
 class _NotificationRepliesPageState extends State<NotificationRepliesPage> {
@@ -75,9 +79,9 @@ class _NotificationRepliesPageState extends State<NotificationRepliesPage> {
       _replyToId = null;
       await _fetchReplies();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to send reply: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to send reply: $e")));
     }
   }
 
@@ -136,66 +140,136 @@ class _NotificationRepliesPageState extends State<NotificationRepliesPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Replies"),
-        backgroundColor: const Color(0xFF2E3192),
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: StudentAppBar(),
+    drawer: StudentMenuDrawer(),
+    body: Column(
+      children: [
+        // 🔹 Title Row at the top
+      Padding(
+  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // 🔹 Back button row
+      InkWell(
+        onTap: () => Navigator.pop(context),
+        borderRadius: BorderRadius.circular(4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+           
+            SizedBox(width: 4),
+            Text(
+              "< Back",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                // color: Color(0xFF2E3192), // dark blue
+              ),
+            ),
+          ],
+        ),
       ),
-      body: Column(
+
+      const SizedBox(height: 12), // space between back button and title row
+
+      // 🔹 Icon + Title row
+      Row(
         children: [
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(child: Text(_error!))
-                    : _replies.isEmpty
-                        ? const Center(child: Text("No replies found."))
-                        : RefreshIndicator(
-                            onRefresh: _fetchReplies,
-                            child: ListView(
-                              padding: const EdgeInsets.all(16),
-                              children: _replies.map((r) => _buildReply(r)).toList(),
-                            ),
-                          ),
-          ),
-          // Reply input
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.white,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _replyController,
-                    decoration: InputDecoration(
-                      hintText: _replyToId == null
-                          ? "Write a reply..."
-                          : "Replying to ID $_replyToId",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.grey),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _postReply,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E3192),
-                  ),
-                  child: const Text("Send"),
-                ),
-              ],
+            height: 40,
+            width: 40,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2E3192), // dark blue background
+              
+            ),
+            padding: const EdgeInsets.all(8), // space for the SVG inside
+            child: SvgPicture.asset(
+              'assets/icons/message.svg',
+              color: Colors.white, // icon color white
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            "Message Replies",
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E3192), // dark blue text color
             ),
           ),
         ],
       ),
-      backgroundColor: const Color(0xFFF9F7A5),
-    );
-  }
+    ],
+  ),
+)
+,
+
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Center(child: Text(_error!))
+                  : _replies.isEmpty
+                      ? const Center(child: Text("No replies found."))
+                      : RefreshIndicator(
+                          onRefresh: _fetchReplies,
+                          child: ListView(
+                            padding: const EdgeInsets.all(16),
+                            children:
+                                _replies.map((r) => _buildReply(r)).toList(),
+                          ),
+                        ),
+        ),
+
+        // Reply input
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: Colors.white,
+          child: Row(
+            children: [
+             Expanded(
+  child: TextField(
+    controller: _replyController,
+    onChanged: (value) {
+      setState(() {}); // rebuild button when text changes
+    },
+    decoration: InputDecoration(
+      hintText: _replyToId == null
+          ? "Write a reply..."
+          : "Replying to ID $_replyToId",
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.grey),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    ),
+  ),
+),
+const SizedBox(width: 8),
+ElevatedButton(
+  onPressed: () {
+    if (_replyController.text.trim().isEmpty) return; // prevent sending
+    _postReply();
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: _replyController.text.trim().isEmpty
+        ? const Color(0xFF2E3192) // dark blue for “inactive”
+        : Colors.blue,           // active color
+    foregroundColor: Colors.white,
+  ),
+  child: const Text("Send"),
+),
+
+            ],
+          ),
+        ),
+      ],
+    ),
+    backgroundColor: const Color(0xFFF9F7A5),
+  );
+}
 }
