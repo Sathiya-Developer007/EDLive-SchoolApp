@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:school_app/models/notification_reply_model.dart';
+import 'package:school_app/models/student_notification_msg_view_model.dart';
 
 class NotificationReplyService {
   final String baseUrl =
@@ -60,11 +60,12 @@ Future<void> postReply({
   }
 
   final url = Uri.parse(
-      "$baseUrl/dashboard/messages/$itemId/replies?item_type=$itemType&studentId=$studentId");
+      "$baseUrl/dashboard/messages/$itemId/reply?studentId=$studentId");
 
   final body = {
-    "message_text": messageText,
-    if (parentId != null) "parent_id": parentId,
+    "item_type": itemType,        // ✅ include item_type
+    "message_text": messageText,  // ✅ message text
+    if (parentId != null) "parent_id": parentId, // ✅ optional parent
   };
 
   final response = await http.post(
@@ -81,5 +82,7 @@ Future<void> postReply({
         "Error ${response.statusCode}: ${response.reasonPhrase}");
   }
 }
+
+
 
 }

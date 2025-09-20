@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '/models/notification_reply_model.dart';
-import '/services/notification_reply_service.dart';
+import '../../models/student_notification_msg_view_model.dart';
+import '../../services/student_notification_msg_view_service.dart';
 import 'package:intl/intl.dart';
 
 class NotificationRepliesPage extends StatefulWidget {
