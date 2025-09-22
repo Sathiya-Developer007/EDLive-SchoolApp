@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
+import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+
+import 'package:school_app/services/notification_service.dart';
+import 'package:school_app/models/notification_reply_model.dart';
 
 // ----------------- MODEL -----------------
 class NotificationItem {
@@ -39,7 +44,7 @@ class NotificationItem {
 
 // ----------------- NOTIFICATION PAGE -----------------
 class NotificationPage extends StatefulWidget {
-  const NotificationPage({super.key});
+   NotificationPage({super.key});
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
@@ -49,17 +54,16 @@ class _NotificationPageState extends State<NotificationPage> {
   List<NotificationItem> _notifications = [];
   bool _loading = true;
   String? _error;
-
-  DateTime _selectedDate = DateTime.now(); // 👈 selected date
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _fetchNotifications(); // load today's notifications first
+    _fetchNotifications();
   }
 
   Future<void> _pickDate() async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
@@ -71,7 +75,7 @@ class _NotificationPageState extends State<NotificationPage> {
         _selectedDate = picked;
         _loading = true;
       });
-      _fetchNotifications(); // reload API with new date
+      _fetchNotifications();
     }
   }
 
@@ -137,32 +141,28 @@ class _NotificationPageState extends State<NotificationPage> {
       drawer: const MenuDrawer(),
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Back button
             GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => Navigator.pop(context),
               child: const Text(
                 "< Back",
                 style: TextStyle(color: Colors.black, fontSize: 16),
               ),
             ),
             const SizedBox(height: 12),
-
-            // 👇 Date picker row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   "Date: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}",
                   style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E3192)),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.calendar_today, color: Color(0xFF2E3192)),
@@ -171,8 +171,6 @@ class _NotificationPageState extends State<NotificationPage> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Loader / Error / List
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -180,68 +178,113 @@ class _NotificationPageState extends State<NotificationPage> {
                       ? Center(child: Text(_error!))
                       : _notifications.isEmpty
                           ? const Center(child: Text("No notifications found."))
-                          : ListView.builder(
-                              itemCount: _notifications.length,
-                              itemBuilder: (context, index) {
-                                final item = _notifications[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 2,
-                                  child: Padding(
+                          : RefreshIndicator(
+                              onRefresh: _fetchNotifications,
+                              child: ListView.builder(
+                                itemCount: _notifications.length,
+                                itemBuilder: (context, index) {
+                                  final item = _notifications[index];
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
                                     padding: const EdgeInsets.all(12),
-                                    child: // Inside ListView.builder -> Card -> Column
-Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(
-            item.type,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Color(0xFF2E3192),
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        // 👇 show module type here
-        Text(
-          item.moduleType,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.black54,
-          ),
-        ),
-      ],
-    ),
-    const SizedBox(height: 4),
-    Text(
-      DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
-      style: const TextStyle(fontSize: 12, color: Colors.black54),
-    ),
-    const SizedBox(height: 6),
-    Text(
-      item.title,
-      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-    ),
-    const SizedBox(height: 4),
-    Text(
-      item.subtitle,
-      style: const TextStyle(fontSize: 13, color: Colors.grey),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    ),
-  ],
-),
- ),
-                                );
-                              },
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Container(
+                                        //   padding: const EdgeInsets.all(10),
+                                        //   decoration: const BoxDecoration(
+                                        //     color: Color(0xFF2E3192),
+                                        //   ),
+                                        //   child: SvgPicture.asset(
+                                        //     'assets/icons/message.svg',
+                                        //     height: 20,
+                                        //     width: 20,
+                                        //     color: Colors.white,
+                                        //   ),
+                                        // ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      item.type,
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 16,
+                                                        color: Color(0xFF2E3192),
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    item.moduleType,
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                      color: Colors.black54,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
+                                                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                item.title,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                item.subtitle,
+                                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Align(
+                                                alignment: Alignment.centerRight,
+                                                child: TextButton.icon(
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => NotificationDetailPage(item: item),
+                                                      ),
+                                                    );
+                                                  },
+                                                  icon: const Icon(Icons.reply, color: Color(0xFF2E3192)),
+                                                  label: const Text(
+                                                    "Reply",
+                                                    style: TextStyle(color: Color(0xFF2E3192)),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
             ),
           ],
@@ -251,16 +294,13 @@ Column(
   }
 }
 
-// ----------------- DETAIL PAGE -----------------
+// ----------------- NOTIFICATION DETAIL PAGE -----------------
+
+
 class NotificationDetailPage extends StatefulWidget {
   final NotificationItem item;
-  final bool openChat;
 
-  const NotificationDetailPage({
-    super.key,
-    required this.item,
-    this.openChat = false,
-  });
+  NotificationDetailPage({super.key, required this.item});
 
   @override
   State<NotificationDetailPage> createState() => _NotificationDetailPageState();
@@ -268,182 +308,330 @@ class NotificationDetailPage extends StatefulWidget {
 
 class _NotificationDetailPageState extends State<NotificationDetailPage> {
   final TextEditingController _msgController = TextEditingController();
-  final List<String> _messages = [];
-  bool _showChat = false;
+  List<NotificationReply> _replies = [];
+  bool _loadingReplies = true;
+  String? _replyError;
+
+  final NotificationService _service = NotificationService();
+
+  NotificationReply? _selectedReply; // Selected message to reply
 
   @override
   void initState() {
     super.initState();
-    if (widget.openChat) {
-      _showChat = true;
+    _fetchReplies();
+  }
+
+  Future<void> _fetchReplies() async {
+    setState(() {
+      _loadingReplies = true;
+      _replyError = null;
+    });
+
+    try {
+      final replies = await _service.fetchReplies(
+        itemId: widget.item.id,
+        itemType: widget.item.moduleType,
+      );
+      setState(() {
+        _replies = replies;
+        _loadingReplies = false;
+      });
+    } catch (e) {
+      setState(() {
+        _replyError = e.toString();
+        _loadingReplies = false;
+      });
     }
+  }
+
+  // Flatten nested replies
+  List<NotificationReply> _flattenReplies(List<NotificationReply> replies) {
+    List<NotificationReply> list = [];
+    for (var r in replies) {
+      list.add(r);
+      if (r.replies.isNotEmpty) {
+        list.addAll(_flattenReplies(r.replies));
+      }
+    }
+    return list;
   }
 
   @override
   Widget build(BuildContext context) {
+    final flattenedReplies = _flattenReplies(_replies);
+
     return Scaffold(
-      appBar: const TeacherAppBar(),
-      drawer: const MenuDrawer(),
+      appBar: TeacherAppBar(),
+      drawer: MenuDrawer(),
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Text("< Back",
-                  style: TextStyle(fontSize: 14, color: Colors.black)),
-            ),
-            const SizedBox(height: 12),
-         Expanded(
-  child: Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ---------- TYPE + CHAT ICON ----------
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Type: ${widget.item.type}",
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E3192),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.message, color: Color(0xFF2E3192)),
-              onPressed: () {
-                setState(() {
-                  _showChat = true;
-                });
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        // ---------- MODULE TYPE ----------
-        Text(
-          "Module: ${widget.item.moduleType}",
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // ---------- TITLE ----------
-        Text(
-          widget.item.title,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // ---------- CONTENT ----------
-        Text(
-          widget.item.subtitle,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // ---------- DATE ----------
-        Text(
-          "Date: ${DateFormat('dd/MM/yyyy').format(widget.item.dateTime)}",
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.black54,
-          ),
-        ),
-
-        // ---------- CHAT SECTION ----------
-        if (_showChat) ...[
-          const Divider(height: 30),
-          const Text(
-            "Chat with Teacher",
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2E3192),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // MESSAGES LIST
-          Flexible(
-            child: ListView.builder(
-              itemCount: _messages.length,
-              itemBuilder: (context, index) => Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E3192),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _messages[index],
-                    style: const TextStyle(
-                      color: Colors.white,
+            // Top Title + Back
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: const Text(
+                    "< Back",
+                    style: TextStyle(
+                      color: Colors.black,
                       fontSize: 14,
                     ),
                   ),
                 ),
-              ),
-            ),
-          ),
-
-          // INPUT BOX
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _msgController,
-                  decoration: InputDecoration(
-                    hintText: "Type your message...",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2E3192),
+                      ),
+                      child: SvgPicture.asset(
+                        'assets/icons/notification.svg',
+                        height: 20,
+                        width: 20,
+                        color: Colors.white,
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Replies",
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E3192),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+
+            // Main content container
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // Notification Details
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.item.title,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text("${widget.item.moduleType} • ${widget.item.type}",
+                              style: const TextStyle(
+                                  fontSize: 13, color: Colors.black54)),
+                          const SizedBox(height: 4),
+                          Text(
+                              DateFormat('dd/MM/yyyy HH:mm')
+                                  .format(widget.item.dateTime),
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.black45)),
+                        ],
+                      ),
+                    ),
+                    const Divider(),
+
+                    // Replies List
+                    Expanded(
+                      child: _loadingReplies
+                          ? const Center(child: CircularProgressIndicator())
+                          : _replyError != null
+                              ? Center(child: Text(_replyError!))
+                              : flattenedReplies.isEmpty
+                                  ? const Center(child: Text("No replies yet"))
+                                  : ListView.builder(
+                                      itemCount: flattenedReplies.length,
+                                      itemBuilder: (context, index) {
+                                        final reply = flattenedReplies[index];
+                                        final isTeacher =
+                                            reply.senderType == 'Teacher';
+
+                                        return GestureDetector(
+                                          onLongPress: () {
+                                            if (!isTeacher) {
+                                              setState(() {
+                                                _selectedReply = reply;
+                                              });
+                                            }
+                                          },
+                                          child: Align(
+                                            alignment: isTeacher
+                                                ? Alignment.centerRight
+                                                : Alignment.centerLeft,
+                                            child: Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 4,
+                                                      horizontal: 8),
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: isTeacher
+                                                    ? const Color(0xFF2E3192)
+                                                    : Colors.grey[300],
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  if (_selectedReply == reply)
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              4),
+                                                      decoration:
+                                                          BoxDecoration(
+                                                        color: Colors.grey[200],
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(6),
+                                                      ),
+                                                      child: Text(
+                                                        "Replying to: ${reply.messageText}",
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                          fontStyle:
+                                                              FontStyle.italic,
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  Text(
+                                                    reply.messageText,
+                                                    style: TextStyle(
+                                                      color: isTeacher
+                                                          ? Colors.white
+                                                          : Colors.black87,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    "${reply.senderName} • ${DateFormat('dd/MM/yyyy HH:mm').format(reply.createdAt)}",
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: isTeacher
+                                                          ? Colors.white70
+                                                          : Colors.black54,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                    ),
+
+                    // Reply input box
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_selectedReply != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              margin: const EdgeInsets.only(bottom: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "Replying to: ${_selectedReply!.messageText}",
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontStyle: FontStyle.italic),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _selectedReply = null),
+                                    child: const Icon(Icons.close, size: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _msgController,
+                                  decoration: InputDecoration(
+                                    hintText: "Write a reply...",
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+  onPressed: () async {
+    if (_msgController.text.trim().isEmpty) return;
+    await _service.sendReply(
+      itemId: widget.item.id,
+      itemType: widget.item.moduleType,
+      message: _msgController.text.trim(),
+      // replyToId removed
+    );
+    _msgController.clear();
+    setState(() {
+      _selectedReply = null; // clear selected reply after sending
+    });
+    _fetchReplies();
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color(0xFF2E3192),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  ),
+  child: const Icon(Icons.send, color: Colors.white),
+),
+ ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.send, color: Color(0xFF2E3192)),
-                onPressed: () {
-                  if (_msgController.text.trim().isEmpty) return;
-                  setState(() {
-                    _messages.add(_msgController.text.trim());
-                    _msgController.clear();
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
-      ],
-    ),
-  ),
-)
- ]),
+            ),
+          ],
+        ),
       ),
     );
   }
