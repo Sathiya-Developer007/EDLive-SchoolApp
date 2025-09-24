@@ -517,21 +517,35 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   ),
                 const SizedBox(height: 12),
                 if (settings.showResources) ...[
-                  DashboardTile(
-                    title: 'Teachers',
-                    subtitle: 'You can interact with teachers',
-                    icon: Icons.person,
-                    color: const Color(0xFFFFD399),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const StudentTeacherPage(),
-                        ),
-                      );
-                    },
-                    onClose: () => settings.updateVisibility('Teachers', false),
-                  ),
+                 DashboardTile(
+  title: 'Teachers',
+  subtitle: 'You can interact with teachers',
+  icon: Icons.person,
+  color: const Color(0xFFFFD399),
+  onTap: () async {
+    final prefs = await SharedPreferences.getInstance();
+    final studentIdInt = prefs.getInt('student_id');
+
+    if (studentIdInt != null) {
+      final studentId = studentIdInt.toString();
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentTeacherPage(studentId: studentId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Student ID not found. Please log in again.'),
+        ),
+      );
+    }
+  },
+  onClose: () => settings.updateVisibility('Teachers', false),
+),
+
+
 
                   const SizedBox(height: 12),
                 ],

@@ -22,13 +22,13 @@ class TeacherContactPage extends StatelessWidget {
       backgroundColor: const Color(0xFFFFD596), // light orange
       appBar: StudentAppBar(),
       drawer: StudentMenuDrawer(),
-        body: Column(
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 10, 0, 0),
-           
-               child: GestureDetector(
+
+            child: GestureDetector(
               onTap: () {
                 Navigator.pop(context); // Navigate back
               },
@@ -38,17 +38,18 @@ class TeacherContactPage extends StatelessWidget {
                   Text("< Back", style: TextStyle(fontSize: 14)),
                 ],
               ),
-          ),),
-            Padding(
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-  color: const Color(0xFF2E3192),
-  borderRadius: BorderRadius.circular(2), // 2px radius
-),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E3192),
+                    borderRadius: BorderRadius.circular(2), // 2px radius
+                  ),
 
                   child: const Icon(Icons.group, color: Colors.white, size: 20),
                 ),
@@ -63,11 +64,12 @@ class TeacherContactPage extends StatelessWidget {
                 ),
               ],
             ),
-          ), const SizedBox(height: 20),
+          ),
+          const SizedBox(height: 20),
           Center(
             child: Container(
               padding: const EdgeInsets.all(20),
-             margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
 
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -81,19 +83,22 @@ class TeacherContactPage extends StatelessWidget {
                     child: Icon(Icons.person, size: 50, color: Colors.white),
                   ),
                   const SizedBox(height: 10),
-                  Text(name,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text(subject,
-                      style: const TextStyle(color: Colors.black54)),
-                  const SizedBox(height: 20),
-               Center(
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(subject, style: const TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 30),
+Center(
   child: Column(
-    crossAxisAlignment: CrossAxisAlignment.center,
+    crossAxisAlignment: CrossAxisAlignment.start, // left align rows
     children: [
       Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
+          const SizedBox(width: 16), // 👈 move title slightly right
           const Text("Call: "),
           GestureDetector(
             onTap: () {
@@ -109,10 +114,10 @@ class TeacherContactPage extends StatelessWidget {
           ),
         ],
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 13),
       Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
+          const SizedBox(width: 16), // 👈 same padding
           const Text("WhatsApp: "),
           GestureDetector(
             onTap: () {
@@ -128,11 +133,11 @@ class TeacherContactPage extends StatelessWidget {
           ),
         ],
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 13),
       Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("email: "),
+          const SizedBox(width: 16), // 👈 same padding
+          const Text("Email: "),
           GestureDetector(
             onTap: () {
               // launch email
@@ -150,7 +155,7 @@ class TeacherContactPage extends StatelessWidget {
     ],
   ),
 ),
-  ],
+ ],
               ),
             ),
           ),

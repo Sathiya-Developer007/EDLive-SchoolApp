@@ -252,14 +252,7 @@ else {
               itemBuilder: (context, index) {
                 final dayMenu = _weeklyMenu?["$index"];
                 if (dayMenu == null) return const SizedBox();
-                if (dayMenu == null) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text("No menu defined for this date")),
-  );
-  setState(() => _loading = false);
-  // return;
-}
-
+                
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
