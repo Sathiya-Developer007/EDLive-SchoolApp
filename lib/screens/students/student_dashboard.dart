@@ -28,6 +28,8 @@ import 'student_cocurricular_page.dart';
 import 'student_library_page.dart';
 import 'student_quicknotes_page.dart';
 
+import 'student_profile_page.dart';
+
 class StudentDashboardPage extends StatefulWidget {
   final Map<String, dynamic> childData;
   const StudentDashboardPage({super.key, required this.childData});
@@ -76,15 +78,15 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     return '$startYear-${startYear + 1}';
   }
 
-String getPastAcademicYear() {
-  final now = DateTime.now();
-  // If current month >= June, academic year started last year
-  if (now.month >= 6) {
-    return "${now.year - 1}-${now.year}";
-  } else {
-    return "${now.year - 2}-${now.year - 1}";
+  String getPastAcademicYear() {
+    final now = DateTime.now();
+    // If current month >= June, academic year started last year
+    if (now.month >= 6) {
+      return "${now.year - 1}-${now.year}";
+    } else {
+      return "${now.year - 2}-${now.year - 1}";
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +99,7 @@ String getPastAcademicYear() {
         Expanded(
           child: Scaffold(
             backgroundColor: const Color(0xFFF4F4F4),
-            appBar: const StudentAppBar(),
+            appBar: StudentAppBar(),
             drawer: const StudentMenuDrawer(),
             body: ListView(
               padding: const EdgeInsets.all(12),
@@ -132,22 +134,22 @@ String getPastAcademicYear() {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                   DashboardTile(
+                    DashboardTile(
                       title: 'Notifications',
                       subtitle: 'PTA meeting on 12, Feb. 2019',
                       iconPath: 'assets/icons/notification.svg',
                       color: const Color(0xFFF9F7A5),
                       badgeCount: counts?.notifications,
-                     onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const StudentNotificationPage(),
-    ),
-  );
-},
-
-                    ),  if (settings.showAchievements)
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const StudentNotificationPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    if (settings.showAchievements)
                       DashboardTile(
                         title: 'Achievements',
                         subtitle:
@@ -174,14 +176,15 @@ String getPastAcademicYear() {
                       color: const Color(0xFF8FD8E5),
                       badgeCount: counts.todo, // ✅ dynamic
                       onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/student-todo',
-                          arguments: {
-                            'studentId': child['studentId'],
-                            'child': child,
-                          },
-                        );
+                     Navigator.pushNamed(
+  context,
+  '/student-todo',
+  arguments: {
+    'studentId': child['id'],   // 👈 use id, not studentId
+    'child': child,
+  },
+);
+
                       },
                     ),
                   ],
@@ -264,40 +267,46 @@ String getPastAcademicYear() {
                 Row(
                   children: [
                     Expanded(
-                      child:DashboardTile(
-  title: 'Time table',
-  iconPath: 'assets/icons/class_time.svg',
-  color: const Color(0xFFE8B3DE),
-  centerContent: true,
-  onTap: () async {
-    final prefs = await SharedPreferences.getInstance();
-    final selectedChildString = prefs.getString('selected_child');
+                      child: DashboardTile(
+                        title: 'Time table',
+                        iconPath: 'assets/icons/class_time.svg',
+                        color: const Color(0xFFE8B3DE),
+                        centerContent: true,
+                        onTap: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          final selectedChildString = prefs.getString(
+                            'selected_child',
+                          );
 
-    if (selectedChildString == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No child selected. Please select a child.")),
-      );
-      return;
-    }
+                          if (selectedChildString == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "No child selected. Please select a child.",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
 
-    final selectedChild = jsonDecode(selectedChildString);
-    final studentId = selectedChild['id'].toString();
+                          final selectedChild = jsonDecode(selectedChildString);
+                          final studentId = selectedChild['id'].toString();
 
-    // ✅ Use past academic year dynamically
-    final academicYear = getPastAcademicYear();
+                          // ✅ Use past academic year dynamically
+                          final academicYear = getPastAcademicYear();
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentTimeTablePage(
-          academicYear: academicYear, // 2024-2025 if today is 2025
-          studentId: studentId,
-        ),
-      ),
-    );
-  },
-)
-
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentTimeTablePage(
+                                academicYear:
+                                    academicYear, // 2024-2025 if today is 2025
+                                studentId: studentId,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -334,7 +343,7 @@ String getPastAcademicYear() {
                           title: 'Exams',
                           iconPath: 'assets/icons/exams.svg',
                           color: const Color(0xFFAAE5C8),
-                          badgeCount: 2,
+                          // badgeCount: 2,
                           centerContent: true,
                         ),
                       ),
@@ -367,7 +376,6 @@ String getPastAcademicYear() {
                   subtitle: 'Progress report updated',
                   iconPath: 'assets/icons/reports.svg',
                   color: const Color(0xFFFFCCCC),
-                  badgeCount: 1,
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
                     final studentId =
@@ -448,36 +456,40 @@ String getPastAcademicYear() {
                       ),
                     if (settings.showSchoolBus && settings.showMessage)
                       const SizedBox(width: 12),
-                 if (settings.showMessage)
-  Expanded(
-    child: DashboardTile(
-      title: 'Message',
-      iconPath: 'assets/icons/message.svg',
-      color: const Color(0xFFA3D3A7),
-      badgeCount: counts.messages, // ✅ dynamic
-      centerContent: true,
-      onTap: () async {
-        final prefs = await SharedPreferences.getInstance();
-        final studentIdInt = prefs.getInt('student_id');
+                    if (settings.showMessage)
+                      Expanded(
+                        child: DashboardTile(
+                          title: 'Message',
+                          iconPath: 'assets/icons/message.svg',
+                          color: const Color(0xFFA3D3A7),
+                          badgeCount: counts.messages, // ✅ dynamic
+                          centerContent: true,
+                          onTap: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            final studentIdInt = prefs.getInt('student_id');
 
-        if (studentIdInt == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Student ID not found')),
-          );
-          return;
-        }
+                            if (studentIdInt == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Student ID not found'),
+                                ),
+                              );
+                              return;
+                            }
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => StudentMessagesPage(studentId: studentIdInt),
-          ),
-        );
-      },
-      onClose: () => settings.updateVisibility('Message', false),
-    ),
-  ),
-
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StudentMessagesPage(
+                                  studentId: studentIdInt,
+                                ),
+                              ),
+                            );
+                          },
+                          onClose: () =>
+                              settings.updateVisibility('Message', false),
+                        ),
+                      ),
                   ],
                 ),
 
@@ -524,26 +536,24 @@ String getPastAcademicYear() {
                   const SizedBox(height: 12),
                 ],
 
-
                 // Quick Notes
-DashboardTile(
-  title: 'Quick Notes',
-  subtitle: 'View notes from your teachers',
-  iconPath: 'assets/icons/quick_notes.svg',
-  color: const Color(0xFFE6E6E6),
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const StudentQuickNotesPage(),
-      ),
-    );
-  },
-),
-const SizedBox(height: 12),
+                DashboardTile(
+                  title: 'Quick Notes',
+                  subtitle: 'View notes from your teachers',
+                  iconPath: 'assets/icons/quick_notes.svg',
+                  color: const Color(0xFFE6E6E6),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StudentQuickNotesPage(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
 
-// Co-curricular activities
-
+                // Co-curricular activities
                 if (settings.showCoCurricular) ...[
                   DashboardTile(
                     title: 'Co curricular activities',

@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+
+
 import 'package:school_app/models/teacher_class_student.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
@@ -18,6 +21,7 @@ class _StudentQuickNotesPageState extends State<StudentQuickNotesPage> {
   List<dynamic> _notes = [];
   bool _isLoading = true;
   String? _error;
+  dynamic _selectedNote; // 🔹 track which note is selected
 
   @override
   void initState() {
@@ -67,68 +71,72 @@ class _StudentQuickNotesPageState extends State<StudentQuickNotesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFE6E6E6),
-      drawer:  StudentMenuDrawer(),
+      drawer: StudentMenuDrawer(),
       appBar: StudentAppBar(),
       body: Column(
         children: [
           // Header
-         Container(
-  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // 🔹 Back button
-      GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: const Text(
-          '< Back',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.black,
-          ),
-        ),
-      ),
-      const SizedBox(height: 8),
-
-      // 🔹 Row with Icon + Title
-      Row(
-        children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2E3192), // background color
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: SvgPicture.asset(
-              "assets/icons/quick_notes.svg",
-              width: 24,
-              height: 24,
-              color: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    if (_selectedNote != null) {
+                      // go back to list view
+                      setState(() {
+                        _selectedNote = null;
+                      });
+                    } else {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text(
+                    '< Back',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E3192),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SvgPicture.asset(
+                        "assets/icons/quick_notes.svg",
+                        width: 24,
+                        height: 24,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Quick Notes',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2E3192),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 10),
-          const Text(
-            'Quick Notes',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2E3192),
-            ),
-          ),
-        ],
-      ),
-    ],
-  ),
-)
-,const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
           // Notes container
-         Expanded(
+Expanded(
   child: Container(
-    margin: const EdgeInsets.symmetric(
-      horizontal: 12,
-      vertical: 0,
-    ).copyWith(bottom: 20), // 🔹 Add 20px space at the bottom
+    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10), // fixed outside spacing
+    padding: const EdgeInsets.all(16), // inner padding
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(8),
@@ -142,16 +150,93 @@ class _StudentQuickNotesPageState extends State<StudentQuickNotesPage> {
                   style: const TextStyle(color: Colors.red),
                 ),
               )
-            : _notes.isEmpty
-                ? const Center(child: Text("No notes available"))
+            : _selectedNote != null
+                ? LayoutBuilder(
+                    builder: (context, constraints) {
+                      // constraints.maxWidth is the fixed container width
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: constraints.maxWidth,
+                              child: Text(
+                                _selectedNote["title"] ?? "",
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2E3192),
+                                ),
+                                softWrap: true,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: constraints.maxWidth,
+                              child: Text(
+                                _selectedNote["description"] ?? "",
+                                style: const TextStyle(fontSize: 16),
+                                softWrap: true,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          if (_selectedNote["web_links"] != null &&
+    _selectedNote["web_links"].isNotEmpty)
+  Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "Links:",
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      ...(_selectedNote["web_links"] as List).map(
+        (link) => SizedBox(
+          width: constraints.maxWidth,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: InkWell(
+              onTap: () async {
+                final uri = Uri.tryParse(link);
+                if (uri != null && await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Cannot open link")),
+                  );
+                }
+              },
+              child: Text(
+                link,
+                style: const TextStyle(
+                  color: Colors.blue,
+                  // decoration: TextDecoration.underline,
+                ),
+                softWrap: true,
+              ),
+            ),
+          ),
+        ),
+      ).toList(),
+    ],
+  ),
+
+                          ],
+                        ),
+                      );
+                    },
+                  )
                 : ListView.separated(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.zero, // padding handled by container
                     itemCount: _notes.length,
                     separatorBuilder: (_, __) =>
                         const Divider(color: Colors.grey),
                     itemBuilder: (context, index) {
                       final note = _notes[index];
                       return ListTile(
+                        contentPadding: EdgeInsets.zero,
                         title: Text(
                           note["title"] ?? "",
                           style: const TextStyle(
@@ -159,36 +244,24 @@ class _StudentQuickNotesPageState extends State<StudentQuickNotesPage> {
                             color: Color(0xFF2E3192),
                             fontWeight: FontWeight.w600,
                           ),
+                          softWrap: true,
                         ),
-                        subtitle: Text(note["description"] ?? ""),
+                        subtitle: Text(
+                          note["description"] ?? "",
+                          softWrap: true,
+                        ),
                         trailing: Text(
                           note["created_by_name"] ?? "",
                           style: const TextStyle(
                             fontStyle: FontStyle.italic,
                             fontSize: 12,
                           ),
+                          softWrap: true,
                         ),
                         onTap: () {
-                          if (note["web_links"] != null &&
-                              note["web_links"].isNotEmpty) {
-                            final links =
-                                (note["web_links"] as List).join("\n");
-                            showDialog(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: Text(note["title"] ?? ""),
-                                content: Text(
-                                    "${note["description"]}\n\nLinks:\n$links"),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context),
-                                    child: const Text("Close"),
-                                  )
-                                ],
-                              ),
-                            );
-                          }
+                          setState(() {
+                            _selectedNote = note;
+                          });
                         },
                       );
                     },

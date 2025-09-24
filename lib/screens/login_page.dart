@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'students/student_dashboard.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,7 +21,9 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    final url = Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/auth/login');
+    final url = Uri.parse(
+      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/auth/login',
+    );
 
     try {
       final response = await http.post(
@@ -42,33 +45,76 @@ class _LoginPageState extends State<LoginPage> {
         final user = data['user'];
         final userType = user['usertype']?.toString().toLowerCase();
 
-     if (token != null && userType != null) {
+      if (token != null && userType != null) {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('auth_token', token);
   await prefs.setString('user_type', userType);
-  await prefs.setString('user_data', jsonEncode(user)); // ✅ store complete user info
+  await prefs.setString('user_data', jsonEncode(user)); // store complete user info
 
-  // ✅ Correct: store the real student ID if available
-if (userType == 'student' && user['student_id'] != null) {
-  print("Saving student_id: ${user['student_id']}"); // ✅ Debug
- await prefs.setInt('student_id', int.parse(user['student_id'].toString()));
+  if (userType == 'student' && user['student_id'] != null) {
+    await prefs.setInt('student_id', int.parse(user['student_id'].toString()));
+  }
 
-}
-
-
-  // ✅ Navigate based on user type
   if (userType == 'teacher') {
     Navigator.pushReplacementNamed(context, '/dashboard');
   } else if (userType == 'student' || userType == 'parent') {
-    Navigator.pushReplacementNamed(
-      context,
-      '/select-child',
-      arguments: user,
+    // ✅ Fetch children first
+    final childrenResponse = await http.get(
+      Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/student/parents/children'),
+      headers: {
+        'accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
     );
- 
+
+    if (childrenResponse.statusCode == 200) {
+      final List<dynamic> childrenData = json.decode(childrenResponse.body);
+
+      if (childrenData.length == 1) {
+        // Only 1 child → go directly to StudentDashboardPage
+        final child = childrenData[0];
+        await prefs.setString('selected_child', jsonEncode({
+          'id': child['id'],
+          'user_id': child['user_id'],
+          'name': child['full_name'],
+          'image': child['profile_img'] != null
+              ? 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000${child['profile_img']}'
+              : '',
+          'class': child['class_name'] ?? '',
+          'class_id': child['class_id'],
+          'notification': 0,
+        }));
+        await prefs.setInt('student_id', child['id']);
+        await prefs.setInt('class_id', child['class_id']);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StudentDashboardPage(
+              childData: json.decode(prefs.getString('selected_child')!),
+            ),
+          ),
+        );
+      } else {
+        // 2 or more children → go to SelectChildPage
+        Navigator.pushReplacementNamed(
+          context,
+          '/select-child',
+          arguments: user,
+        );
+      }
+    } else {
+      // Failed to fetch children → fallback to SelectChildPage
+      Navigator.pushReplacementNamed(
+        context,
+        '/select-child',
+        arguments: user,
+      );
+    }
   } else {
-          _showError('Missing token or user type.');
-        }}
+    _showError('Missing token or user type.');
+  }
+   }
       } else {
         final errorData = json.decode(response.body);
         final errorMessage = errorData['message'] ?? 'Login failed';

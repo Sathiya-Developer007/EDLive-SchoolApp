@@ -37,6 +37,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
         'Authorization': 'Bearer $token',
         'accept': '*/*',
       });
+
       if (res.statusCode == 200) {
         setState(() {
           data = jsonDecode(res.body);
@@ -76,6 +77,34 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     );
   }
 
+  Widget _networkImage(String? imageUrl, {double size = 120}) {
+    return ClipOval(
+      child: imageUrl != null && imageUrl.isNotEmpty
+          ? Image.network(
+              imageUrl,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return _placeholderImage(size);
+              },
+            )
+          : _placeholderImage(size),
+    );
+  }
+
+  Widget _placeholderImage(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.person, size: 50, color: Colors.white),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -85,17 +114,17 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
       return const Scaffold(body: Center(child: Text('Error loading student')));
     }
 
-    final basic   = data!['basic_info']      ?? {};
-    final school  = data!['school_info']     ?? {};
-    final parent  = data!['parent']          ?? {};
-    final health  = data!['health']          ?? {};
-    final caste   = data!['caste_religion']  ?? {};
+    final basic = data!['basic_info'] ?? {};
+    final school = data!['school_info'] ?? {};
+    final parent = data!['parent'] ?? {};
+    final health = data!['health'] ?? {};
+    final caste = data!['caste_religion'] ?? {};
     final imgBase = 'http://schoolmanagement.canadacentral.cloudapp.azure.com';
 
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        drawer: StudentMenuDrawer(),
+        drawer: const StudentMenuDrawer(),
         appBar: StudentAppBar(
           onProfileTap: () => Navigator.pop(context),
         ),
@@ -118,19 +147,20 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                   Center(
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundImage: data!['profile_img'] != null
-                              ? NetworkImage('$imgBase${data!['profile_img']}')
-                              : const AssetImage('assets/images/child1.jpg')
-                                  as ImageProvider,
+                        _networkImage(
+                          data!['profile_img'] != null
+                              ? '$imgBase${data!['profile_img']}'
+                              : null,
+                          size: 120,
                         ),
                         const SizedBox(height: 6),
-                        Text(data!['full_name'] ?? '',
-                            style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600)),
+                        Text(
+                          data!['full_name'] ?? '',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600),
+                        ),
                       ],
                     ),
                   ),
@@ -161,35 +191,35 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _info('Gender',      basic['gender']),
-                        _info('DOB',         basic['date_of_birth']?.split('T').first),
-                        _info('Blood Group', basic['blood_group']),
-                        _info('Contact',     basic['contact_number']),
+                        _info('Gender : ', basic['gender']),
+                        _info('DOB : ', basic['date_of_birth']?.split('T').first),
+                        _info('Blood Group : ', basic['blood_group']),
+                        _info('Contact : ', basic['contact_number']),
                         const SizedBox(height: 16),
                         const Divider(),
                         const Text('School Info',
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold)),
-                        _info('Admission No', data!['admission_no']),
-                        _info('Class Joined', school['class_joined']),
-                        _info('Class Teacher', school['class_teacher']),
-                        _info('Previous School', school['prev_school']),
+                        _info('Admission No : ', data!['admission_no']),
+                        _info('Class Joined : ', school['class_joined']),
+                        _info('Class Teacher : ', school['class_teacher']),
+                        _info('Previous School : ', school['prev_school']),
                         const SizedBox(height: 16),
                         const Divider(),
                         const Text('Health',
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold)),
-                        _info('Disability', health['disability'] == true ? 'Yes' : 'No'),
-                        _info('Disability Details', health['disability_details']),
-                        _info('Disease', health['disease'] == true ? 'Yes' : 'No'),
-                        _info('Disease Details', health['disease_details']),
+                        _info('Disability : ', health['disability'] == true ? 'Yes' : 'No'),
+                        _info('Disability Details : ', health['disability_details']),
+                        _info('Disease : ', health['disease'] == true ? 'Yes' : 'No'),
+                        _info('Disease Details : ', health['disease_details']),
                         const SizedBox(height: 16),
                         const Divider(),
                         const Text('Caste & Religion',
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold)),
-                        _info('Caste', caste['caste']),
-                        _info('Religion', caste['religion']),
+                        _info('Caste : ', caste['caste']),
+                        _info('Religion : ', caste['religion']),
                       ],
                     ),
                   ),
@@ -200,8 +230,20 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _parentCard(parent['father_name'], 'Father', parent),
-                        _parentCard(parent['mother_name'], 'Mother', parent),
+                        _parentCard(
+                            parent['father_name'],
+                            'Father',
+                            parent['father_img'] != null
+                                ? '$imgBase${parent['father_img']}'
+                                : null,
+                            parent),
+                        _parentCard(
+                            parent['mother_name'],
+                            'Mother',
+                            parent['mother_img'] != null
+                                ? '$imgBase${parent['mother_img']}'
+                                : null,
+                            parent),
                       ],
                     ),
                   ),
@@ -228,14 +270,15 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   }
 
   // ----- Parent card -----
-  Widget _parentCard(String? name, String role, Map parent) {
+  Widget _parentCard(String? name, String role, String? imageUrl, Map parent) {
     if (name == null) return const SizedBox.shrink();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.fromLTRB(8, 20, 8, 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: role == 'Father' ? Colors.grey : Colors.transparent),
+          bottom: BorderSide(
+              color: role == 'Father' ? Colors.grey : Colors.transparent),
         ),
       ),
       child: Stack(
@@ -244,7 +287,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 24),
-              const CircleAvatar(radius: 55, child: Icon(Icons.person, size: 76)),
+              _networkImage(imageUrl, size: 110),
               const SizedBox(height: 10),
               Text(name,
                   style: const TextStyle(
@@ -254,8 +297,10 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
               Text('($role)',
                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 12),
-              _info('Mobile', role == 'Father' ? parent['father_contact'] : parent['mother_contact']),
-              _info('Email',  role == 'Father' ? parent['father_email']   : parent['mother_email']),
+              _info('Mobile',
+                  role == 'Father' ? parent['father_contact'] : parent['mother_contact']),
+              _info('Email',
+                  role == 'Father' ? parent['father_email'] : parent['mother_email']),
             ],
           ),
 

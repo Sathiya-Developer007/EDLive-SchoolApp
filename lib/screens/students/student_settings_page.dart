@@ -48,7 +48,7 @@ class _StudentSettingsPageState extends State<StudentSettingsPage> {
           body: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 80, child: StudentAppBar()),
+               SizedBox(height: 80, child: StudentAppBar()),
               _buildHeader(),
               _buildTabBar(),
 

@@ -56,11 +56,52 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
   String? _error;
   DateTime _selectedDate = DateTime.now();
 
+  Set<int> _viewedIds = {};
+
+
   @override
   void initState() {
     super.initState();
     _fetchNotifications();
   }
+
+  Future<void> _markAsViewed(int itemId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+    final studentId = prefs.getInt("student_id");
+
+    if (token == null || studentId == null) return;
+
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed?studentId=$studentId";
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: json.encode({
+        "item_type": "notifications",
+        "item_id": itemId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data["success"] == true) {
+        debugPrint("✅ Student notification $itemId marked as viewed");
+      }
+    } else {
+      debugPrint(
+          "❌ Failed to mark notification viewed: ${response.statusCode}");
+    }
+  } catch (e) {
+    debugPrint("❌ Error marking notification viewed: $e");
+  }
+}
+
 
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
@@ -79,68 +120,93 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
     }
   }
 
-  Future<void> _fetchNotifications() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("auth_token");
-      final studentId = prefs.getInt("student_id");
+ Map<String, List<StudentNotificationItem>> _notificationsByDate = {};
 
-      if (token == null || studentId == null) {
-        setState(() {
-          _loading = false;
-          _error = "Missing token or student ID. Please login again.";
-        });
-        return;
-      }
+Future<void> _fetchNotifications() async {
+  try {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
-      final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+    final studentId = prefs.getInt("student_id");
 
-      final url =
-          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?studentId=$studentId&date=$formattedDate";
+    if (token == null || studentId == null) {
+      setState(() {
+        _loading = false;
+        _error = "Missing token or student ID. Please login again.";
+      });
+      return;
+    }
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-      );
+    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          final List list = data['notifications'] ?? [];
-          setState(() {
-            _notifications = list
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?studentId=$studentId&date=$formattedDate";
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['success'] == true) {
+        final notificationsData = data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
+
+        Map<String, List<StudentNotificationItem>> grouped = {};
+
+        notificationsData.forEach((dateStr, list) {
+          final List items = list as List;
+          if (items.isNotEmpty) {
+            grouped[dateStr] = items
                 .map((e) => StudentNotificationItem.fromJson(e))
                 .toList();
-            _loading = false;
-            _error = null;
-          });
-        } else {
-          setState(() {
-            _loading = false;
-            _error = "Failed to load notifications.";
-          });
-        }
+            // Sort each day by timestamp descending
+            grouped[dateStr]!.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+          }
+        });
+
+        // Sort dates descending
+        final sortedGrouped = Map.fromEntries(
+          grouped.entries.toList()
+            ..sort((a, b) => b.key.compareTo(a.key)),
+        );
+
+        setState(() {
+          _notificationsByDate = sortedGrouped;
+          _loading = false;
+          _error = null;
+        });
       } else {
         setState(() {
           _loading = false;
-          _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
+          _error = "Failed to load notifications.";
         });
       }
-    } catch (e) {
+    } else {
       setState(() {
         _loading = false;
-        _error = "Something went wrong: $e";
+        _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
       });
     }
+  } catch (e) {
+    setState(() {
+      _loading = false;
+      _error = "Something went wrong: $e";
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const StudentAppBar(),
+      appBar:  StudentAppBar(),
       drawer: const StudentMenuDrawer(),
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
@@ -225,113 +291,130 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
             const SizedBox(height: 16),
 
             // Loader / Error / List
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? Center(child: Text(_error!))
-                      : _notifications.isEmpty
-                          ? const Center(child: Text("No notifications found."))
-                          : ListView.builder(
-                              itemCount: _notifications.length,
-                              itemBuilder: (context, index) {
-                                final item = _notifications[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  elevation: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                item.type,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                  color: Color(0xFF2E3192),
-                                                ),
-                                                overflow:
-                                                    TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            Text(
-                                              item.moduleType,
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.black54,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          DateFormat(
-                                            'dd/MM/yyyy HH:mm',
-                                          ).format(item.dateTime),
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          item.title,
+        Expanded(
+  child: _loading
+      ? const Center(child: CircularProgressIndicator())
+      : _error != null
+          ? Center(child: Text(_error!))
+          : _notificationsByDate.isEmpty
+              ? const Center(child: Text("No notifications found."))
+              : ListView(
+                  children: _notificationsByDate.entries.map((entry) {
+                    final date = entry.key;
+                    final items = entry.value;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Date header
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            DateFormat('dd/MM/yyyy').format(DateTime.parse(date)),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2E3192),
+                            ),
+                          ),
+                        ),
+                        ...items.map((item) {
+                          // Mark as viewed if not already
+                          if (!_viewedIds.contains(item.id)) {
+                            _viewedIds.add(item.id);
+                            _markAsViewed(item.id);
+                          }
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 2,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.type,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 14,
+                                            fontSize: 16,
+                                            color: Color(0xFF2E3192),
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          item.subtitle,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.grey,
-                                          ),
-                                          maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                        const SizedBox(height: 8),
-
-                                        // ✅ View Replies button
-                                        Align(
-                                          alignment: Alignment.centerRight,
-                                          child: TextButton(
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      NotificationRepliesPage(
-                                                    itemId: item.id,
-                                                    itemType: item.apiItemType,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            child:
-                                                const Text("View Replies"),
-                                          ),
+                                      ),
+                                      Text(
+                                        item.moduleType,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black54,
                                         ),
-                                      ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    DateFormat('HH:mm').format(item.dateTime),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black54,
                                     ),
                                   ),
-                                );
-                              },
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    item.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.subtitle,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => NotificationRepliesPage(
+                                              itemId: item.id,
+                                              itemType: item.apiItemType,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text("View Replies"),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-            ),
-          ],
+                          );
+                        }).toList(),
+                      ],
+                    );
+                  }).toList(),
+                ),
+),
+  ],
         ),
       ),
     );

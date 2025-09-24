@@ -148,7 +148,7 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFE8B3DE),
       drawer: const StudentMenuDrawer(),
-      appBar: const StudentAppBar(),
+      appBar:  StudentAppBar(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

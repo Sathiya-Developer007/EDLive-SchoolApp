@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'teacher_menu_drawer.dart';
 
@@ -81,14 +82,34 @@ class TransportPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Transport',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E3192),
-                ),
-              ),
+Row(
+  mainAxisAlignment: MainAxisAlignment.start,
+  children: [
+    Container(
+      padding: const EdgeInsets.all(6), // space inside background
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E3192), // background color
+        // shape: BoxShape.circle, // makes it circular
+      ),
+      child: SvgPicture.asset(
+        'assets/icons/transport.svg', // your SVG path
+        height: 20,
+        width: 20,
+        color: Colors.white, // icon color (white inside blue bg)
+      ),
+    ),
+    const SizedBox(width: 10),
+    const Text(
+      'Transport',
+      style: TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF2E3192),
+      ),
+    ),
+  ],
+)
+,
               const SizedBox(height: 20),
 
               // Full-width white containers

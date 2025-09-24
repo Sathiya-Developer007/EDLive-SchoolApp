@@ -42,20 +42,20 @@ class _SelectChildPageState extends State<SelectChildPage> {
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
       setState(() {
-        children = data.map<Map<String, dynamic>>((child) {
-          return {
-            'id': child['id'],
-            'user_id': child['user_id'],
-            'name': child['full_name'],
-            'image': child['profile_img'] != null
-                ? 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000${child['profile_img']}'
-                : '',
-            'class': child['student_id'],
-            'class_id': child['class_id'],
-            'notification': 0, // default
-          };
-        }).toList();
-        isLoading = false;
+children = data.map<Map<String, dynamic>>((child) {
+  return {
+    'id': child['id'],
+    'user_id': child['user_id'],
+    'name': child['full_name'],
+    'image': child['profile_img'] != null
+        ? 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000${child['profile_img']}'
+        : '',
+    'class': child['class_name'] ?? '',  // 👈 show class name instead of student_id
+    'class_id': child['class_id'],
+    'notification': 0,
+  };
+}).toList();
+  isLoading = false;
       });
     } else {
       setState(() => isLoading = false);
@@ -67,7 +67,7 @@ class _SelectChildPageState extends State<SelectChildPage> {
 Widget build(BuildContext context) {
   return Scaffold(
     backgroundColor: Colors.white,
-    appBar: const StudentAppBar(),
+    appBar:  StudentAppBar(),
     drawer: const StudentMenuDrawer(),
     body: isLoading
         ? const Center(child: CircularProgressIndicator())

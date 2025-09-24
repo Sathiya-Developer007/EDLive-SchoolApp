@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
-import 'package:school_app/models/notification_reply_model.dart';
+import 'package:school_app/models/teacher_notification_reply_model.dart';
 
 class NotificationService {
   final String baseUrl =

@@ -64,20 +64,20 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    DashboardTile(
-                      title: 'Notifications',
-                      subtitle: 'PTA meeting on 12, Feb. 2019',
-                      iconPath: 'assets/icons/notification.svg',
-                      color: const Color(0xFFF9F7A5),
-                      badgeCount: counts?.notifications,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>  NotificationPage()),
-                        );
-                      },
-                    ),
+                   DashboardTile(
+  title: 'Notifications',
+  subtitle: 'PTA meeting on 12, Feb. 2019',
+  iconPath: 'assets/icons/notification.svg',
+  color: const Color(0xFFF9F7A5),
+  badgeCount: counts?.notifications,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => NotificationPage()),
+    );
+  },
+),
+
                     if (settings.showAchievements)
                       DashboardTile(
                         title: 'Achievements',
@@ -188,7 +188,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         title: 'Exams',
                         iconPath: 'assets/icons/exams.svg',
                         color: const Color(0xFFAAE5C8),
-                        badgeCount: 2, // placeholder
+                        // badgeCount: 2, // placeholder
                         centerContent: true,
                         onTap: () {
                           Navigator.push(
@@ -226,7 +226,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                         title: 'Message',
                         iconPath: 'assets/icons/message.svg',
                         color: const Color(0xFFE8B3DE),
-                        badgeCount: counts?.messages,
+                        // badgeCount: counts?.messages,
                         centerContent: true,
                         onTap: () {
                           Navigator.push(

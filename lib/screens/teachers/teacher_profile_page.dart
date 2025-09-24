@@ -1,16 +1,23 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart'; 
+
 import 'teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 
-
 class TeacherProfilePage extends StatefulWidget {
-  const TeacherProfilePage({super.key});
+  final int staffId; // 👈 pass staffId of logged-in teacher
+  const TeacherProfilePage({super.key, required this.staffId});
 
   @override
   State<TeacherProfilePage> createState() => _TeacherProfilePageState();
 }
 
-class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTickerProviderStateMixin {
+class _TeacherProfilePageState extends State<TeacherProfilePage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final List<String> _tabs = [
     "Basic",
@@ -21,70 +28,135 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
     "Documents"
   ];
 
+  String _formatDate(String? dateStr) {
+  if (dateStr == null || dateStr.isEmpty) return "";
+  try {
+    final dt = DateTime.parse(dateStr);
+    return DateFormat('yyyy-MM-dd').format(dt); // 👈 only date part
+  } catch (e) {
+    return dateStr; // fallback
+  }
+}
+
+  Map<String, dynamic>? teacherData;
+  bool isLoading = true;
+  String? errorMsg;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    fetchTeacherProfile();
   }
 
- Widget _buildHeaderWithProfile() {
-  return Container(
-    width: double.infinity,
-    color: const Color(0xFF29ABE2),
-    padding: const EdgeInsets.only(top: 20, bottom: 16,left: 10),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 🔙 Back Button
-        Padding(
-          padding: const EdgeInsets.only(left: 16.0, bottom: 0),
-          child: GestureDetector(
-            onTap: () {
-              Navigator.pop(context); // Navigate back
-            },
-            child: const Text(
-              '< Back',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.normal,
+  Future<void> fetchTeacherProfile() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token == null) {
+        setState(() {
+          errorMsg = "No token found. Please login again.";
+          isLoading = false;
+        });
+        return;
+      }
+
+      final url =
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/staff/Staff/${widget.staffId}";
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          teacherData = data;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          errorMsg = "Failed to fetch staff. (${response.statusCode})";
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMsg = "Error: $e";
+        isLoading = false;
+      });
+    }
+  }
+
+  Widget _buildHeaderWithProfile() {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF29ABE2),
+      padding: const EdgeInsets.only(top: 20, bottom: 16, left: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔙 Back Button
+          Padding(
+            padding: const EdgeInsets.only(left: 16.0, bottom: 0),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                '< Back',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
             ),
           ),
-        ),
 
-        // 👤 Profile Picture & Name Centered
-        Center(
-          child: Column(
-            children: const [
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.grey,
-                child: Icon(Icons.person, size: 70, color: Colors.white),
-              ),
-              SizedBox(height: 10),
-              Text(
-                "Mr. Ezhil Selvan",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-            ],
+          // 👤 Profile Picture & Name Centered
+          Center(
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 60,
+                  backgroundColor: Colors.grey,
+                  backgroundImage: teacherData?['profile_image'] != null
+                      ? NetworkImage(
+                          "http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData!['profile_image']}")
+                      : null,
+                  child: teacherData?['profile_image'] == null
+                      ? const Icon(Icons.person,
+                          size: 70, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  teacherData?['full_name'] ?? "Loading...",
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
-        ),
 
-        // 🧭 Tab Bar
-        TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: Colors.deepPurple,
-          unselectedLabelColor: Colors.black54,
-          indicatorColor: Colors.deepPurple,
-          tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-        ),
-      ],
-    ),
-  );
-}
+          // 🧭 Tab Bar
+          TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            labelColor: Colors.deepPurple,
+            unselectedLabelColor: Colors.white,
+            indicatorColor: Colors.deepPurple,
+            tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
@@ -93,7 +165,9 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
         text: TextSpan(
           style: const TextStyle(color: Colors.black, fontSize: 14),
           children: [
-            TextSpan(text: label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(
+                text: label,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             TextSpan(text: " $value"),
           ],
         ),
@@ -101,7 +175,8 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
     );
   }
 
-  Widget _buildDetailCard({required String title, required Map<String, String> items}) {
+  Widget _buildDetailCard(
+      {required String title, required Map<String, String> items}) {
     return Card(
       elevation: 3,
       child: Column(
@@ -109,9 +184,13 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text(title,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
-          ...items.entries.map((e) => _buildDetailRow(e.key, e.value)).toList(),
+          ...items.entries
+              .map((e) => _buildDetailRow(e.key, e.value))
+              .toList(),
         ],
       ),
     );
@@ -123,7 +202,10 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 2, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(
+              flex: 2,
+              child: Text(label,
+                  style: const TextStyle(fontWeight: FontWeight.bold))),
           Expanded(flex: 3, child: Text(value)),
         ],
       ),
@@ -138,24 +220,24 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.grey,
-              child: Icon(Icons.person, size: 50, color: Colors.white),
-            ),
+            
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Mr. Ezhil Selvan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(teacherData?['full_name'] ?? "",
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-                  const Text("B.Sc. Information Technology, B.E IT, B.Ed", style: TextStyle(color: Colors.grey)),
+                  Text(teacherData?['degree'] ?? "",
+                      style: const TextStyle(color: Colors.grey)),
                   const SizedBox(height: 6),
-                  _buildInfoRow("ID No:", "STF-001"),
-                  _buildInfoRow("Gender:", "Male"),
-                  _buildInfoRow("Phone:", "9876543210, 1234567890"),
-                  _buildInfoRow("Email:", "ezhilselvan@gmail.com"),
+                  _buildInfoRow("ID No:", teacherData?['staff_id_no'] ?? ""),
+                  _buildInfoRow("Gender:", teacherData?['gender'] ?? ""),
+                  _buildInfoRow("Phone:",
+                      "${teacherData?['phone'] ?? ''}, ${teacherData?['alt_phone'] ?? ''}"),
+                  _buildInfoRow("Email:", teacherData?['email'] ?? ""),
                 ],
               ),
             ),
@@ -164,6 +246,8 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
       ),
     );
   }
+
+
 
   Widget _buildBasicTab() {
     return SingleChildScrollView(
@@ -175,12 +259,13 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
           _buildDetailCard(
             title: "Personal Information",
             items: {
-              "Date of Birth": "14/06/1982",
-              "Age": "42",
-              "Blood Group": "B+",
-              "Account No.": "1234567890",
-              "PAN": "XXXXXXXXXX",
-              "Aadhaar No.": "XXXXXXXXXXXX",
+              "Date of Birth": _formatDate(teacherData?['dob']),
+
+              "Age": teacherData?['age']?.toString() ?? "",
+              "Blood Group": teacherData?['blood_group'] ?? "",
+              "Account No.": teacherData?['account_no'] ?? "",
+              "PAN": teacherData?['pan_no'] ?? "",
+              "Aadhaar No.": teacherData?['aadhaar_no'] ?? "",
             },
           ),
         ],
@@ -188,12 +273,14 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
     );
   }
 
-  Widget _buildResponsibilitiesTab() {
+  // Your other tabs remain unchanged
+   Widget _buildResponsibilitiesTab() {
+    final responsibilities = teacherData?['classResponsibilities'] as List<dynamic>? ?? [];
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildSectionHeader("Class Schedule"),
+          _buildSectionHeader("Class Responsibilities"),
           Card(
             elevation: 3,
             child: SingleChildScrollView(
@@ -208,24 +295,19 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
                   DataColumn(label: Text("Thu")),
                   DataColumn(label: Text("Fri")),
                   DataColumn(label: Text("Sat")),
-                  DataColumn(label: Text("Actions")),
                 ],
-                rows: [
-                  DataRow(cells: [
-                    const DataCell(Text("10 A")),
-                    const DataCell(Text("Mathematics")),
-                    const DataCell(Text("09:45 AM")),
-                    const DataCell(Text("09:45 AM")),
-                    const DataCell(Text("09:45 AM")),
-                    const DataCell(Text("---")),
-                    const DataCell(Text("09:45 AM")),
-                    const DataCell(Text("01:00 PM")),
-                    DataCell(IconButton(
-                      icon: const Icon(Icons.more_vert, size: 20),
-                      onPressed: () {},
-                    )),
-                  ]),
-                ],
+                rows: responsibilities.map((resp) {
+                  return DataRow(cells: [
+                    DataCell(Text(resp['class_name'].toString())),
+                    DataCell(Text(resp['subject'].toString())),
+                    DataCell(Text(resp['monday']?.toString() ?? "-")),
+                    DataCell(Text(resp['tuesday']?.toString() ?? "-")),
+                    DataCell(Text(resp['wednesday']?.toString() ?? "-")),
+                    DataCell(Text(resp['thursday']?.toString() ?? "-")),
+                    DataCell(Text(resp['friday']?.toString() ?? "-")),
+                    DataCell(Text(resp['saturday']?.toString() ?? "-")),
+                  ]);
+                }).toList(),
               ),
             ),
           ),
@@ -235,97 +317,99 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
   }
 
   Widget _buildServiceTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildDetailCard(
-            title: "Service Information",
-            items: {
-              "Joining Date": "01/05/2025",
-              "Total Leaves": "30",
-              "Used Leaves": "20",
-              "Organization": "School",
-              "From Date": "17/01/2021",
-              "To Date": "17/12/2023",
-              "Designation": "Teacher",
-              "PF Number": "123548",
-            },
-          ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 3,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("PF Document", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {},
-                        child: const Text("View PF Document"),
-                      ),
-                      const SizedBox(width: 10),
-                      OutlinedButton(
-                        onPressed: () {},
-                        child: const Text("Replace"),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  final services = teacherData?['service'] as List<dynamic>? ?? [];
+  final experience = teacherData?['experience'] as List<dynamic>? ?? [];
 
-  Widget _buildEducationTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildSectionHeader("Education History"),
-          Card(
-            elevation: 3,
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      children: [
+        _buildSectionHeader("Service Information"),
+        ...services.map((srv) => _buildDetailCard(
+              title: "Service #${srv['id']}",
+              items: {
+                "Joining Date": _formatDate(srv['joining_date']),
+                "Total Leaves": srv['total_leaves'].toString(),
+                "Used Leaves": srv['used_leaves'].toString(),
+                "PF Number": srv['pf_number'] ?? "",
+                "PF Doc": srv['pf_doc'] ?? "",
+              },
+            )),
+        const SizedBox(height: 16),
+        _buildSectionHeader("Experience"),
+        ...experience.map((exp) => _buildDetailCard(
+              title: exp['organization'] ?? "Experience",
+              items: {
+                "Designation": exp['designation'] ?? "",
+                "From": _formatDate(exp['from_date']),
+                "To": _formatDate(exp['to_date']),
+                "Docs": exp['exp_docs'] ?? "",
+              },
+            )),
+      ],
+    ),
+  );
+}
+  
+// import 'package:url_launcher/url_launcher.dart';
+
+Widget _buildEducationTab() {
+  final education = teacherData?['education'] as List<dynamic>? ?? [];
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      children: [
+        _buildSectionHeader("Education History"),
+        Card(
+          elevation: 3,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal, // 👈 enable horizontal scroll
             child: DataTable(
               columns: const [
                 DataColumn(label: Text("Degree")),
                 DataColumn(label: Text("University")),
                 DataColumn(label: Text("Year")),
-                DataColumn(label: Text("Actions")),
+                DataColumn(label: Text("Certificate")),
               ],
-              rows: [
-                _buildEducationRow("B.Sc. Information Technology", "Manonmaniom Sundaranar", "2008"),
-                _buildEducationRow("B.E IT", "ManonManium Sundaranor", "2003"),
-                _buildEducationRow("B.Ed", "Anna University", "2010"),
-              ],
+              rows: education.map((edu) {
+                return DataRow(cells: [
+                  DataCell(Text(edu['degree'] ?? "")),
+                  DataCell(Text(edu['university'] ?? "")),
+                  DataCell(Text(edu['year']?.toString() ?? "")),
+                  DataCell(
+                    (edu['certificate'] != null && edu['certificate'] != "")
+                        ? GestureDetector(
+                            onTap: () async {
+                              final url =
+                                  "http://schoolmanagement.canadacentral.cloudapp.azure.com/content/uploads/education/${edu['certificate']}";
+                              if (await canLaunchUrl(Uri.parse(url))) {
+                                await launchUrl(Uri.parse(url),
+                                    mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            child: Row(
+                              children: const [
+                                Icon(Icons.picture_as_pdf, color: Colors.red),
+                                SizedBox(width: 6),
+                                Text("View",
+                                    style: TextStyle(color: Colors.blue)),
+                              ],
+                            ),
+                          )
+                        : const Text("-"),
+                  ),
+                ]);
+              }).toList(),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  DataRow _buildEducationRow(String degree, String university, String year) {
-    return DataRow(cells: [
-      DataCell(Text(degree)),
-      DataCell(Text(university)),
-      DataCell(Text(year)),
-      DataCell(Row(
-        children: [
-          IconButton(icon: const Icon(Icons.visibility, size: 18), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.delete, size: 18, color: Colors.red), onPressed: () {}),
-        ],
-      )),
-    ]);
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildFamilyTab() {
+    final family = teacherData?['family'] as List<dynamic>? ?? [];
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -333,130 +417,94 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> with SingleTick
           _buildDetailCard(
             title: "Address Information",
             items: {
-              "Current Address": "Click to add",
-              "Permanent Address": "Same as Current",
+              "Current Address": teacherData?['current_address'] ?? "",
+              "Permanent Address": teacherData?['permanent_address'] ?? "",
             },
           ),
           const SizedBox(height: 16),
-          Card(
-            elevation: 3,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Family Members", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.person_add),
-                    label: const Text("Add Family Member"),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildSectionHeader("Family Members"),
+          ...family.map((fam) => _buildDetailCard(
+            title: fam['family_name'] ?? "Family Member",
+            items: {
+              "Relation": fam['relation'] ?? "",
+              "Contact": fam['family_contact'] ?? "",
+            },
+          )),
         ],
       ),
     );
   }
-
-  Widget _buildDocumentsTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.cloud_upload, size: 80, color: Colors.grey),
-          const SizedBox(height: 20),
-          const Text("Upload Documents", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.attach_file),
-            label: const Text("Select Files"),
-            onPressed: () {},
+   Widget _buildDocumentsTab() {
+    final documents = teacherData?['documents'] as List<dynamic>? ?? [];
+    if (documents.isEmpty) {
+      return const Center(child: Text("No documents uploaded."));
+    }
+    return ListView.builder(
+      itemCount: documents.length,
+      itemBuilder: (context, index) {
+        final doc = documents[index];
+        return ListTile(
+          leading: const Icon(Icons.insert_drive_file, color: Colors.blue),
+          title: Text(doc['document_path'] ?? "Document"),
+          trailing: IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () {
+              // TODO: implement file download
+            },
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildActionBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), spreadRadius: 2, blurRadius: 5, offset: const Offset(0, -2))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              IconButton(icon: const Icon(Icons.favorite_border, color: Colors.deepPurple), onPressed: () {}),
-              IconButton(icon: const Icon(Icons.share, color: Colors.deepPurple), onPressed: () {}),
-            ],
-          ),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: const Text("Edit Profile"),
-          ),
-        ],
-      ),
+      child: Text(title,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
     );
   }
 
 
   @override
-Widget build(BuildContext context) {
-  return Column(
-    children: [
-      // 🔲 Black top bar
-      Container(
-        height: 20,
-        width: double.infinity,
-        color: Colors.black,
-      ),
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (errorMsg != null) {
+      return Center(child: Text(errorMsg!));
+    }
 
-      // 🏗️ Rest of the UI
-      Expanded(
-        child: Scaffold(
-          backgroundColor: const Color(0xFF29ABE2), // updated sky blue
-          drawer: const MenuDrawer(),
-          appBar: TeacherAppBar(),
-             body: Column(
-            children: [
-              _buildHeaderWithProfile(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildBasicTab(),
-                    _buildResponsibilitiesTab(),
-                    _buildServiceTab(),
-                    _buildEducationTab(),
-                    _buildFamilyTab(),
-                    _buildDocumentsTab(),
-                  ],
+    return Column(
+      children: [
+       
+        Expanded(
+          child: Scaffold(
+            backgroundColor: const Color(0xFF29ABE2),
+            drawer: const MenuDrawer(),
+            appBar: TeacherAppBar(),
+            body: Column(
+              children: [
+                _buildHeaderWithProfile(),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildBasicTab(),
+                      _buildResponsibilitiesTab(),
+                      _buildServiceTab(),
+                      _buildEducationTab(),
+                      _buildFamilyTab(),
+                      _buildDocumentsTab(),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+           
           ),
-          bottomNavigationBar: _buildActionBar(),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 }

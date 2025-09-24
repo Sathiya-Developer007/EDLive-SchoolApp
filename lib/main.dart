@@ -156,10 +156,11 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const ToDoListPage());
           case '/classtime':
             return MaterialPageRoute(builder: (_) => const ClassTimePageView());
-          case '/profile':
-            return MaterialPageRoute(
-              builder: (_) => const TeacherProfilePage(),
-            );
+         case '/profile':
+  return MaterialPageRoute(
+    builder: (_) => TeacherProfilePage(staffId: 1), // replace with actual staffId
+  );
+
           case '/settings':
             return MaterialPageRoute(builder: (_) => const SettingsPage());
 

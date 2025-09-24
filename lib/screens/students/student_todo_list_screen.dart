@@ -151,7 +151,7 @@ Future<void> _markDashboardViewed(
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF87CEEB),
-      appBar: const StudentAppBar(),
+      appBar:  StudentAppBar(),
       drawer: const StudentMenuDrawer(),
       body: Column(
         children: [

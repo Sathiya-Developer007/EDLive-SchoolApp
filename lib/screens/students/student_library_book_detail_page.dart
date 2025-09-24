@@ -77,7 +77,7 @@ class _StudentBookDetailPageState extends State<StudentBookDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const StudentAppBar(),
+      appBar:  StudentAppBar(),
       drawer: StudentMenuDrawer(),
       body: Container(
        color: Color(0xFFACCFE2),

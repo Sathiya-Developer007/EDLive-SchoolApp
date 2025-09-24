@@ -51,7 +51,7 @@ Future<void> loadExams() async {
     return Scaffold(
       backgroundColor: const Color(0xFFFCDBB1),
       drawer: const StudentMenuDrawer(),
-      appBar: const StudentAppBar(),
+      appBar:  StudentAppBar(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

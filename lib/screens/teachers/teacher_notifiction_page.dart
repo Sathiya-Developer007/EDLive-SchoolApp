@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
-import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 
-import 'package:school_app/services/notification_service.dart';
-import 'package:school_app/models/notification_reply_model.dart';
+import 'package:school_app/services/teacher_notification_service.dart';
+import 'package:school_app/models/teacher_notification_reply_model.dart';
 
 // ----------------- MODEL -----------------
 class NotificationItem {
@@ -30,16 +28,16 @@ class NotificationItem {
     required this.type,
   });
 
-  factory NotificationItem.fromJson(Map<String, dynamic> json) {
-    return NotificationItem(
-      id: json['id'],
-      title: json['title'] ?? '',
-      subtitle: json['content'] ?? '',
-      moduleType: json['module_type'] ?? '',
-      dateTime: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
-      type: json['type'] ?? '',
-    );
-  }
+ factory NotificationItem.fromJson(Map<String, dynamic> json) {
+  return NotificationItem(
+    id: json['id'],
+    title: json['title'] ?? '',
+    subtitle: json['content'] ?? '',
+    moduleType: json['module_type'] ?? '',
+    dateTime: DateTime.tryParse(json['notification_date'] ?? json['timestamp'] ?? '') ?? DateTime.now(),
+    type: json['type'] ?? '',
+  );
+}
 }
 
 // ----------------- NOTIFICATION PAGE -----------------
@@ -56,11 +54,51 @@ class _NotificationPageState extends State<NotificationPage> {
   String? _error;
   DateTime _selectedDate = DateTime.now();
 
+  Set<int> _viewedIds = {};
+
+
   @override
   void initState() {
     super.initState();
     _fetchNotifications();
   }
+
+  Future<void> _markAsViewed(int id) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+
+    if (token == null) return;
+
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed";
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: json.encode({
+        "item_type": "notifications",
+        "item_id": id,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data["success"] == true) {
+        debugPrint("✅ Marked notification $id as viewed");
+      }
+    } else {
+      debugPrint(
+          "❌ Failed to mark viewed: ${response.statusCode} ${response.reasonPhrase}");
+    }
+  } catch (e) {
+    debugPrint("❌ Error marking notification viewed: $e");
+  }
+}
+
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -79,66 +117,81 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  Future<void> _fetchNotifications() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("auth_token");
+Future<void> _fetchNotifications() async {
+  try {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
-      if (token == null) {
-        setState(() {
-          _loading = false;
-          _error = "No token found, please login again.";
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+    if (token == null) {
+      setState(() {
+        _loading = false;
+        _error = "No token found, please login again.";
+      });
+      return;
+    }
+
+    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?date=$formattedDate";
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      if (data['success'] == true) {
+        final notificationsByDate = data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
+        List<NotificationItem> tempList = [];
+
+        // Flatten all dates into a single list
+        notificationsByDate.forEach((date, notifs) {
+          final List list = notifs as List;
+          tempList.addAll(list.map((e) => NotificationItem.fromJson(e)));
         });
-        return;
-      }
 
-      final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      final url =
-          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?date=$formattedDate";
+        // ✅ Sort notifications by timestamp descending
+        tempList.sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          final List list = data['notifications'] ?? [];
-          setState(() {
-            _notifications =
-                list.map((e) => NotificationItem.fromJson(e)).toList();
-            _loading = false;
-            _error = null;
-          });
-        } else {
-          setState(() {
-            _loading = false;
-            _error = "Failed to load notifications.";
-          });
-        }
+        setState(() {
+          _notifications = tempList;
+          _loading = false;
+          _error = null;
+        });
       } else {
         setState(() {
           _loading = false;
-          _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
+          _error = "Failed to load notifications.";
         });
       }
-    } catch (e) {
+    } else {
       setState(() {
         _loading = false;
-        _error = "Something went wrong: $e";
+        _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
       });
     }
+  } catch (e) {
+    setState(() {
+      _loading = false;
+      _error = "Something went wrong: $e";
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const TeacherAppBar(),
-      drawer: const MenuDrawer(),
+      appBar:  TeacherAppBar(),
+      drawer:  MenuDrawer(),
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -182,109 +235,110 @@ class _NotificationPageState extends State<NotificationPage> {
                               onRefresh: _fetchNotifications,
                               child: ListView.builder(
                                 itemCount: _notifications.length,
-                                itemBuilder: (context, index) {
-                                  final item = _notifications[index];
-                                  return Container(
-                                    margin: const EdgeInsets.only(bottom: 16),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Colors.black12,
-                                          blurRadius: 6,
-                                          offset: Offset(0, 3),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Container(
-                                        //   padding: const EdgeInsets.all(10),
-                                        //   decoration: const BoxDecoration(
-                                        //     color: Color(0xFF2E3192),
-                                        //   ),
-                                        //   child: SvgPicture.asset(
-                                        //     'assets/icons/message.svg',
-                                        //     height: 20,
-                                        //     width: 20,
-                                        //     color: Colors.white,
-                                        //   ),
-                                        // ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      item.type,
-                                                      style: const TextStyle(
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 16,
-                                                        color: Color(0xFF2E3192),
-                                                      ),
-                                                      overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    item.moduleType,
-                                                    style: const TextStyle(
-                                                      fontSize: 13,
-                                                      color: Colors.black54,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
-                                                style: const TextStyle(fontSize: 12, color: Colors.black54),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Text(
-                                                item.title,
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                item.subtitle,
-                                                style: const TextStyle(fontSize: 13, color: Colors.grey),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Align(
-                                                alignment: Alignment.centerRight,
-                                                child: TextButton.icon(
-                                                  onPressed: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => NotificationDetailPage(item: item),
-                                                      ),
-                                                    );
-                                                  },
-                                                  icon: const Icon(Icons.reply, color: Color(0xFF2E3192)),
-                                                  label: const Text(
-                                                    "Reply",
-                                                    style: TextStyle(color: Color(0xFF2E3192)),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
+                              itemBuilder: (context, index) {
+  final item = _notifications[index];
+
+  // ✅ Mark as viewed if not already marked
+  if (!_viewedIds.contains(item.id)) {
+    _viewedIds.add(item.id);
+    _markAsViewed(item.id);
+  }
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.type,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF2E3192),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    item.moduleType,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                item.title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.subtitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => NotificationDetailPage(item: item),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.reply, color: Color(0xFF2E3192)),
+                  label: const Text(
+                    "Reply",
+                    style: TextStyle(color: Color(0xFF2E3192)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+},
+  ),
                             ),
             ),
           ],
