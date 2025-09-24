@@ -38,12 +38,83 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
     _fetchMenu();
   }
 
+Future<void> _submitFoodForSelectedDate() async {
+  if (!_isAnySelected) return; // nothing selected
+
+  setState(() => _loading = true);
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token") ?? "";
+    final studentId = prefs.getInt("student_id") ?? 0;
+
+    final formattedDate =
+        "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+
+    final weekdayIndex = _selectedDate.weekday - 1; // 0 = Monday
+    final dayMenu = _weeklyMenu?["$weekdayIndex"];
+
+    // Safely get menu IDs
+    int breakfastId = (_foodSelections["Breakfast"]! && dayMenu?["breakfast"] != null)
+        ? dayMenu!["breakfast"]["items"][0]["id"]
+        : 0;
+    int lunchId = (_foodSelections["Lunch"]! && dayMenu?["lunch"] != null)
+        ? dayMenu!["lunch"]["items"][0]["id"]
+        : 0;
+    int snacksId = (_foodSelections["Snacks"]! && dayMenu?["snacks"] != null)
+        ? dayMenu!["snacks"]["items"][0]["id"]
+        : 0;
+
+    final body = {
+      "student_id": studentId,
+      "date": formattedDate,
+      "breakfast_menu_id": breakfastId,
+      "lunch_menu_id": lunchId,
+      "snacks_menu_id": snacksId,
+    };
+
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/food/schedule";
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        "accept": "application/json",
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Food schedule confirmed!")),
+      );
+      print("Schedule saved: $data");
+    } else {
+      print("Error ${response.statusCode}: ${response.body}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to confirm food: ${response.statusCode}")),
+      );
+    }
+  } catch (e) {
+    print("Submit API Error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error submitting food selection")),
+    );
+  } finally {
+    setState(() => _loading = false);
+  }
+}
+
+
   Future<void> _fetchMenu() async {
     setState(() => _loading = true);
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token") ?? "";
+      final token = prefs.getString("auth_token") ?? "";
 
       final formattedDate =
           "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
@@ -181,6 +252,14 @@ else {
               itemBuilder: (context, index) {
                 final dayMenu = _weeklyMenu?["$index"];
                 if (dayMenu == null) return const SizedBox();
+                if (dayMenu == null) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("No menu defined for this date")),
+  );
+  setState(() => _loading = false);
+  // return;
+}
+
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,24 +305,15 @@ if (dayMenu["snacks"] != null)
             width: double.infinity,
             margin: const EdgeInsets.all(16),
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _isAnySelected ? Colors.blue : const Color(0xFFCCCCCC),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              onPressed: _isAnySelected
-                  ? () {
-                      // TODO: Implement pay API call
-                    }
-                  : null,
-              child: const Text("Pay & Confirm",
-                  style: TextStyle(color: Colors.white, fontSize: 16)),
-            ),
-          ),
+  onPressed: _isAnySelected ? _submitFoodForSelectedDate : null,
+  style: ElevatedButton.styleFrom(
+    backgroundColor: _isAnySelected ? Colors.blue : const Color(0xFFCCCCCC),
+    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+  ),
+  child: const Text("Pay & Confirm", style: TextStyle(color: Colors.white, fontSize: 16)),
+)
+    ),
         ],
       ),
     );
@@ -358,7 +428,7 @@ class FoodTile extends StatelessWidget {
   final bool checked;
   final ValueChanged<bool> onChanged;
 
-  FoodTile({ // <- NOT const
+  const FoodTile({ // <- NOT const
     super.key,
     required this.keyName,
     required this.title,
