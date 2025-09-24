@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
-import '/models/special_care_model.dart';
-import '/services/special_care_service.dart';
-import '/models/special_care_item.dart';
-import '/services/special_care_item_service.dart';
+import '../../models/teacher_special_care_model.dart';
+import '../../services/teacher_special_care_service.dart';
+import '../../models/teacher_special_care_item.dart';
+import '../../services/teacher_special_care_item_service.dart';
 
 
 import '/models/teacher_class_student.dart';

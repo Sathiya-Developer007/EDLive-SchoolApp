@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:school_app/screens/teachers/teacher_notifiction_page.dart';
+
 
 class TeacherAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onMenuPressed;
@@ -19,12 +21,7 @@ class TeacherAppBar extends StatelessWidget implements PreferredSizeWidget {
         height: 63,
         child: Column(
           children: [
-            // 🔲 Top black bar
-            // Container(
-            //   height: 30,
-            //   width: double.infinity,
-            //   color: Colors.black,
-            // ),
+            
             // ⬜ Main AppBar content
             Expanded(
               child: AppBar(
@@ -38,43 +35,55 @@ class TeacherAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ),
                 title: Row(
-                  children: [
-                    const Text(
-                      'Ed',
-                      style: TextStyle(
-                        color: Colors.indigo,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
-                    ),
-                    const Text(
-                      'Live',
-                      style: TextStyle(
-                        color: Colors.lightBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
-                    ),
-                    const Spacer(),
-                    SvgPicture.asset(
-                      'assets/icons/notification.svg',
-                      height: 24,
-                      width: 24,
-                      color: Colors.black,
-                    ),
-                    const SizedBox(width: 16),
-                    GestureDetector(
-                      onTap: onProfileTap ?? () {
-                        Navigator.pushNamed(context, '/profile');
-                      },
-                      child: const CircleAvatar(
-                        backgroundColor: Colors.grey,
-                        child: Icon(Icons.person, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+  children: [
+    const Text(
+      'Ed',
+      style: TextStyle(
+        color: Colors.indigo,
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+    ),
+    const Text(
+      'Live',
+      style: TextStyle(
+        color: Colors.lightBlue,
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+    ),
+    const Spacer(),
+
+    // ✅ Notification icon with navigation
+    GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => NotificationPage()),
+        );
+      },
+      child: SvgPicture.asset(
+        'assets/icons/notification.svg',
+        height: 24,
+        width: 24,
+        color: Colors.black,
+      ),
+    ),
+
+    const SizedBox(width: 16),
+
+    GestureDetector(
+      onTap: onProfileTap ?? () {
+        Navigator.pushNamed(context, '/profile');
+      },
+      child: const CircleAvatar(
+        backgroundColor: Colors.grey,
+        child: Icon(Icons.person, color: Colors.white),
+      ),
+    ),
+  ],
+),
+  ),
             ),
           ],
         ),

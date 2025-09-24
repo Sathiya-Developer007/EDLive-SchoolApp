@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '/models/special_care_item.dart';
+import '../models/teacher_special_care_item.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SpecialCareItemService {

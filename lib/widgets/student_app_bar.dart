@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_app/screens/students/student_profile_page.dart';
+import 'package:school_app/screens/students/student_notifiction_page.dart';
 
 // ---------------- SERVICE ----------------
 class StudentService {
@@ -63,48 +64,66 @@ class StudentAppBar extends StatelessWidget implements PreferredSizeWidget {
                     onMenuPressed ?? () => Scaffold.of(context).openDrawer(),
               ),
             ),
-            title: Row(
-              children: [
-                const Text('Ed',
-                    style: TextStyle(
-                        color: Colors.indigo,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24)),
-                const Text('Live',
-                    style: TextStyle(
-                        color: Colors.lightBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24)),
-                const Spacer(),
-                SvgPicture.asset('assets/icons/notification.svg',
-                    height: 24, width: 24, color: Colors.black),
-                const SizedBox(width: 16),
-                GestureDetector(
-                  onTap: onProfileTap ??
-                      () {
-                        if (studentId == null) return;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                StudentProfilePage(studentId: studentId),
-                          ),
-                        );
-                      },
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: const Color(0xFF2E99EF),
-                    backgroundImage: profileImgUrl != null && profileImgUrl != ''
-                        ? NetworkImage(profileImgUrl)
-                        : null,
-                    child: profileImgUrl == null || profileImgUrl == ''
-                        ? const Icon(Icons.person, color: Colors.white, size: 20)
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          );
+          title: Row(
+  children: [
+    const Text('Ed',
+        style: TextStyle(
+            color: Colors.indigo,
+            fontWeight: FontWeight.bold,
+            fontSize: 24)),
+    const Text('Live',
+        style: TextStyle(
+            color: Colors.lightBlue,
+            fontWeight: FontWeight.bold,
+            fontSize: 24)),
+    const Spacer(),
+
+    // 🔹 Notification icon navigates to StudentNotificationPage
+    GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const StudentNotificationPage(),
+          ),
+        );
+      },
+      child: SvgPicture.asset(
+        'assets/icons/notification.svg',
+        height: 24,
+        width: 24,
+        color: Colors.black,
+      ),
+    ),
+
+    const SizedBox(width: 16),
+
+    // 🔹 Profile avatar
+    GestureDetector(
+      onTap: onProfileTap ??
+          () {
+            if (studentId == null) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => StudentProfilePage(studentId: studentId),
+              ),
+            );
+          },
+      child: CircleAvatar(
+        radius: 18,
+        backgroundColor: const Color(0xFF2E99EF),
+        backgroundImage: profileImgUrl != null && profileImgUrl != ''
+            ? NetworkImage(profileImgUrl)
+            : null,
+        child: profileImgUrl == null || profileImgUrl == ''
+            ? const Icon(Icons.person, color: Colors.white, size: 20)
+            : null,
+      ),
+    ),
+  ],
+),
+  );
         },
       ),
     );
