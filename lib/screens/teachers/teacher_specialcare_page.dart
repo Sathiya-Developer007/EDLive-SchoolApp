@@ -8,12 +8,8 @@ import '../../models/teacher_special_care_model.dart';
 import '../../services/teacher_special_care_service.dart';
 import '../../models/teacher_special_care_item.dart';
 import '../../services/teacher_special_care_item_service.dart';
-
-
 import '/models/teacher_class_student.dart';
 import 'package:school_app/services/teacher_class_student_list.dart';
-
-
 
 /// ---------------- SpecialCarePage ----------------
 class SpecialCarePage extends StatefulWidget {
@@ -179,7 +175,7 @@ class _SpecialCarePageState extends State<SpecialCarePage> {
   }
 }
 
-/// ---------------- Generic Detail Page (Same as AcademicSupportPage) ----------------
+/// ---------------- Category Detail Page ----------------
 class CategoryDetailPage extends StatefulWidget {
   final SpecialCareCategory category;
   const CategoryDetailPage({super.key, required this.category});
@@ -193,9 +189,9 @@ class _CategoryDetailPageState extends State<CategoryDetailPage> {
   final SpecialCareItemService _service = SpecialCareItemService();
 
   List<Student> allStudents = [];
-  Student? selectedStudent;
+  List<Student> selectedStudents = [];
+  bool isLoadingStudents = true;
 
-  // Maps to store selected days and times per subject
   Map<String, List<String>> _selectedDays = {};
   Map<String, TimeOfDay> _startTimes = {};
   Map<String, TimeOfDay> _endTimes = {};
@@ -204,7 +200,7 @@ class _CategoryDetailPageState extends State<CategoryDetailPage> {
   void initState() {
     super.initState();
     _loadStudents();
-    // Initialize default times
+
     for (var subject in ['Math', 'Science', 'English']) {
       _startTimes[subject] = const TimeOfDay(hour: 16, minute: 0);
       _endTimes[subject] = const TimeOfDay(hour: 17, minute: 0);
@@ -220,39 +216,94 @@ class _CategoryDetailPageState extends State<CategoryDetailPage> {
       if (!mounted) return;
       setState(() {
         allStudents = students;
-        selectedStudent = allStudents.isNotEmpty ? allStudents[0] : null;
+        isLoadingStudents = false;
       });
     } catch (e) {
+      setState(() => isLoadingStudents = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to load students: $e")),
       );
     }
   }
 
+  void _showMultiSelectStudents() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.all(12),
+          child: ListView(
+            children: allStudents.map((student) {
+              final isSelected = selectedStudents.contains(student);
+              return CheckboxListTile(
+                title: Text(student.studentName),
+                value: isSelected,
+                onChanged: (bool? selected) {
+                  setState(() {
+                    if (selected == true) {
+                      selectedStudents.add(student);
+                    } else {
+                      selectedStudents.remove(student);
+                    }
+                  });
+                  Navigator.pop(context);
+                  _showMultiSelectStudents(); // reopen modal to reflect changes
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _submitSpecialCare() async {
-    if (selectedStudent == null) {
+    if (selectedStudents.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a student.")),
+        const SnackBar(content: Text("Please select at least one student.")),
       );
       return;
     }
 
     try {
-      // Build days and time info from interactive table
-      final daysMap = _selectedDays.map((k, v) => MapEntry(k, v));
-      final timesMap = _startTimes.map((subject, start) {
+      final daysList = _selectedDays.values.expand((e) => e).toList();
+      final timeString = _startTimes.keys.map((subject) {
+        final start = _startTimes[subject]!;
         final end = _endTimes[subject]!;
-        return MapEntry(subject, "${start.format(context)} - ${end.format(context)}");
-      });
+        return "${start.format(context)} - ${end.format(context)}";
+      }).join(", ");
+
+      String careType;
+      switch (widget.category.name.trim()) {
+        case "Academic Support":
+          careType = "academic";
+          break;
+        case "Emotional & Mental Wellbeing":
+          careType = "emotional";
+          break;
+        case "Health & Safety":
+          careType = "health";
+          break;
+        case "Inclusive Learning":
+          careType = "inclusive";
+          break;
+        default:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Invalid category: ${widget.category.name}")),
+          );
+          return;
+      }
 
       final item = SpecialCareItem(
-        studentId: selectedStudent!.id,
+        studentIds: selectedStudents.map((s) => s.id).toList(),
         categoryId: widget.category.id,
         title: widget.category.name,
-        description: notesController.text.isEmpty ? "No description" : notesController.text,
-        careType: widget.category.name.toLowerCase(),
-        days: daysMap.values.expand((e) => e).toList(),
-        time: timesMap.values.join(", "),
+        description: notesController.text.isEmpty
+            ? "No description"
+            : notesController.text,
+        careType: careType,
+        days: daysList,
+        time: timeString,
         materials: ["workbook.pdf"],
         tools: ["calculator"],
         assignedTo: 5,
@@ -263,8 +314,8 @@ class _CategoryDetailPageState extends State<CategoryDetailPage> {
       );
 
       final createdItem = await _service.createSpecialCareItem(item);
-
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Created: ${createdItem.title}")),
       );
@@ -319,164 +370,158 @@ class _CategoryDetailPageState extends State<CategoryDetailPage> {
               child: SingleChildScrollView(
                 child: Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Student dropdown
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // 🔽 Dynamic Student Dropdown
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Select Student', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(4),
-                              color: Colors.white,
-                            ),
-                            child: DropdownButton<Student>(
-                              value: selectedStudent,
-                              isExpanded: true,
-                              underline: const SizedBox(),
-                              icon: const Icon(Icons.arrow_drop_down),
-                              items: allStudents.map((student) => DropdownMenuItem<Student>(
-                                    value: student,
-                                    child: Text(student.studentName),
-                                  )).toList(),
-                              onChanged: (Student? newValue) {
-                                setState(() {
-                                  selectedStudent = newValue;
-                                });
-                              },
-                            ),
+                          const Text("Student Name", style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 20),
+                          SizedBox(
+                            width: 200,
+                            child: isLoadingStudents
+                                ? const Center(child: CircularProgressIndicator())
+                                : GestureDetector(
+                                    onTap: _showMultiSelectStudents,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        border: Border.all(color: Colors.grey.shade400),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        selectedStudents.isEmpty
+                                            ? "Select Students"
+                                            : selectedStudents
+                                                .map((s) => s.studentName)
+                                                .join(", "),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 24),
 
-                     const SizedBox(height: 24),
-// Section title
-const Text(
-  'Remedial Class Timetable',
-  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)),
-),
-const SizedBox(height: 16),
-Column(
-  children: ['Math', 'Science', 'English'].map((subject) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Subject title
-            Text(subject,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-
-            // Days selection (scrollable if needed)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day) {
-                  final isSelected = _selectedDays[subject]?.contains(day) ?? false;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      label: Text(day, style: const TextStyle(fontSize: 12)),
-                      selected: isSelected,
-                      selectedColor: Colors.blue.shade100,
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedDays[subject] ??= [];
-                            _selectedDays[subject]!.add(day);
-                          } else {
-                            _selectedDays[subject]?.remove(day);
-                          }
-                        });
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: Colors.grey),
-
-            // Time selection
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.schedule, size: 16, color: Colors.grey),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: context,
-                      initialTime: _startTimes[subject]!,
-                    );
-                    if (picked != null) setState(() => _startTimes[subject] = picked);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _startTimes[subject]?.format(context) ?? 'Start',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text('-', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: context,
-                      initialTime: _endTimes[subject]!,
-                    );
-                    if (picked != null) setState(() => _endTimes[subject] = picked);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _endTimes[subject]?.format(context) ?? 'End',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }).toList(),
-),
-
+                      // Remedial Class Timetable
+                      const Text(
+                        'Remedial Class Timetable',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)),
+                      ),
+                      const SizedBox(height: 16),
+                      Column(
+                        children: ['Math', 'Science', 'English'].map((subject) {
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 10),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day) {
+                                        final isSelected = _selectedDays[subject]?.contains(day) ?? false;
+                                        return Padding(
+                                          padding: const EdgeInsets.only(right: 6),
+                                          child: ChoiceChip(
+                                            label: Text(day, style: const TextStyle(fontSize: 12)),
+                                            selected: isSelected,
+                                            selectedColor: Colors.blue.shade100,
+                                            onSelected: (selected) {
+                                              setState(() {
+                                                if (selected) {
+                                                  _selectedDays[subject] ??= [];
+                                                  _selectedDays[subject]!.add(day);
+                                                } else {
+                                                  _selectedDays[subject]?.remove(day);
+                                                }
+                                              });
+                                            },
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Divider(height: 1, color: Colors.grey),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.schedule, size: 16, color: Colors.grey),
+                                      const SizedBox(width: 6),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          final picked = await showTimePicker(
+                                            context: context,
+                                            initialTime: _startTimes[subject]!,
+                                          );
+                                          if (picked != null) setState(() => _startTimes[subject] = picked);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade200,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            _startTimes[subject]?.format(context) ?? 'Start',
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text('-', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          final picked = await showTimePicker(
+                                            context: context,
+                                            initialTime: _endTimes[subject]!,
+                                          );
+                                          if (picked != null) setState(() => _endTimes[subject] = picked);
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade200,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            _endTimes[subject]?.format(context) ?? 'End',
+                                            style: const TextStyle(fontSize: 12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
 
                       const SizedBox(height: 24),
-                      // Homework section
                       Row(
                         children: [
                           const Text('Upload Files:', style: TextStyle(fontSize: 16)),
                           const SizedBox(width: 16),
                           ElevatedButton(
-                            onPressed: () {
-                              // TODO: handle file upload
-                            },
+                            onPressed: () {},
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: Colors.black,
@@ -506,7 +551,6 @@ Column(
                           decoration: const InputDecoration(border: InputBorder.none, hintText: 'Enter notes here'),
                         ),
                       ),
-
                       const SizedBox(height: 24),
                       Center(
                         child: ElevatedButton(

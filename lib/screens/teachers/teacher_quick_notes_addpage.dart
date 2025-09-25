@@ -52,56 +52,56 @@ class _AddQuickNotePageState extends State<AddQuickNotePage> {
     }
   }
 
-void _showMultiSelectStudents() {
-  // temporary copy
-  List<QuickNoteStudent> tempSelected = List.from(selectedStudents);
+  void _showMultiSelectStudents() {
+    // temporary copy
+    List<QuickNoteStudent> tempSelected = List.from(selectedStudents);
 
-  showDialog(
-    context: context,
-    builder: (ctx) {
-      return StatefulBuilder(
-        builder: (ctx, setStateDialog) {
-          return AlertDialog(
-            title: const Text("Select Students"),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView(
-                children: students.map((stu) {
-                  final isSelected = tempSelected.contains(stu);
-                  return CheckboxListTile(
-                    value: isSelected,
-                    title: Text(stu.fullName),
-                    onChanged: (bool? checked) {
-                      setStateDialog(() {
-                        if (checked == true) {
-                          tempSelected.add(stu);
-                        } else {
-                          tempSelected.remove(stu);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              title: const Text("Select Students"),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  children: students.map((stu) {
+                    final isSelected = tempSelected.contains(stu);
+                    return CheckboxListTile(
+                      value: isSelected,
+                      title: Text(stu.fullName),
+                      onChanged: (bool? checked) {
+                        setStateDialog(() {
+                          if (checked == true) {
+                            tempSelected.add(stu);
+                          } else {
+                            tempSelected.remove(stu);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  // ✅ update parent state when Done pressed
-                  setState(() {
-                    selectedStudents = tempSelected;
-                  });
-                  Navigator.pop(ctx);
-                },
-                child: const Text("Done"),
-              )
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    // ✅ update parent state when Done pressed
+                    setState(() {
+                      selectedStudents = tempSelected;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text("Done"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,8 +117,10 @@ void _showMultiSelectStudents() {
             children: [
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: const Text("< Back",
-                    style: TextStyle(fontSize: 14, color: Colors.black)),
+                child: const Text(
+                  "< Back",
+                  style: TextStyle(fontSize: 14, color: Colors.black),
+                ),
               ),
               const SizedBox(height: 6),
 
@@ -165,94 +167,122 @@ void _showMultiSelectStudents() {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text("Class",
-                                      style: TextStyle(fontSize: 14)),
+                                  const Text(
+                                    "Class",
+                                    style: TextStyle(fontSize: 14),
+                                  ),
                                   const SizedBox(width: 20),
                                   SizedBox(
                                     width: 200,
                                     child: FutureBuilder<List<QuickNoteClass>>(
-  future: futureClasses,
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const Center(child: CircularProgressIndicator());
-    } else if (snapshot.hasError) {
-      return Text("Error: ${snapshot.error}");
-    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-      return const Text("No classes found");
-    } else {
-      final classes = snapshot.data!;
+                                      future: futureClasses,
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return const Center(
+                                            child: CircularProgressIndicator(),
+                                          );
+                                        } else if (snapshot.hasError) {
+                                          return Text(
+                                            "Error: ${snapshot.error}",
+                                          );
+                                        } else if (!snapshot.hasData ||
+                                            snapshot.data!.isEmpty) {
+                                          return const Text("No classes found");
+                                        } else {
+                                          final classes = snapshot.data!;
 
-      // ✅ Don't call setState inside build
-      if (selectedClass == null) {
-        // Instead of setState, just assign directly
-        selectedClass = classes.first;
+                                          // ✅ Don't call setState inside build
+                                          if (selectedClass == null) {
+                                            // Instead of setState, just assign directly
+                                            selectedClass = classes.first;
 
-        // Trigger async load AFTER build is done
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _loadStudents(selectedClass!.classId);
-        });
-      }
+                                            // Trigger async load AFTER build is done
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  _loadStudents(
+                                                    selectedClass!.classId,
+                                                  );
+                                                });
+                                          }
 
-      return DropdownButton<QuickNoteClass>(
-        value: selectedClass,
-        isExpanded: true,
-        underline: const SizedBox(),
-        items: classes.map((cls) {
-          return DropdownMenuItem(
-            value: cls,
-            child: Text(cls.className),
-          );
-        }).toList(),
-        onChanged: (val) {
-          if (val != null) {
-            setState(() {
-              selectedClass = val;
-            });
-            _loadStudents(val.classId);
-          }
-        },
-      );
-    }
-  },
-),
-  ),
+                                          return DropdownButton<QuickNoteClass>(
+                                            value: selectedClass,
+                                            isExpanded: true,
+                                            underline: const SizedBox(),
+                                            items: classes.map((cls) {
+                                              return DropdownMenuItem(
+                                                value: cls,
+                                                child: Text(cls.className),
+                                              );
+                                            }).toList(),
+                                            onChanged: (val) {
+                                              if (val != null) {
+                                                setState(() {
+                                                  selectedClass = val;
+                                                });
+                                                _loadStudents(val.classId);
+                                              }
+                                            },
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 16),
 
                               // 🔽 Dynamic Student Dropdown
-                          Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    const Text("Student Name", style: TextStyle(fontSize: 14)),
-    const SizedBox(width: 20),
-    SizedBox(
-      width: 200,
-      child: isLoadingStudents
-          ? const Center(child: CircularProgressIndicator())
-          : GestureDetector(
-              onTap: _showMultiSelectStudents, // ✅ multiple select
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-  selectedStudents.isEmpty
-      ? "Select Students"
-      : selectedStudents.map((s) => s.fullName).join(", "),
-  maxLines: 2,
-  overflow: TextOverflow.ellipsis,
-),
-
-              ),
-            ),
-    ),
-  ],
-),
-  const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    "Student Name",
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  SizedBox(
+                                    width: 200,
+                                    child: isLoadingStudents
+                                        ? const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        : GestureDetector(
+                                            onTap:
+                                                _showMultiSelectStudents, // ✅ multiple select
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 10,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                border: Border.all(
+                                                  color: Colors.grey.shade400,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                selectedStudents.isEmpty
+                                                    ? "Select Students"
+                                                    : selectedStudents
+                                                          .map(
+                                                            (s) => s.fullName,
+                                                          )
+                                                          .join(", "),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
 
                               // Notes, Desc, Links
                               TextField(
@@ -286,47 +316,56 @@ void _showMultiSelectStudents() {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Center(
-                                child: Text("Remove",
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600)),
+                                child: Text(
+                                  "Remove",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                           onTap: () async {
-  try {
-    final service = QuickNoteService();
+                              onTap: () async {
+                                try {
+                                  final service = QuickNoteService();
 
-    final note = await service.createQuickNote(
-      title: noteController.text.trim(),
-      description: descController.text.trim(),
-      webLinks: linkController.text.isNotEmpty
-          ? [linkController.text.trim()]
-          : [],
-      studentIds: selectedStudents.map((s) => s.id).toList(), // ✅ multiple
-      classId: selectedClass!.classId,
-    );
+                                  final note = await service.createQuickNote(
+                                    title: noteController.text.trim(),
+                                    description: descController.text.trim(),
+                                    webLinks: linkController.text.isNotEmpty
+                                        ? [linkController.text.trim()]
+                                        : [],
+                                    studentIds: selectedStudents
+                                        .map((s) => s.id)
+                                        .toList(), // ✅ multiple
+                                    classId: selectedClass!.classId,
+                                  );
 
-    debugPrint("✅ Quick Note Created: $note");
+                                  debugPrint("✅ Quick Note Created: $note");
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Quick note added successfully!")),
-      );
-      Navigator.pop(context);
-    }
-  } catch (e) {
-    debugPrint("❌ Error adding quick note: $e");
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
-  }
-},
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Quick note added successfully!",
+                                        ),
+                                      ),
+                                    );
+                                    Navigator.pop(context);
+                                  }
+                                } catch (e) {
+                                  debugPrint("❌ Error adding quick note: $e");
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("Error: $e")),
+                                    );
+                                  }
+                                }
+                              },
 
                               child: Container(
                                 height: 44,
@@ -335,10 +374,13 @@ void _showMultiSelectStudents() {
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Center(
-                                  child: Text("Add",
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600)),
+                                  child: Text(
+                                    "Add",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -348,7 +390,7 @@ void _showMultiSelectStudents() {
                     ],
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -361,8 +403,7 @@ void _showMultiSelectStudents() {
       hintText: label,
       filled: true,
       fillColor: const Color(0xFFF5F5F5),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
         borderSide: BorderSide.none,

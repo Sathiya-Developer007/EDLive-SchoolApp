@@ -1,7 +1,6 @@
 class SpecialCareItem {
-  final int? id;
-  final int studentId;
-  final int categoryId;
+  final List<int> studentIds;
+  final int categoryId;   // <-- NEW
   final String title;
   final String description;
   final String careType;
@@ -16,9 +15,8 @@ class SpecialCareItem {
   final String visibility;
 
   SpecialCareItem({
-    this.id,
-    required this.studentId,
-    required this.categoryId,
+    required this.studentIds,
+    required this.categoryId,   // <-- NEW
     required this.title,
     required this.description,
     required this.careType,
@@ -35,8 +33,8 @@ class SpecialCareItem {
 
   Map<String, dynamic> toJson() {
     return {
-      "studentId": studentId,
-      "categoryId": categoryId,
+      "studentIds": studentIds,
+      "categoryId": categoryId,   // <-- NEW
       "title": title,
       "description": description,
       "careType": careType,
@@ -58,20 +56,19 @@ class SpecialCareItem {
 
   factory SpecialCareItem.fromJson(Map<String, dynamic> json) {
     return SpecialCareItem(
-      id: json["id"],
-      studentId: json["student_id"],
-      categoryId: json["category_id"],
+      studentIds: List<int>.from(json["studentIds"] ?? []),
+      categoryId: json["categoryId"],   // <-- NEW
       title: json["title"],
       description: json["description"],
-      careType: json["care_type"],
-      days: List<String>.from(json["schedule_details"]["days"]),
-      time: json["schedule_details"]["time"],
+      careType: json["careType"],
+      days: List<String>.from(json["scheduleDetails"]["days"]),
+      time: json["scheduleDetails"]["time"],
       materials: List<String>.from(json["resources"]["materials"]),
       tools: List<String>.from(json["resources"]["tools"]),
-      assignedTo: json["assigned_to"],
+      assignedTo: json["assignedTo"],
       status: json["status"],
-      startDate: json["start_date"],
-      endDate: json["end_date"],
+      startDate: json["startDate"],
+      endDate: json["endDate"],
       visibility: json["visibility"],
     );
   }
