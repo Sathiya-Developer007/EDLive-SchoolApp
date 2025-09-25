@@ -21,6 +21,7 @@ class _StudentToDoListPageState extends State<StudentToDoListPage> {
   bool _isLoading = true;
   Map<int, String> _classDisplayNames = {};
   List<Map<String, dynamic>> _classList = [];
+  Map<String, dynamic>? _selectedTask; // 🔹 selected task for detail view
 
   @override
   void initState() {
@@ -29,90 +30,63 @@ class _StudentToDoListPageState extends State<StudentToDoListPage> {
     _fetchClassList();
   }
 
-  /// ✅ Fetch student tasks
-/// ✅ Fetch student tasks
-Future<void> _fetchTasks() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    final studentId = prefs.getInt('student_id'); // saved during login
+  Future<void> _fetchTasks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final studentId = prefs.getInt('student_id');
 
-    if (token == null || studentId == null) {
-      print("⚠️ Missing token or studentId");
-      return;
-    }
+      if (token == null || studentId == null) return;
 
-    final url = Uri.parse(
-      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student/$studentId',
-    );
+      final url = Uri.parse(
+          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student/$studentId');
 
-    final response = await http.get(
-      url,
-      headers: {
+      final response = await http.get(url, headers: {
         "Authorization": "Bearer $token",
         "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-
-      setState(() {
-        _tasks = List<Map<String, dynamic>>.from(data);
-        _isLoading = false;
       });
 
-      // ✅ Mark dashboard as viewed for each todo item
-      for (var task in _tasks) {
-        if (task['id'] != null) {
-          await _markDashboardViewed(studentId, token, task['id']);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          _tasks = List<Map<String, dynamic>>.from(data);
+          _isLoading = false;
+        });
+
+        for (var task in _tasks) {
+          if (task['id'] != null) {
+            await _markDashboardViewed(studentId, token, task['id']);
+          }
         }
+      } else {
+        setState(() => _isLoading = false);
       }
-    } else {
-      print("❌ Failed to fetch todos: ${response.statusCode}");
+    } catch (e) {
       setState(() => _isLoading = false);
     }
-  } catch (e) {
-    print("❌ Error fetching todos: $e");
-    setState(() => _isLoading = false);
   }
-}
 
-/// ✅ Mark dashboard item as viewed
-Future<void> _markDashboardViewed(
-    int studentId, String token, int todoId) async {
-  try {
-    final url = Uri.parse(
-      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed?studentId=$studentId',
-    );
+  Future<void> _markDashboardViewed(
+      int studentId, String token, int todoId) async {
+    try {
+      final url = Uri.parse(
+          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed?studentId=$studentId');
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "item_type": "todo",
-        "item_id": todoId,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      print("✅ Todo $todoId marked as viewed");
-    } else {
-      print("❌ Failed to mark todo $todoId viewed: ${response.statusCode}");
-    }
-  } catch (e) {
-    print("❌ Error marking todo $todoId viewed: $e");
+      await http.post(url,
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({
+            "item_type": "todo",
+            "item_id": todoId,
+          }));
+    } catch (_) {}
   }
-}
 
-  /// ✅ Fetch class list
   Future<void> _fetchClassList() async {
     final url = Uri.parse(
-      'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes',
-    );
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/master/classes');
 
     try {
       final response = await http.get(url);
@@ -134,9 +108,7 @@ Future<void> _markDashboardViewed(
           };
         });
       }
-    } catch (e) {
-      print('Error fetching classes: $e');
-    }
+    } catch (_) {}
   }
 
   String _formatDisplayDate(String dateString) {
@@ -151,14 +123,21 @@ Future<void> _markDashboardViewed(
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF87CEEB),
-      appBar:  StudentAppBar(),
+      appBar: StudentAppBar(),
       drawer: const StudentMenuDrawer(),
       body: Column(
         children: [
+          // 🔙 Back
           Padding(
             padding: const EdgeInsets.only(left: 16, top: 10),
             child: GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                if (_selectedTask != null) {
+                  setState(() => _selectedTask = null);
+                } else {
+                  Navigator.pop(context);
+                }
+              },
               child: Row(
                 children: [
                   SvgPicture.asset(
@@ -175,6 +154,8 @@ Future<void> _markDashboardViewed(
               ),
             ),
           ),
+
+          // 📘 Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Row(
@@ -192,74 +173,132 @@ Future<void> _markDashboardViewed(
               ],
             ),
           ),
+
+          // 🔹 List or Detail
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _tasks.isEmpty
                     ? const Center(child: Text('No tasks found.'))
-                    : ListView.builder(
-                        itemCount: _tasks.length,
-                        itemBuilder: (context, index) {
-                          final task = _tasks[index];
-                          final className = task['class_id'] != null
-                              ? _classDisplayNames[task['class_id']]
-                              : null;
+                    : _selectedTask != null
+                        ? _buildTaskDetail(_selectedTask!)
+                        : ListView.builder(
+                            itemCount: _tasks.length,
+                            itemBuilder: (context, index) {
+                              final task = _tasks[index];
+                              final className = task['class_id'] != null
+                                  ? _classDisplayNames[task['class_id']]
+                                  : null;
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 6,
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _formatDisplayDate(task['date']),
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    task['title'] ?? '',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    task['description'] ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  if (className != null &&
-                                      className.isNotEmpty)
-                                    ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Class: $className',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.blue[700],
-                                        ),
-                                      ),
-                                    ],
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                            // Inside ListView.builder for task list (1st page)
+return GestureDetector(
+  onTap: () {
+    setState(() => _selectedTask = task); // open full detail
+  },
+  child: Container(
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: const [
+        BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _formatDisplayDate(task['date']),
+          style: const TextStyle(fontSize: 14),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          task['title'] ?? '',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 2),
+        // ✅ Show only first 2 lines of description
+        Text(
+          task['description'] ?? '',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.black87,
+          ),
+        ),
+        if (task['class_id'] != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Class: ${_classDisplayNames[task['class_id']] ?? ''}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.blue[700],
+              ),
+            ),
+          ),
+      ],
+    ),
+  ),
+);
+ },
+                          ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTaskDetail(Map<String, dynamic> task) {
+    final className = task['class_id'] != null
+        ? _classDisplayNames[task['class_id']]
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(
+            child: Text(
+              task['title'] ?? 'No title',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3192),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Date: ${_formatDisplayDate(task['date'])}',
+            style: const TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          if (className != null)
+            Text(
+              'Class: $className',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            task['description'] ?? 'No description',
+            style: const TextStyle(fontSize: 16),
+          ),
+        ]),
       ),
     );
   }

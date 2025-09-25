@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +24,7 @@ class _StudentActivitiesPageState extends State<StudentActivitiesPage> {
   bool isLoading = true;
   List<dynamic> activities = [];
   String? errorMessage;
+  Map<String, dynamic>? _selectedActivity; // 🔹 selected activity for detail view
 
   @override
   void initState() {
@@ -82,34 +84,64 @@ class _StudentActivitiesPageState extends State<StudentActivitiesPage> {
     return Scaffold(
       appBar: StudentAppBar(),
       drawer: StudentMenuDrawer(),
-    body: Container(
+body: Container(
   color: const Color(0xFFDBD88A),
   padding: const EdgeInsets.all(16),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      // ✅ Back button at top left
+      // 🔙 Back button
       GestureDetector(
-        onTap: () => Navigator.pop(context),
+        onTap: () {
+          if (_selectedActivity != null) {
+            setState(() => _selectedActivity = null);
+          } else {
+            Navigator.pop(context);
+          }
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            // color: Colors.white,
-            borderRadius: BorderRadius.circular(6),
-          ),
           child: const Text(
             '< Back',
-            style: TextStyle(
-              color: Colors.black,
-              // fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.black, fontSize: 16),
           ),
         ),
       ),
+      const SizedBox(height: 8),
+
+      // 🔹 Page title below back button
+     // 🔹 Page title with icon below back button
+Row(
+  children: [
+    Container(
+      width: 35,
+      height: 35,
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E3192),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: SvgPicture.asset(
+        'assets/icons/co_curricular.svg', // ✅ your SVG icon
+        color: Colors.white,
+      ),
+    ),
+    const SizedBox(width: 12),
+    const Text(
+      'Co curricular activities',
+      style: TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF2E3192),
+      ),
+    ),
+  ],
+),
+const SizedBox(height: 12),
+
       const SizedBox(height: 12),
 
-      // ✅ Activities list
+      // 🔹 List or Detail view
       Expanded(
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -117,47 +149,109 @@ class _StudentActivitiesPageState extends State<StudentActivitiesPage> {
                 ? Center(child: Text(errorMessage!))
                 : activities.isEmpty
                     ? const Center(child: Text("No activities found"))
-                    : ListView.builder(
-                        itemCount: activities.length,
-                        itemBuilder: (context, index) {
-                          final activity = activities[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    activity["activity_name"] ?? "Unknown Activity",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                      color: Color(0xFF2E3192),
-                                      height: 1.3,
-                                    ),
+                    : _selectedActivity != null
+                        ? _buildActivityDetail(_selectedActivity!)
+                        : ListView.builder(
+                            itemCount: activities.length,
+                            itemBuilder: (context, index) {
+                              final activity = activities[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() => _selectedActivity = activity);
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 6,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text("Category: ${activity["category_name"]}", style: const TextStyle(height: 1.4)),
-                                  const SizedBox(height: 4),
-                                  Text("Class: ${activity["class_name"]}", style: const TextStyle(height: 1.4)),
-                                  const SizedBox(height: 4),
-                                  Text("Student: ${activity["student_name"]}", style: const TextStyle(height: 1.4)),
-                                  const SizedBox(height: 4),
-                                  Text("Academic Year: ${activity["academic_year"]}", style: const TextStyle(height: 1.4)),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        activity["activity_name"] ?? "Unknown Activity",
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: Color(0xFF2E3192),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        "Category: ${activity["category_name"]}",
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "Class: ${activity["class_name"]}",
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
       ),
     ],
   ),
-)
+),
  );
+  }
+
+  Widget _buildActivityDetail(Map<String, dynamic> activity) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(
+            child: Text(
+              activity["activity_name"] ?? "No title",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2E3192),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Category: ${activity["category_name"]}',
+            style: const TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Class: ${activity["class_name"]}',
+            style: const TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Student: ${activity["student_name"]}',
+            style: const TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Academic Year: ${activity["academic_year"]}',
+            style: const TextStyle(fontSize: 16),
+          ),
+        ]),
+      ),
+    );
   }
 }
