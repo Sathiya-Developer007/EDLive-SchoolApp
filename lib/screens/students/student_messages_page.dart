@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 
-// ---------------- MODEL ----------------
+/// ---------------- MODEL ----------------
 class StudentMessage {
   final int id;
   final int studentId;
@@ -42,7 +42,7 @@ class StudentMessage {
   }
 }
 
-// ---------------- SERVICE ----------------
+/// ---------------- SERVICE ----------------
 class MessageService {
   static const String baseUrl =
       "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api";
@@ -82,7 +82,7 @@ class MessageService {
   }
 }
 
-// ---------------- UI PAGE ----------------
+/// ---------------- UI PAGE ----------------
 class StudentMessagesPage extends StatefulWidget {
   final int studentId;
   const StudentMessagesPage({Key? key, required this.studentId})
@@ -94,6 +94,7 @@ class StudentMessagesPage extends StatefulWidget {
 
 class _StudentMessagesPageState extends State<StudentMessagesPage> {
   late Future<List<StudentMessage>> _messagesFuture;
+  StudentMessage? _selectedMessage; // 🔹 For detail page
 
   @override
   void initState() {
@@ -104,7 +105,7 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
   Future<List<StudentMessage>> _loadMessages() async {
     final messages = await MessageService.fetchMessages(widget.studentId);
 
-    // ✅ Mark all messages as viewed
+    // ✅ Mark all as viewed
     for (var msg in messages) {
       MessageService.markMessageViewed(widget.studentId, msg.id);
     }
@@ -122,15 +123,23 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Back + Title
+          // Back
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                if (_selectedMessage != null) {
+                  setState(() => _selectedMessage = null); // back to list
+                } else {
+                  Navigator.pop(context);
+                }
+              },
               child: const Text("< Back",
                   style: TextStyle(fontSize: 16, color: Colors.black87)),
             ),
           ),
+
+          // Title
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
             child: Row(
@@ -155,7 +164,7 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
             ),
           ),
 
-          // Messages List
+          // List OR Detail
           Expanded(
             child: FutureBuilder<List<StudentMessage>>(
               future: _messagesFuture,
@@ -169,79 +178,152 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                 }
 
                 final messages = snapshot.data!;
+
+                // 🔹 DETAIL VIEW
+                if (_selectedMessage != null) {
+                  final msg = _selectedMessage!;
+                  return Container(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Sender
+                          SizedBox(
+                            width: double.infinity,
+                            child: Text(
+                              msg.senderName,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E3192),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Date
+                          SizedBox(
+                            width: double.infinity,
+                            child: Text(
+                              "${msg.createdAt.toLocal()}".split(" ")[0],
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Message text
+                          SizedBox(
+                            width: double.infinity,
+                            child: Text(
+                              msg.messageText,
+                              style: const TextStyle(fontSize: 16, height: 1.5),
+                              softWrap: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                // 🔹 LIST VIEW
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Icon
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: msg.isAppreciation
-                                  ? Colors.green
-                                  : const Color(0xFF2E3192),
-                              shape: BoxShape.circle,
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedMessage = msg;
+                        });
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
                             ),
-                            child: Icon(
-                              msg.isAppreciation
-                                  ? Icons.thumb_up_alt_rounded
-                                  : Icons.chat_bubble_outline,
-                              color: Colors.white,
-                              size: 22,
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Icon
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: msg.isAppreciation
+                                    ? Colors.green
+                                    : const Color(0xFF2E3192),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                msg.isAppreciation
+                                    ? Icons.thumb_up_alt_rounded
+                                    : Icons.chat_bubble_outline,
+                                color: Colors.white,
+                                size: 22,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
+                            const SizedBox(width: 12),
 
-                          // Message Details
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(msg.senderName,
+                            // Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(msg.senderName,
+                                          style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF2E3192))),
+                                      Text(
+                                        "${msg.createdAt.toLocal()}".split(" ")[0],
                                         style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF2E3192))),
-                                    Text(
-                                      "${msg.createdAt.toLocal()}"
-                                          .split(" ")[0],
-                                      style: const TextStyle(
-                                          fontSize: 12, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(msg.messageText,
+                                            fontSize: 12, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    msg.messageText,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 14,
                                         color: Colors.black87,
-                                        height: 1.4)),
-                              ],
+                                        height: 1.4),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },

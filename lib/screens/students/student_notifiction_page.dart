@@ -51,15 +51,12 @@ class StudentNotificationPage extends StatefulWidget {
 }
 
 class _StudentNotificationPageState extends State<StudentNotificationPage> {
-  
   List<StudentNotificationItem> _notifications = [];
   bool _loading = true;
   String? _error;
   DateTime _selectedDate = DateTime.now();
 
   Set<int> _viewedIds = {};
-
-  
 
 
   @override
