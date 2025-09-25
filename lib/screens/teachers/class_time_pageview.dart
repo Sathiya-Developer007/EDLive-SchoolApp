@@ -167,7 +167,7 @@ void _onTabTapped(int index) {
                                 ),
                               ),
                               const Spacer(),
-                              const Icon(Icons.more_vert),
+                              
                             ],
                           ),
                           const SizedBox(height: 0),
