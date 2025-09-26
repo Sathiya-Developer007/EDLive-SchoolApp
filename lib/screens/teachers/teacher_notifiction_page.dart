@@ -28,34 +28,33 @@ class NotificationItem {
     required this.type,
   });
 
- factory NotificationItem.fromJson(Map<String, dynamic> json) {
-  return NotificationItem(
-    id: json['id'],
-    title: json['title'] ?? '',
-    subtitle: json['content'] ?? '',
-    moduleType: json['module_type'] ?? '',
-    dateTime: DateTime.tryParse(json['notification_date'] ?? json['timestamp'] ?? '') ?? DateTime.now(),
-    type: json['type'] ?? '',
-  );
-}
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    return NotificationItem(
+      id: json['id'],
+      title: json['title'] ?? '',
+      subtitle: json['content'] ?? '',
+      moduleType: json['module_type'] ?? '',
+      dateTime: DateTime.tryParse(json['notification_date'] ?? json['timestamp'] ?? '') ?? DateTime.now(),
+      type: json['type'] ?? '',
+    );
+  }
 }
 
-// ----------------- NOTIFICATION PAGE -----------------
+// ----------------- PAGE -----------------
 class NotificationPage extends StatefulWidget {
-   NotificationPage({super.key});
+  const NotificationPage({super.key});
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  List<NotificationItem> _notifications = [];
+  Map<String, List<NotificationItem>> _notificationsByDate = {};
   bool _loading = true;
+  bool _fetchingMore = false;
   String? _error;
-  DateTime _selectedDate = DateTime.now();
-
+  DateTime? _nextFetchDate;
   Set<int> _viewedIds = {};
-
 
   @override
   void initState() {
@@ -64,134 +63,119 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Future<void> _markAsViewed(int id) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("auth_token");
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+      if (token == null) return;
 
-    if (token == null) return;
+      final url =
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed";
 
-    final url =
-        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed";
+      await http.post(
+        Uri.parse(url),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: json.encode({
+          "item_type": "notifications",
+          "item_id": id,
+        }),
+      );
 
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-      body: json.encode({
-        "item_type": "notifications",
-        "item_id": id,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data["success"] == true) {
-        debugPrint("✅ Marked notification $id as viewed");
-      }
-    } else {
-      debugPrint(
-          "❌ Failed to mark viewed: ${response.statusCode} ${response.reasonPhrase}");
-    }
-  } catch (e) {
-    debugPrint("❌ Error marking notification viewed: $e");
-  }
-}
-
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _loading = true;
-      });
-      _fetchNotifications();
+      debugPrint("✅ Marked notification $id as viewed");
+    } catch (e) {
+      debugPrint("❌ Error marking notification viewed: $e");
     }
   }
 
-Future<void> _fetchNotifications() async {
-  try {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("auth_token");
-    if (token == null) {
-      setState(() {
-        _loading = false;
-        _error = "No token found, please login again.";
-      });
-      return;
-    }
-
-    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    final url =
-        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?date=$formattedDate";
-
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-
-      if (data['success'] == true) {
-        final notificationsByDate = data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
-        List<NotificationItem> tempList = [];
-
-        // Flatten all dates into a single list
-        notificationsByDate.forEach((date, notifs) {
-          final List list = notifs as List;
-          tempList.addAll(list.map((e) => NotificationItem.fromJson(e)));
-        });
-
-        // ✅ Sort notifications by timestamp descending
-        tempList.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-
-        setState(() {
-          _notifications = tempList;
-          _loading = false;
-          _error = null;
-        });
+  Future<void> _fetchNotifications({bool loadMore = false}) async {
+    try {
+      if (loadMore) {
+        setState(() => _fetchingMore = true);
       } else {
         setState(() {
-          _loading = false;
-          _error = "Failed to load notifications.";
+          _loading = true;
+          _error = null;
+          _notificationsByDate.clear();
+          _nextFetchDate = DateTime.now();
         });
       }
-    } else {
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("auth_token");
+      if (token == null) {
+        setState(() {
+          _loading = false;
+          _fetchingMore = false;
+          _error = "No token found, please login again.";
+        });
+        return;
+      }
+
+      final dateToFetch = _nextFetchDate!;
+      final formattedDate = DateFormat('yyyy-MM-dd').format(dateToFetch);
+
+      final url =
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?date=$formattedDate";
+
+      final response = await http.get(Uri.parse(url), headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      });
+
+      if (response.statusCode != 200) throw Exception("Failed to fetch notifications");
+
+      final data = json.decode(response.body);
+      if (data['success'] != true) throw Exception("API returned error");
+
+      final notificationsData =
+          data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
+
+      notificationsData.forEach((dateStr, list) {
+        final List items = list as List;
+        if (items.isNotEmpty) {
+          _notificationsByDate.putIfAbsent(dateStr, () => []);
+          _notificationsByDate[dateStr]!.addAll(
+              items.map((e) => NotificationItem.fromJson(e)).toList());
+        }
+      });
+
+      // Prepare next fetch date
+      final periodStart = data['notifications']['period_start'];
+      if (periodStart != null) {
+        DateTime prevStart = DateTime.parse(periodStart);
+        _nextFetchDate = prevStart.isBefore(DateTime(2020)) ? null : prevStart.subtract(const Duration(days: 1));
+      } else {
+        _nextFetchDate = null;
+      }
+
+      // Sort notifications
+      _notificationsByDate.forEach((key, value) => value.sort((a, b) => b.dateTime.compareTo(a.dateTime)));
+
+      final sortedGrouped = Map.fromEntries(
+        _notificationsByDate.entries.toList()..sort((a, b) => b.key.compareTo(a.key)),
+      );
+
+      setState(() {
+        _notificationsByDate = sortedGrouped;
+        _loading = false;
+        _fetchingMore = false;
+      });
+    } catch (e) {
       setState(() {
         _loading = false;
-        _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
+        _fetchingMore = false;
+        _error = "Something went wrong: $e";
       });
     }
-  } catch (e) {
-    setState(() {
-      _loading = false;
-      _error = "Something went wrong: $e";
-    });
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:  TeacherAppBar(),
-      drawer:  MenuDrawer(),
+      appBar: TeacherAppBar(),
+      drawer: const MenuDrawer(),
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -200,26 +184,22 @@ Future<void> _fetchNotifications() async {
           children: [
             GestureDetector(
               onTap: () => Navigator.pop(context),
-              child: const Text(
-                "< Back",
-                style: TextStyle(color: Colors.black, fontSize: 16),
-              ),
+              child: const Text("< Back", style: TextStyle(color: Colors.black, fontSize: 16)),
             ),
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Date: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E3192),
-                  ),
+                Container(
+                  height: 40,
+                  width: 40,
+                  decoration: const BoxDecoration(color: Color(0xFF2E3192)),
+                  padding: const EdgeInsets.all(8),
+                  child: SvgPicture.asset('assets/icons/notification.svg', color: Colors.white),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.calendar_today, color: Color(0xFF2E3192)),
-                  onPressed: _pickDate,
+                const SizedBox(width: 12),
+                const Text(
+                  "Notifications",
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)),
                 ),
               ],
             ),
@@ -229,116 +209,100 @@ Future<void> _fetchNotifications() async {
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
                       ? Center(child: Text(_error!))
-                      : _notifications.isEmpty
+                      : _notificationsByDate.isEmpty
                           ? const Center(child: Text("No notifications found."))
-                          : RefreshIndicator(
-                              onRefresh: _fetchNotifications,
-                              child: ListView.builder(
-                                itemCount: _notifications.length,
-                              itemBuilder: (context, index) {
-  final item = _notifications[index];
+                          : ListView(
+                              children: [
+                                ..._notificationsByDate.entries.map((entry) {
+                                  final date = entry.key;
+                                  final items = entry.value;
 
-  // ✅ Mark as viewed if not already marked
-  if (!_viewedIds.contains(item.id)) {
-    _viewedIds.add(item.id);
-    _markAsViewed(item.id);
-  }
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: Text(
+                                          DateFormat('dd/MM/yyyy').format(DateTime.parse(date)),
+                                          style: const TextStyle(
+                                              fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)),
+                                        ),
+                                      ),
+                                      ...items.map((item) {
+                                        if (!_viewedIds.contains(item.id)) {
+                                          _viewedIds.add(item.id);
+                                          _markAsViewed(item.id);
+                                        }
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 16),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: const [
-        BoxShadow(
-          color: Colors.black12,
-          blurRadius: 6,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.type,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF2E3192),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(
-                    item.moduleType,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                DateFormat('dd/MM/yyyy HH:mm').format(item.dateTime),
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                item.title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                item.subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => NotificationDetailPage(item: item),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.reply, color: Color(0xFF2E3192)),
-                  label: const Text(
-                    "Reply",
-                    style: TextStyle(color: Color(0xFF2E3192)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-},
-  ),
+                                        return Card(
+                                          margin: const EdgeInsets.only(bottom: 12),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          elevation: 2,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(item.type,
+                                                          style: const TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 16,
+                                                              color: Color(0xFF2E3192)),
+                                                          overflow: TextOverflow.ellipsis),
+                                                    ),
+                                                    Text(item.moduleType,
+                                                        style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(DateFormat('HH:mm').format(item.dateTime),
+                                                    style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                                                const SizedBox(height: 6),
+                                                Text(item.title,
+                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                                const SizedBox(height: 4),
+                                                Text(item.subtitle,
+                                                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis),
+                                                const SizedBox(height: 8),
+                                                Align(
+                                                  alignment: Alignment.centerRight,
+                                                  child: TextButton(
+                                                    onPressed: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (_) => NotificationDetailPage(item: item),
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: const Text("Reply"),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ],
+                                  );
+                                }).toList(),
+                                if (_nextFetchDate != null)
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: _fetchingMore
+                                        ? const Center(child: CircularProgressIndicator())
+                                        : ElevatedButton(
+                                            onPressed: () => _fetchNotifications(loadMore: true),
+                                            child: const Text("View the notifications from the past 7 days"),
+                                          ),
+                                  ),
+                              ],
                             ),
             ),
           ],
@@ -347,6 +311,8 @@ Future<void> _fetchNotifications() async {
     );
   }
 }
+
+
 
 // ----------------- NOTIFICATION DETAIL PAGE -----------------
 
