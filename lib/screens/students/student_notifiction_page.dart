@@ -59,11 +59,17 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
   Set<int> _viewedIds = {};
 
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchNotifications();
-  }
+  bool _fetchingMore = false;
+DateTime? _nextFetchDate; // for keeping track of next week's start date
+
+
+
+@override
+void initState() {
+  super.initState();
+  _fetchNotifications();
+}
+
 
   Future<void> _markAsViewed(int itemId) async {
   try {
@@ -122,12 +128,18 @@ class _StudentNotificationPageState extends State<StudentNotificationPage> {
 
  Map<String, List<StudentNotificationItem>> _notificationsByDate = {};
 
-Future<void> _fetchNotifications() async {
+Future<void> _fetchNotifications({bool loadMore = false}) async {
   try {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (loadMore) {
+      setState(() => _fetchingMore = true);
+    } else {
+      setState(() {
+        _loading = true;
+        _error = null;
+        _notificationsByDate.clear();
+        _nextFetchDate = _selectedDate; // reset when first load
+      });
+    }
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("auth_token");
@@ -136,12 +148,14 @@ Future<void> _fetchNotifications() async {
     if (token == null || studentId == null) {
       setState(() {
         _loading = false;
+        _fetchingMore = false;
         _error = "Missing token or student ID. Please login again.";
       });
       return;
     }
 
-    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final dateToFetch = _nextFetchDate ?? _selectedDate;
+    final formattedDate = DateFormat('yyyy-MM-dd').format(dateToFetch);
 
     final url =
         "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?studentId=$studentId&date=$formattedDate";
@@ -154,51 +168,61 @@ Future<void> _fetchNotifications() async {
       },
     );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['success'] == true) {
-        final notificationsData = data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
+    if (response.statusCode != 200) {
+      throw Exception("Failed to fetch notifications");
+    }
 
-        Map<String, List<StudentNotificationItem>> grouped = {};
+    final data = json.decode(response.body);
+    if (data['success'] != true) {
+      throw Exception("API returned error");
+    }
 
-        notificationsData.forEach((dateStr, list) {
-          final List items = list as List;
-          if (items.isNotEmpty) {
-            grouped[dateStr] = items
-                .map((e) => StudentNotificationItem.fromJson(e))
-                .toList();
-            // Sort each day by timestamp descending
-            grouped[dateStr]!.sort((a, b) => b.dateTime.compareTo(a.dateTime));
-          }
-        });
+    final notificationsData =
+        data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
 
-        // Sort dates descending
-        final sortedGrouped = Map.fromEntries(
-          grouped.entries.toList()
-            ..sort((a, b) => b.key.compareTo(a.key)),
+    notificationsData.forEach((dateStr, list) {
+      final List items = list as List;
+      if (items.isNotEmpty) {
+        _notificationsByDate.putIfAbsent(dateStr, () => []);
+        _notificationsByDate[dateStr]!.addAll(
+          items.map((e) => StudentNotificationItem.fromJson(e)).toList(),
         );
+      }
+    });
 
-        setState(() {
-          _notificationsByDate = sortedGrouped;
-          _loading = false;
-          _error = null;
-        });
+    // prepare for next week
+    final periodStart = data['notifications']['period_start'];
+    if (periodStart != null) {
+      DateTime prevStart = DateTime.parse(periodStart);
+      if (!prevStart.isBefore(DateTime(2020))) {
+        _nextFetchDate = prevStart.subtract(const Duration(days: 1));
       } else {
-        setState(() {
-          _loading = false;
-          _error = "Failed to load notifications.";
-        });
+        _nextFetchDate = null; // stop fetching
       }
     } else {
-      setState(() {
-        _loading = false;
-        _error = "Error ${response.statusCode}: ${response.reasonPhrase}";
-      });
+      _nextFetchDate = null;
     }
+
+    // sort data
+    _notificationsByDate.forEach((key, value) {
+      value.sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    });
+
+    final sortedGrouped = Map.fromEntries(
+      _notificationsByDate.entries.toList()
+        ..sort((a, b) => b.key.compareTo(a.key)),
+    );
+
+    setState(() {
+      _notificationsByDate = sortedGrouped;
+      _loading = false;
+      _fetchingMore = false;
+    });
   } catch (e) {
     setState(() {
       _loading = false;
-      _error = "Something went wrong: $e";
+      _fetchingMore = false;
+      _error = "Error: $e";
     });
   }
 }
@@ -291,7 +315,7 @@ Future<void> _fetchNotifications() async {
             const SizedBox(height: 16),
 
             // Loader / Error / List
-        Expanded(
+Expanded(
   child: _loading
       ? const Center(child: CircularProgressIndicator())
       : _error != null
@@ -299,119 +323,140 @@ Future<void> _fetchNotifications() async {
           : _notificationsByDate.isEmpty
               ? const Center(child: Text("No notifications found."))
               : ListView(
-                  children: _notificationsByDate.entries.map((entry) {
-                    final date = entry.key;
-                    final items = entry.value;
+                  children: [
+                    // 🔹 Notifications list
+                    ..._notificationsByDate.entries.map((entry) {
+                      final date = entry.key;
+                      final items = entry.value;
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Date header
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            DateFormat('dd/MM/yyyy').format(DateTime.parse(date)),
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2E3192),
-                            ),
-                          ),
-                        ),
-                        ...items.map((item) {
-                          // Mark as viewed if not already
-                          if (!_viewedIds.contains(item.id)) {
-                            _viewedIds.add(item.id);
-                            _markAsViewed(item.id);
-                          }
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          item.type,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: Color(0xFF2E3192),
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Text(
-                                        item.moduleType,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    DateFormat('HH:mm').format(item.dateTime),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    item.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.subtitle,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => NotificationRepliesPage(
-                                              itemId: item.id,
-                                              itemType: item.apiItemType,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: const Text("View Replies"),
-                                    ),
-                                  ),
-                                ],
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              DateFormat('dd/MM/yyyy')
+                                  .format(DateTime.parse(date)),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E3192),
                               ),
                             ),
-                          );
-                        }).toList(),
-                      ],
-                    );
-                  }).toList(),
+                          ),
+                          ...items.map((item) {
+                            // Mark as viewed if not already
+                            if (!_viewedIds.contains(item.id)) {
+                              _viewedIds.add(item.id);
+                              _markAsViewed(item.id);
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            item.type,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: Color(0xFF2E3192),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Text(
+                                          item.moduleType,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      DateFormat('HH:mm').format(item.dateTime),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      item.title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.subtitle,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  NotificationRepliesPage(
+                                                itemId: item.id,
+                                                itemType: item.apiItemType,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: const Text("Reply"),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      );
+                    }).toList(),
+
+                    // 🔹 Load More button at bottom
+                    if (_nextFetchDate != null)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _fetchingMore
+                            ? const Center(
+                                child: CircularProgressIndicator(),
+                              )
+                            : ElevatedButton(
+                                onPressed: () =>
+                                    _fetchNotifications(loadMore: true),
+                                child: const Text("View the notifications from the past 7 days"),
+                              ),
+                      ),
+                  ],
                 ),
 ),
   ],
