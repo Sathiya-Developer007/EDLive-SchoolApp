@@ -289,100 +289,137 @@ class _StudentTimeTablePageState extends State<StudentTimeTablePage> {
     );
   }
 
-  Widget _dateScroller() {
-    final itemWidth = MediaQuery.of(context).size.width / 8.5;
-    return SizedBox(
-      height: 58,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: ListView.builder(
-              controller: _scroll,
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: _visibleDates.length,
-              itemBuilder: (context, index) {
-                final date = _visibleDates[index];
-                final selected = date.day == _centerDate.day &&
-                    date.month == _centerDate.month &&
-                    date.year == _centerDate.year;
+Widget _dateScroller() {
+  final screenWidth = MediaQuery.of(context).size.width;
+  final arrowWidth = 30.0; // space for arrows
+  final itemWidth = (screenWidth - 3 * arrowWidth) / 8; // 7 days visible
+  final dates = _visibleDates;
 
-                return GestureDetector(
-                  onTap: () => _onDateTap(date, index),
-                  child: SizedBox(
-                    width: itemWidth,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        color: selected ? Colors.blue : Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.grey.withOpacity(0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2)),
-                        ],
+  return SizedBox(
+    height: 70,
+    child: Stack(
+      children: [
+        // Centered 7-day row
+        Positioned(
+          left: arrowWidth,
+          right: arrowWidth,
+          top: 0,
+          bottom: 0,
+          child: ListView.builder(
+            controller: _scroll,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: dates.length,
+            itemBuilder: (context, index) {
+              final date = dates[index];
+              final selected = date.day == _centerDate.day &&
+                  date.month == _centerDate.month &&
+                  date.year == _centerDate.year;
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _centerDate = date);
+                  WidgetsBinding.instance
+                      .addPostFrameCallback((_) => _centerCurrentDate());
+                },
+                child: Container(
+                  width: itemWidth,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: selected ? Colors.blue : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            DateFormat('EEE').format(date),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: selected ? Colors.white : Colors.black87,
-                              fontSize: 11,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            date.day.toString(),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: selected ? Colors.white : Colors.black87,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
-                );
-              },
-            ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        DateFormat('EEE').format(date),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: selected ? Colors.white : Colors.black87,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        date.day.toString(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: selected ? Colors.white : Colors.black87,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
-          Positioned(
-            left: -12,
-            top: 0,
-            bottom: 0,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, size: 16),
-              onPressed: () {
-                setState(() =>
-                    _startDate = _startDate.subtract(const Duration(days: 7)));
+        ),
+
+        // Left arrow flush with left screen edge
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              setState(() {
+                _centerDate = _centerDate.subtract(const Duration(days: 7));
+                _startDate =
+                    _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
                 _centerCurrentDate();
-              },
+              });
+            },
+            child: SizedBox(
+              width: arrowWidth,
+              height: 70,
+              child: const Icon(Icons.arrow_back_ios,
+                  size: 20, color: Colors.black87),
             ),
           ),
-          Positioned(
-            right: -12,
-            top: 0,
-            bottom: 0,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_forward_ios, size: 16),
-              onPressed: () {
-                setState(() =>
-                    _startDate = _startDate.add(const Duration(days: 7)));
+        ),
+
+        // Right arrow flush with right screen edge
+        Positioned(
+          right: 0,
+          top: 0,
+          bottom: 0,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              setState(() {
+                _centerDate = _centerDate.add(const Duration(days: 7));
+                _startDate =
+                    _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
                 _centerCurrentDate();
-              },
+              });
+            },
+            child: SizedBox(
+              width: arrowWidth,
+              height: 70,
+              child: const Icon(Icons.arrow_forward_ios,
+                  size: 20, color: Colors.black87),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _dayTitle() {
     final dayName = DateFormat('EEEE').format(_centerDate);
