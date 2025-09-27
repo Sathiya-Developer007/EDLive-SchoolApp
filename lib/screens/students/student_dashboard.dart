@@ -653,19 +653,20 @@ class DashboardTile extends StatelessWidget {
                 size: 36,
                 color: const Color(0xFF0D47A1),
               ),
-        if (badgeCount != null)
-          Positioned(
-            top: -6,
-            right: -6,
-            child: CircleAvatar(
-              radius: 9,
-              backgroundColor: const Color(0xFF9E005D),
-              child: Text(
-                badgeCount.toString(),
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-              ),
-            ),
-          ),
+      if (badgeCount != null && badgeCount! > 0)
+  Positioned(
+    top: -6,
+    right: -6,
+    child: CircleAvatar(
+      radius: 9,
+      backgroundColor: const Color(0xFF9E005D),
+      child: Text(
+        badgeCount.toString(),
+        style: const TextStyle(color: Colors.white, fontSize: 10),
+      ),
+    ),
+  ),
+
       ],
     );
 
