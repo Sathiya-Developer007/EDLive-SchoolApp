@@ -68,7 +68,7 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> {
                           borderRadius: BorderRadius.circular(0),
                         ),
                         child: SvgPicture.asset(
-                          'assets/icons/Attendance.svg',
+                          'assets/icons/attendance.svg',
                           height: 20,
                           width: 18,
                           color: Colors.white,

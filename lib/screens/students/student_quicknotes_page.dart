@@ -199,16 +199,21 @@ Expanded(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: InkWell(
               onTap: () async {
-                final uri = Uri.tryParse(link);
-                if (uri != null && await canLaunchUrl(uri)) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Cannot open link")),
-                  );
-                }
-              },
-              child: Text(
+  final uri = Uri.tryParse(link);
+  if (uri != null) {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication, // 🔹 opens in Chrome/Safari
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cannot open link")),
+      );
+    }
+  }
+},
+ child: Text(
                 link,
                 style: const TextStyle(
                   color: Colors.blue,
@@ -228,45 +233,65 @@ Expanded(
                       );
                     },
                   )
-                : ListView.separated(
-                    padding: EdgeInsets.zero, // padding handled by container
-                    itemCount: _notes.length,
-                    separatorBuilder: (_, __) =>
-                        const Divider(color: Colors.grey),
-                    itemBuilder: (context, index) {
-                      final note = _notes[index];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          note["title"] ?? "",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF2E3192),
-                            fontWeight: FontWeight.w600,
-                          ),
-                          softWrap: true,
-                        ),
-                        subtitle: Text(
-                          note["description"] ?? "",
-                          softWrap: true,
-                        ),
-                        trailing: Text(
-                          note["created_by_name"] ?? "",
-                          style: const TextStyle(
-                            fontStyle: FontStyle.italic,
-                            fontSize: 12,
-                          ),
-                          softWrap: true,
-                        ),
-                        onTap: () {
-                          setState(() {
-                            _selectedNote = note;
-                          });
-                        },
-                      );
-                    },
-                  ),
+              // 🔹 Replace only the list section when _selectedNote == null
+: ListView.builder(
+    padding: const EdgeInsets.all(12),
+    itemCount: _notes.length,
+    itemBuilder: (context, index) {
+      final note = _notes[index];
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            note["title"] ?? "",
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color(0xFF2E3192),
+              fontWeight: FontWeight.w600,
+            ),
+            softWrap: true,
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              note["description"] ?? "",
+              maxLines: 2, // 🔹 show only 2 lines
+              overflow: TextOverflow.ellipsis, // 🔹 truncate with "..."
+              softWrap: true,
+            ),
+          ),
+          trailing: Text(
+            note["created_by_name"] ?? "",
+            style: const TextStyle(
+              fontStyle: FontStyle.italic,
+              fontSize: 12,
+            ),
+            softWrap: true,
+          ),
+          onTap: () {
+            setState(() {
+              _selectedNote = note;
+            });
+          },
+        ),
+      );
+    },
   ),
+ ),
 ),
   ],
       ),

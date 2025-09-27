@@ -292,27 +292,27 @@ Future<void> _fetchNotifications({bool loadMore = false}) async {
             const SizedBox(height: 16),
 
             // Date picker
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Date: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E3192),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.calendar_today,
-                    color: Color(0xFF2E3192),
-                  ),
-                  onPressed: _pickDate,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            // Row(
+            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //   children: [
+            //     Text(
+            //       "Date: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}",
+            //       style: const TextStyle(
+            //         fontSize: 16,
+            //         fontWeight: FontWeight.bold,
+            //         color: Color(0xFF2E3192),
+            //       ),
+            //     ),
+            //     IconButton(
+            //       icon: const Icon(
+            //         Icons.calendar_today,
+            //         color: Color(0xFF2E3192),
+            //       ),
+            //       onPressed: _pickDate,
+            //     ),
+            //   ],
+            // ),
+            const SizedBox(height: 10),
 
             // Loader / Error / List
 Expanded(

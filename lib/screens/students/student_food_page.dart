@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+
 
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
@@ -32,11 +34,38 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
 
   bool get _isAnySelected => _foodSelections.containsValue(true);
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchMenu();
+ late ScrollController _scroll;
+late DateTime _centerDate;
+late DateTime _startDate;
+List<DateTime> _visibleDates = [];
+
+@override
+void initState() {
+  super.initState();
+  _centerDate = DateTime.now();
+  _startDate = _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
+  _generateVisibleDates();
+  _scroll = ScrollController();
+  _fetchMenu();
+}
+
+void _generateVisibleDates() {
+  _visibleDates = List.generate(30, (i) => _startDate.add(Duration(days: i))); 
+}
+
+void _centerCurrentDate() {
+  final index = _visibleDates.indexWhere((d) =>
+      d.day == _centerDate.day &&
+      d.month == _centerDate.month &&
+      d.year == _centerDate.year);
+
+  if (index != -1) {
+    final itemWidth =
+        (MediaQuery.of(context).size.width - 3 * 30) / 8; // same as in _dateScroller
+    _scroll.animateTo(index * itemWidth,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
+}
 
 Future<void> _submitFoodForSelectedDate() async {
   if (!_isAnySelected) return; // nothing selected
@@ -238,7 +267,8 @@ else {
           ),
 
           // Calendar selector
-          _calendarSection(),
+          _dateScroller(),
+
 
           // Food List
        Expanded(
@@ -312,79 +342,192 @@ if (dayMenu["snacks"] != null)
     );
   }
 
-  // Calendar Section widget
-  Widget _calendarSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(8)),
-      child: Column(
-        children: [
-          // Month selector
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+Widget _dateScroller() {
+  final screenWidth = MediaQuery.of(context).size.width;
+  final arrowWidth = 30.0;
+  final itemWidth = (screenWidth - 3 * arrowWidth) / 7;
+
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.2),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        // 🔹 Month selector
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left, color: Colors.black),
+              onPressed: _previousMonth,
+            ),
+            Text(
+              _monthYear,
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E3192)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.chevron_right, color: Colors.black),
+              onPressed: _nextMonth,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // 🔹 Week scroll
+        SizedBox(
+          height: 70,
+          child: Stack(
             children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left, color: Colors.black),
-                onPressed: _previousMonth,
+              // Scrollable dates
+              Positioned(
+                left: arrowWidth,
+                right: arrowWidth,
+                top: 0,
+                bottom: 0,
+                child: ListView.builder(
+                  controller: _scroll,
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: _visibleDates.length,
+                  itemBuilder: (context, index) {
+                    final date = _visibleDates[index];
+                    final selected = date.day == _centerDate.day &&
+                        date.month == _centerDate.month &&
+                        date.year == _centerDate.year;
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _centerDate = date;
+                          _selectedDate = date;
+                        });
+                        _fetchMenu();
+                        WidgetsBinding.instance.addPostFrameCallback(
+                            (_) => _centerCurrentDate());
+                      },
+                      child: Container(
+                        width: itemWidth,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: selected ? Colors.blue : Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            if (selected)
+                              BoxShadow(
+                                color: Colors.blue.withOpacity(0.4),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              DateFormat('EEE').format(date),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    selected ? Colors.white : Colors.black87,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              date.day.toString(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    selected ? Colors.white : Colors.black87,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
-              Text(_monthYear,
-                  style: const TextStyle(
-                      fontSize: 20, color: Color(0xFF2E3192))),
-              IconButton(
-                icon: const Icon(Icons.chevron_right, color: Colors.black),
-                onPressed: _nextMonth,
+
+              // Left arrow
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    setState(() {
+                      _centerDate =
+                          _centerDate.subtract(const Duration(days: 7));
+                      _startDate = _centerDate
+                          .subtract(Duration(days: _centerDate.weekday - 1));
+                      _generateVisibleDates();
+                    });
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _centerCurrentDate();
+                      _fetchMenu();
+                    });
+                  },
+                  child: const SizedBox(
+                    width: 30,
+                    height: 70,
+                    child: Icon(Icons.arrow_back_ios,
+                        size: 20, color: Colors.black87),
+                  ),
+                ),
+              ),
+
+              // Right arrow
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    setState(() {
+                      _centerDate =
+                          _centerDate.add(const Duration(days: 7));
+                      _startDate = _centerDate
+                          .subtract(Duration(days: _centerDate.weekday - 1));
+                      _generateVisibleDates();
+                    });
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _centerCurrentDate();
+                      _fetchMenu();
+                    });
+                  },
+                  child: const SizedBox(
+                    width: 30,
+                    height: 70,
+                    child: Icon(Icons.arrow_forward_ios,
+                        size: 20, color: Colors.black87),
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-
-          // Week selector
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left, color: Colors.black),
-                onPressed: _previousWeek,
-              ),
-           Expanded(
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-    children: List.generate(7, (index) {
-      final startOfWeek =
-          _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
-      final date = startOfWeek.add(Duration(days: index));
-
-      final isSelected = date.day == _selectedDate.day &&
-          date.month == _selectedDate.month &&
-          date.year == _selectedDate.year;
-
-      return GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedDate = date;
-          });
-          _fetchMenu(); // 🔹 Fetch API data for that date
-        },
-        child: _dayTile(
-          ["Mon.", "Tue.", "Wed.", "Thu.", "Fri.", "Sat.", "Sun."][index],
-          date.day.toString(),
-          isSelected,
         ),
-      );
-    }),
-  ),
-),
-  IconButton(
-                icon: const Icon(Icons.chevron_right, color: Colors.black),
-                onPressed: _nextWeek,
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   static Widget _dayTile(String day, String date, bool selected) {
     return Container(

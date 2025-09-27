@@ -66,7 +66,7 @@ class TeacherAttendancePage extends StatelessWidget {
                         padding: const EdgeInsets.all(6),
                         color: const Color(0xFF2E3192),
                         child: SvgPicture.asset(
-                          'assets/icons/Attendance.svg',
+                          'assets/icons/attendance.svg',
                           height: 20,
                           width: 18,
                           color: Colors.white,
