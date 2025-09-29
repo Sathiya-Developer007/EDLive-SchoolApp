@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'package:school_app/models/pta_meeting_model.dart';
-import 'package:school_app/services/pta_service.dart';
+import 'package:school_app/models/pta_next_meeting_model.dart';
+import 'package:school_app/services/pta_next_meeting_service.dart';
 
 import 'package:school_app/models/pta_history_model.dart';
 import 'package:school_app/services/pta_history_service.dart';

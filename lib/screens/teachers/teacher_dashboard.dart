@@ -206,20 +206,30 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                 /// Fourth group: Transport, Message
                 Row(
                   children: [
-                    Expanded(
-                      child: DashboardTile(
-                        title: 'Transport',
-                        iconPath: 'assets/icons/transport.svg',
-                        color: const Color(0xFFCCCCFF),
-                        centerContent: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const TransportPage()),
-                          );
-                        },
-                      ),
-                    ),
+               Expanded(
+  child: DashboardTile(
+    title: 'Transport',
+    iconPath: 'assets/icons/transport.svg',
+    color: const Color(0xFFCCCCFF),
+    centerContent: true,
+    onTap: () {
+      final now = DateTime.now();
+      final academicYear = '${now.year}-${now.year + 1}';
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TransportPage(
+            staffId: 1, // or get dynamically from login
+            academicYear: academicYear,
+          ),
+        ),
+      );
+    },
+  ),
+),
+
+
                     const SizedBox(width: 12),
                     Expanded(
                       child: DashboardTile(

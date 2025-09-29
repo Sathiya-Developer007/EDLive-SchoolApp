@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/pta_meeting_model.dart';
+import '../models/pta_next_meeting_model.dart';
 import 'package:school_app/models/class_section.dart';
 import 'package:school_app/services/class_section_service.dart';
 
