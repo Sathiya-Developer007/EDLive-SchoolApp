@@ -304,24 +304,25 @@ SizedBox(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              time ?? '',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: isUpcoming ? Colors.blue : Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "$className - $subject",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isUpcoming ? Colors.blue : Colors.black,
-                              ),
-                            ),
-                          ],
+                        children: [
+  Text(
+    time ?? '',
+    style: const TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: Colors.black87, // ✅ fixed color
+    ),
+  ),
+  const SizedBox(height: 4),
+  Text(
+    "$className - $subject",
+    style: const TextStyle(
+      fontSize: 14,
+      color: Colors.grey,
+    ),
+  ),
+],
+
                         ),
                       );
                     },

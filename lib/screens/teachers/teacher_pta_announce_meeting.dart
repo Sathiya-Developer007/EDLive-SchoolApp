@@ -162,76 +162,76 @@ Future<void> _announceMeeting(int meetingId) async {
     const SizedBox(height: 16),
 
               // Division selection
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        "Division",
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w500),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Radio<bool>(
-                            value: true,
-                            groupValue: isAllDivision,
-                            onChanged: (val) {
-                              setState(() {
-                                isAllDivision = val!;
-                              });
-                            },
-                          ),
-                          const Text("All"),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        "Enter Division",
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w500),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Radio<bool>(
-                            value: false,
-                            groupValue: isAllDivision,
-                            onChanged: (val) {
-                              setState(() {
-                                isAllDivision = val!;
-                              });
-                            },
-                          ),
-                          SizedBox(
-                            width: 60,
-                            height: 30,
-                            child: TextField(
-                              controller: divisionController,
-                              enabled: !isAllDivision,
-                              textAlign: TextAlign.center,
-                              decoration: const InputDecoration(
-                                isDense: false,
-                                contentPadding:
-                                    EdgeInsets.symmetric(vertical: 8),
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              // Row(
+              //   crossAxisAlignment: CrossAxisAlignment.center,
+              //   children: [
+              //     Column(
+              //       mainAxisSize: MainAxisSize.min,
+              //       children: [
+              //         const Text(
+              //           "Division",
+              //           style: TextStyle(
+              //               fontSize: 14, fontWeight: FontWeight.w500),
+              //         ),
+              //         Row(
+              //           mainAxisSize: MainAxisSize.min,
+              //           children: [
+              //             Radio<bool>(
+              //               value: true,
+              //               groupValue: isAllDivision,
+              //               onChanged: (val) {
+              //                 setState(() {
+              //                   isAllDivision = val!;
+              //                 });
+              //               },
+              //             ),
+              //             const Text("All"),
+              //           ],
+              //         ),
+              //       ],
+              //     ),
+              //     const SizedBox(width: 10),
+              //     Column(
+              //       mainAxisSize: MainAxisSize.min,
+              //       children: [
+              //         const Text(
+              //           "Enter Division",
+              //           style: TextStyle(
+              //               fontSize: 14, fontWeight: FontWeight.w500),
+              //         ),
+              //         Row(
+              //           mainAxisSize: MainAxisSize.min,
+              //           children: [
+              //             Radio<bool>(
+              //               value: false,
+              //               groupValue: isAllDivision,
+              //               onChanged: (val) {
+              //                 setState(() {
+              //                   isAllDivision = val!;
+              //                 });
+              //               },
+              //             ),
+              //             SizedBox(
+              //               width: 60,
+              //               height: 30,
+              //               child: TextField(
+              //                 controller: divisionController,
+              //                 enabled: !isAllDivision,
+              //                 textAlign: TextAlign.center,
+              //                 decoration: const InputDecoration(
+              //                   isDense: false,
+              //                   contentPadding:
+              //                       EdgeInsets.symmetric(vertical: 8),
+              //                   border: OutlineInputBorder(),
+              //                 ),
+              //               ),
+              //             ),
+              //           ],
+              //         ),
+              //       ],
+              //     ),
+              //   ],
+              // ),
               const SizedBox(height: 16),
 
               // Date & Time
@@ -274,7 +274,7 @@ Future<void> _announceMeeting(int meetingId) async {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 26),
 
               // Subject
               TextFormField(
@@ -284,7 +284,7 @@ Future<void> _announceMeeting(int meetingId) async {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 26),
 
               // Description
               TextFormField(
@@ -295,7 +295,7 @@ Future<void> _announceMeeting(int meetingId) async {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 26),
 
               // Checkboxes
               Row(

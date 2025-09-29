@@ -32,7 +32,14 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
  // API data for selected day
   bool _loading = false;
 
-  bool get _isAnySelected => _foodSelections.containsValue(true);
+bool get _isAnySelected {
+  final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
+  return _foodSelectionsByDate[dateKey]?.containsValue(true) ?? false;
+}
+
+
+
+Map<String, Map<String, bool>> _foodSelectionsByDate = {};
 
  late ScrollController _scroll;
 late DateTime _centerDate;
@@ -67,8 +74,9 @@ void _centerCurrentDate() {
   }
 }
 
-Future<void> _submitFoodForSelectedDate() async {
-  if (!_isAnySelected) return; // nothing selected
+
+Future<void> _submitFoodForWeek() async {
+  if (!_isAnySelected) return;
 
   setState(() => _loading = true);
 
@@ -77,29 +85,90 @@ Future<void> _submitFoodForSelectedDate() async {
     final token = prefs.getString("auth_token") ?? "";
     final studentId = prefs.getInt("student_id") ?? 0;
 
-    final formattedDate =
-        "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
+    for (int weekdayIndex = 0; weekdayIndex < 7; weekdayIndex++) {
+      final dayMenu = _weeklyMenu?["$weekdayIndex"];
+      if (dayMenu == null) continue;
 
-    final weekdayIndex = _selectedDate.weekday - 1; // 0 = Monday
+      final dateForDay = _startDate.add(Duration(days: weekdayIndex));
+      final formattedDate =
+          "${dateForDay.year}-${dateForDay.month.toString().padLeft(2, '0')}-${dateForDay.day.toString().padLeft(2, '0')}";
+
+      final body = {
+        "student_id": studentId,
+        "date": formattedDate,
+        "breakfast_menu_id": (_foodSelections["Breakfast"]! && dayMenu["breakfast"] != null)
+            ? dayMenu["breakfast"]["items"][0]["id"]
+            : 0,
+        "lunch_menu_id": (_foodSelections["Lunch"]! && dayMenu["lunch"] != null)
+            ? dayMenu["lunch"]["items"][0]["id"]
+            : 0,
+        "snacks_menu_id": (_foodSelections["Snacks"]! && dayMenu["snacks"] != null)
+            ? dayMenu["snacks"]["items"][0]["id"]
+            : 0,
+      };
+
+      final url =
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/food/schedule";
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          "accept": "application/json",
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode != 201) {
+        print("❌ Failed for $formattedDate => ${response.body}");
+      } else {
+        print("✅ Saved schedule for $formattedDate");
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Food schedule confirmed for all week!")),
+    );
+  } catch (e) {
+    print("Submit Week API Error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error submitting weekly schedule")),
+    );
+  } finally {
+    setState(() => _loading = false);
+  }
+}
+
+
+Future<void> _submitFoodForSelectedDate() async {
+  final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
+  final selections = _foodSelectionsByDate[dateKey];
+  if (selections == null || !selections.containsValue(true)) return;
+
+  setState(() => _loading = true);
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token") ?? "";
+    final studentId = prefs.getInt("student_id") ?? 0;
+
+    final formattedDate = dateKey;
+    final weekdayIndex = _selectedDate.weekday - 1; 
     final dayMenu = _weeklyMenu?["$weekdayIndex"];
-
-    // Safely get menu IDs
-    int breakfastId = (_foodSelections["Breakfast"]! && dayMenu?["breakfast"] != null)
-        ? dayMenu!["breakfast"]["items"][0]["id"]
-        : 0;
-    int lunchId = (_foodSelections["Lunch"]! && dayMenu?["lunch"] != null)
-        ? dayMenu!["lunch"]["items"][0]["id"]
-        : 0;
-    int snacksId = (_foodSelections["Snacks"]! && dayMenu?["snacks"] != null)
-        ? dayMenu!["snacks"]["items"][0]["id"]
-        : 0;
 
     final body = {
       "student_id": studentId,
       "date": formattedDate,
-      "breakfast_menu_id": breakfastId,
-      "lunch_menu_id": lunchId,
-      "snacks_menu_id": snacksId,
+      "breakfast_menu_id": (selections["Breakfast"]! && dayMenu?["breakfast"] != null)
+          ? dayMenu!["breakfast"]["items"][0]["id"]
+          : 0,
+      "lunch_menu_id": (selections["Lunch"]! && dayMenu?["lunch"] != null)
+          ? dayMenu!["lunch"]["items"][0]["id"]
+          : 0,
+      "snacks_menu_id": (selections["Snacks"]! && dayMenu?["snacks"] != null)
+          ? dayMenu!["snacks"]["items"][0]["id"]
+          : 0,
     };
 
     final url =
@@ -116,22 +185,14 @@ Future<void> _submitFoodForSelectedDate() async {
     );
 
     if (response.statusCode == 201) {
-      final data = jsonDecode(response.body);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Food schedule confirmed!")),
       );
-      print("Schedule saved: $data");
     } else {
       print("Error ${response.statusCode}: ${response.body}");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to confirm food: ${response.statusCode}")),
-      );
     }
   } catch (e) {
     print("Submit API Error: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Error submitting food selection")),
-    );
   } finally {
     setState(() => _loading = false);
   }
@@ -176,11 +237,14 @@ else {
     setState(() => _loading = false);
   }
 
-  void _toggleFood(String key, bool value) {
-    setState(() {
-      _foodSelections[key] = value;
-    });
-  }
+void _toggleFood(String key, bool value) {
+  final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
+  setState(() {
+    _foodSelectionsByDate[dateKey]?[key] = value;
+  });
+}
+
+
 
   void _previousMonth() {
     setState(() {
@@ -294,7 +358,10 @@ else {
     title: "Breakfast (${dayMenu["breakfast"]["price"]}₹)",
     time: "8 : 30 am - 09 : 30 am",
     items: dayMenu["breakfast"]["items"], // pass array
-    checked: _foodSelections["Breakfast"]!,
+checked: _foodSelectionsByDate[
+          DateFormat("yyyy-MM-dd").format(_selectedDate)
+        ]?["Breakfast"] ?? false,
+
     onChanged: (v) => _toggleFood("Breakfast", v),
   ),
 
@@ -304,7 +371,10 @@ if (dayMenu["lunch"] != null)
     title: "Lunch (${dayMenu["lunch"]["price"]}₹)",
     time: "12 : 30 pm - 01 : 30 pm",
     items: dayMenu["lunch"]["items"],
-    checked: _foodSelections["Lunch"]!,
+   checked: _foodSelectionsByDate[
+          DateFormat("yyyy-MM-dd").format(_selectedDate)
+        ]?["Lunch"] ?? false,
+
     onChanged: (v) => _toggleFood("Lunch", v),
   ),
 
@@ -314,7 +384,10 @@ if (dayMenu["snacks"] != null)
     title: "Snacks (${dayMenu["snacks"]["price"]}₹)",
     time: "3 : 30 pm - 4 : 00 pm",
     items: dayMenu["snacks"]["items"],
-    checked: _foodSelections["Snacks"]!,
+checked: _foodSelectionsByDate[
+          DateFormat("yyyy-MM-dd").format(_selectedDate)
+        ]?["Snacks"] ?? false,
+
     onChanged: (v) => _toggleFood("Snacks", v),
   ),
    const SizedBox(height: 20),
@@ -327,16 +400,17 @@ if (dayMenu["snacks"] != null)
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(16),
-            child: ElevatedButton(
-  onPressed: _isAnySelected ? _submitFoodForSelectedDate : null,
+            child:ElevatedButton(
+  onPressed: _isAnySelected ? _submitFoodForWeek : null,
   style: ElevatedButton.styleFrom(
     backgroundColor: _isAnySelected ? Colors.blue : const Color(0xFFCCCCCC),
     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
   ),
-  child: const Text("Pay & Confirm", style: TextStyle(color: Colors.white, fontSize: 16)),
-)
-    ),
+  child: const Text("Pay & Confirm",
+      style: TextStyle(color: Colors.white, fontSize: 16)),
+),
+ ),
         ],
       ),
     );
@@ -409,15 +483,25 @@ Widget _dateScroller() {
                         date.year == _centerDate.year;
 
                     return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _centerDate = date;
-                          _selectedDate = date;
-                        });
-                        _fetchMenu();
-                        WidgetsBinding.instance.addPostFrameCallback(
-                            (_) => _centerCurrentDate());
-                      },
+                    onTap: () {
+  setState(() {
+    _centerDate = date;
+    _selectedDate = date;
+
+    // initialize selections for this date if not exists
+    _foodSelectionsByDate.putIfAbsent(
+      DateFormat("yyyy-MM-dd").format(date),
+      () => {
+        "Breakfast": false,
+        "Lunch": false,
+        "Snacks": false,
+      },
+    );
+  });
+  _fetchMenu();
+  WidgetsBinding.instance.addPostFrameCallback((_) => _centerCurrentDate());
+},
+
                       child: Container(
                         width: itemWidth,
                         margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -587,11 +671,14 @@ class FoodTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Checkbox(
-            value: checked,
-            activeColor: const Color(0xFF29ABE2),
-            onChanged: (value) => onChanged(value ?? false),
-          ),
+        Checkbox(
+  value: checked,
+  fillColor: MaterialStateProperty.all(Colors.white), // white box
+  checkColor: const Color(0xFF29ABE2),                // blue tick
+  onChanged: (value) => onChanged(value ?? false),
+),
+
+
           const SizedBox(width: 8),
           Expanded(
             child: Column(

@@ -1,5 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+import 'package:school_app/models/pta_meeting_model.dart';
+import 'package:school_app/services/pta_service.dart';
+
+import 'package:school_app/models/pta_history_model.dart';
+import 'package:school_app/services/pta_history_service.dart';
+
+import 'package:school_app/models/pta_member_model.dart';
+import 'package:school_app/services/pta_member_service.dart';
+
+
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 
@@ -134,116 +145,164 @@ Row(
                     ),
                     const Divider(height: 1),
 
+                    const SizedBox(height: 15),
+
                     // Tab Views
                     Expanded(
                       child: TabBarView(
                         controller: _tabController,
                         children: [
                           // Next Meeting
-                          SingleChildScrollView(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: const [
-                                SizedBox(height: 10),
-                                Text(
-                                  "2, Nov. 2019, 2 pm",
-                                  style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w500),
-                                ),
-                                SizedBox(height: 10),
-                                Text(
-                                  "For classes\n8, 9 , 10\nAll divisions",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  "Lorem ipsum dolor sit amet, consectetuer adipiscing elit, "
-                                  "sed diam nonummy nibh euismod tincidunt ut laoreet "
-                                  "dolore magna aliquam erat volutpat. Ut wisi enim ad "
-                                  "minim veniam, quis nostrud exerci tation",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // History
-                          ListView(
-                            padding: const EdgeInsets.all(20),
-                            children: const [
-                              _HistoryItem(
-                                  date: "2, Apr 2019, 2 pm",
-                                  classes: "8, 9 , 10"),
-                              Divider(),
-                              _HistoryItem(
-                                  date: "2, Jan.2019, 2 pm",
-                                  classes: "8, 9 , 10"),
-                            ],
-                          ),
-
-                          // People
-                          SingleChildScrollView(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text("President",
-                                    style: TextStyle(fontSize: 14)),
-                                Text("Name",
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500)),
-                                SizedBox(height: 10),
-                                Text("Secretary",
-                                    style: TextStyle(fontSize: 14)),
-                                Text("Name",
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500)),
-                                const SizedBox(height: 10),
-const SizedBox(height: 10),
-Padding(
-  padding: const EdgeInsets.only(bottom: 20.0), // extra bottom space
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: const [
-      Text(
-        "Executive members",
-        style: TextStyle(fontSize: 14),
-      ),
-      SizedBox(height: 4),
-      Text(
-        "Name 1",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-      ),
-      SizedBox(height: 2),
-      
-      Text(
-        "Name 2",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-      ),
-      SizedBox(height: 2),
-      Text(
-        "Name 3",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-      ),
-      SizedBox(height: 2),
-      Text(
-        "Name 4",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-      ),
-    ],
-  ),
+FutureBuilder<List<PTAMeeting>>(
+  future: PTAService().getUpcomingMeetings(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (snapshot.hasError) {
+      return Center(child: Text('Error: ${snapshot.error}'));
+    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      return const Center(child: Text('No upcoming meetings'));
+    } else {
+      final meetings = snapshot.data!;
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: meetings.length,
+        itemBuilder: (context, index) {
+          final meeting = meetings[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Title
+              Text(
+                meeting.title,
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              // Description
+              Text(
+                meeting.description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              // Date & Time
+              Text(
+                '${meeting.date.day}-${meeting.date.month}-${meeting.date.year}, ${meeting.time}',
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              // Classes
+              Text(
+                'For classes: ${meeting.classNames?.join(", ")}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              const Divider(), // optional separator between meetings
+              const SizedBox(height: 16),
+            ],
+          );
+        },
+      );
+    }
+  },
 ),
 
-                              ],
-                            ),
-                          ),
-                        ],
+
+                          // History
+                         FutureBuilder<List<PTAHistory>>(
+  future: PTAHistoryService().getHistory(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (snapshot.hasError) {
+      return Center(child: Text('Error: ${snapshot.error}'));
+    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      return const Center(child: Text('No past meetings'));
+    } else {
+      final history = snapshot.data!;
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: history.length,
+        itemBuilder: (context, index) {
+          final meeting = history[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                meeting.title,
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                meeting.description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${meeting.date.day}-${meeting.date.month}-${meeting.date.year}, ${meeting.time}',
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'For classes: ${meeting.classNames?.join(", ")}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+            ],
+          );
+        },
+      );
+    }
+  },
+),
+
+                          // People
+FutureBuilder<List<PTAMember>>(
+  future: PTAMemberService().getMembers(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    } else if (snapshot.hasError) {
+      return Center(child: Text('Error: ${snapshot.error}'));
+    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+      return const Center(child: Text('No members found'));
+    } else {
+      final members = snapshot.data!;
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: members.length,
+        itemBuilder: (context, index) {
+          final member = members[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                member.position,
+                style: const TextStyle(fontSize: 14),
+              ),
+              Text(
+                member.name,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 10),
+            ],
+          );
+        },
+      );
+    }
+  },
+),
+  ],
                       ),
                     ),
                   ],
