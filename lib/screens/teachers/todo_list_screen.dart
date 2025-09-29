@@ -248,40 +248,41 @@ class _ToDoListPageState extends State<ToDoListPage> {
           ),
 
           // 📘 Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.menu_book, color: Colors.indigo[900], size: 32),
-                    const SizedBox(width: 8),
-                    Text(
-                      'To-Do List',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo[900],
-                      ),
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => setState(() => _showAddForm = !_showAddForm),
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text('Add', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ],
+        Padding(
+  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Row(
+        children: [
+          Icon(Icons.menu_book, color: Colors.indigo[900], size: 32),
+          const SizedBox(width: 8),
+          Text(
+            'To-Do List',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.indigo[900],
             ),
           ),
+        ],
+      ),
+      if (_selectedTask == null) // ✅ Show Add only on list page
+        ElevatedButton.icon(
+          onPressed: () => setState(() => _showAddForm = !_showAddForm),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text('Add', style: TextStyle(color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+    ],
+  ),
+),
 
           // ✏️ Add form
           if (_showAddForm) _buildAddForm(),

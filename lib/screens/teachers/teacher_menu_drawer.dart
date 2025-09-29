@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:restart_app/restart_app.dart';
+
 
 class MenuDrawer extends StatefulWidget {
   const MenuDrawer({super.key});
@@ -107,38 +109,50 @@ class _MenuDrawerState extends State<MenuDrawer> {
                           item['label'],
                           style: const TextStyle(color: Colors.white),
                         ),
-                      onTap: () async {
-  setState(() => _selectedIndex = index);
+                        onTap: () async {
+                          setState(() => _selectedIndex = index);
 
-  if (item['label'] == 'Logout') {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/',
-      (route) => false,
-    );
- } else if ([
-  '/todo',
-  '/classtime',
-  '/settings',
-  '/attendance',
-  '/exams',
-  '/syllabus', // ✅ Add this
-  '/events',
-].contains(item['route'])) {
-  Navigator.pushNamed(context, item['route']);
+                         if (item['label'] == 'Logout') {
+  // 1. Clear all stored data
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.clear(); // Clear everything, not just auth_token
+
+  // 2. Reset any app state if using Provider/Riverpod/GetX
+  // Example with Provider:
+  // context.read<AuthProvider>().logout();
+
+  // 3. Navigate to login page and remove all previous routes
+  Navigator.pushNamedAndRemoveUntil(
+    context,
+    '/', // Replace with your login route if different
+    (route) => false,
+  );
+
+  // 4. Force a full app restart
+  await Restart.restartApp(); // Requires restart_app package
 }
- else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${item['label']} page coming soon.'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-},
-  ),
+ else if ([
+                            '/todo',
+                            '/classtime',
+                            '/settings',
+                            '/attendance',
+                            '/exams',
+                            '/syllabus', // ✅ Add this
+                            '/events',
+                          ].contains(item['route'])) {
+                            Navigator.pushNamed(context, item['route']);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${item['label']} page coming soon.',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
                     ),
                   );
                 },

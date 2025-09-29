@@ -107,10 +107,22 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
 
   final prefs = await SharedPreferences.getInstance();
 
-  if (item['label'] == 'Logout') {
-    await prefs.clear(); // clear all saved data
-    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-  } 
+if (item['label'] == 'Logout') {
+  // 1. Clear all stored data
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.clear(); // Clear everything, not just auth_token
+
+  // 2. Navigate to login page and remove all previous routes
+  Navigator.pushNamedAndRemoveUntil(
+    context,
+    '/', // Replace with your login route if different
+    (route) => false,
+  );
+
+  // 3. (Optional) Force full app restart to ensure no leftover state
+  await Restart.restartApp(); // Requires restart_app package
+}
+
   else if (item['label'] == 'Timetable') {
     final selectedChildString = prefs.getString('selected_child');
     if (selectedChildString == null) {
