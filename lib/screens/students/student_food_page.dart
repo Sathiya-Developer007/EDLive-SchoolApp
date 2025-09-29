@@ -54,6 +54,9 @@ void initState() {
   _generateVisibleDates();
   _scroll = ScrollController();
   _fetchMenu();
+   _loadData();
+   _fetchScheduleForDate(_selectedDate);
+
 }
 
 void _generateVisibleDates() {
@@ -73,6 +76,52 @@ void _centerCurrentDate() {
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 }
+
+
+Future<void> _fetchScheduleForDate(DateTime date) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token") ?? "";
+    final studentId = prefs.getInt("student_id") ?? 0;
+
+    final dateKey = DateFormat("yyyy-MM-dd").format(date);
+    final apiDate =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/food/schedule/$studentId/$apiDate";
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        "accept": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        _foodSelectionsByDate[dateKey] = {
+          "Breakfast": (data["breakfast_menu_id"] ?? 0) != 0,
+          "Lunch": (data["lunch_menu_id"] ?? 0) != 0,
+          "Snacks": (data["snacks_menu_id"] ?? 0) != 0,
+        };
+      });
+    } else {
+      setState(() {
+        _foodSelectionsByDate[dateKey] = {
+          "Breakfast": false,
+          "Lunch": false,
+          "Snacks": false,
+        };
+      });
+    }
+  } catch (e) {
+    print("Fetch schedule error: $e");
+  }
+}
+
 
 
 Future<void> _submitFoodForWeek() async {
@@ -96,13 +145,13 @@ Future<void> _submitFoodForWeek() async {
       final body = {
         "student_id": studentId,
         "date": formattedDate,
-        "breakfast_menu_id": (_foodSelections["Breakfast"]! && dayMenu["breakfast"] != null)
+        "breakfast_menu_id": (_foodSelections["Breakfast"]! && dayMenu["breakfast"]?["items"]?.isNotEmpty == true)
             ? dayMenu["breakfast"]["items"][0]["id"]
             : 0,
-        "lunch_menu_id": (_foodSelections["Lunch"]! && dayMenu["lunch"] != null)
+        "lunch_menu_id": (_foodSelections["Lunch"]! && dayMenu["lunch"]?["items"]?.isNotEmpty == true)
             ? dayMenu["lunch"]["items"][0]["id"]
             : 0,
-        "snacks_menu_id": (_foodSelections["Snacks"]! && dayMenu["snacks"] != null)
+        "snacks_menu_id": (_foodSelections["Snacks"]! && dayMenu["snacks"]?["items"]?.isNotEmpty == true)
             ? dayMenu["snacks"]["items"][0]["id"]
             : 0,
       };
@@ -140,10 +189,10 @@ Future<void> _submitFoodForWeek() async {
   }
 }
 
-
 Future<void> _submitFoodForSelectedDate() async {
   final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
   final selections = _foodSelectionsByDate[dateKey];
+
   if (selections == null || !selections.containsValue(true)) return;
 
   setState(() => _loading = true);
@@ -153,22 +202,24 @@ Future<void> _submitFoodForSelectedDate() async {
     final token = prefs.getString("auth_token") ?? "";
     final studentId = prefs.getInt("student_id") ?? 0;
 
-    final formattedDate = dateKey;
-    final weekdayIndex = _selectedDate.weekday - 1; 
+    final weekdayIndex = _selectedDate.weekday - 1;
     final dayMenu = _weeklyMenu?["$weekdayIndex"];
 
     final body = {
       "student_id": studentId,
-      "date": formattedDate,
-      "breakfast_menu_id": (selections["Breakfast"]! && dayMenu?["breakfast"] != null)
+      "date": dateKey,
+      "breakfast_menu_id": (selections["Breakfast"]! &&
+              dayMenu?["breakfast"]?["items"]?.isNotEmpty == true)
           ? dayMenu!["breakfast"]["items"][0]["id"]
-          : 0,
-      "lunch_menu_id": (selections["Lunch"]! && dayMenu?["lunch"] != null)
-          ? dayMenu!["lunch"]["items"][0]["id"]
-          : 0,
-      "snacks_menu_id": (selections["Snacks"]! && dayMenu?["snacks"] != null)
-          ? dayMenu!["snacks"]["items"][0]["id"]
-          : 0,
+          : null, // ✅ unselected → null
+      "lunch_menu_id": (selections["Lunch"]! &&
+              dayMenu?["lunch"]?["items"]?.isNotEmpty == true)
+          ? dayMenu["lunch"]["items"][0]["id"]
+          : null, // ✅ unselected → null
+      "snacks_menu_id": (selections["Snacks"]! &&
+              dayMenu?["snacks"]?["items"]?.isNotEmpty == true)
+          ? dayMenu["snacks"]["items"][0]["id"]
+          : null, // ✅ unselected → null
     };
 
     final url =
@@ -186,13 +237,19 @@ Future<void> _submitFoodForSelectedDate() async {
 
     if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Food schedule confirmed!")),
+        SnackBar(content: Text("✅ Order confirmed for $dateKey")),
       );
     } else {
-      print("Error ${response.statusCode}: ${response.body}");
+      print("❌ Error ${response.statusCode}: ${response.body}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to confirm order")),
+      );
     }
   } catch (e) {
     print("Submit API Error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error submitting order")),
+    );
   } finally {
     setState(() => _loading = false);
   }
@@ -239,9 +296,58 @@ else {
 
 void _toggleFood(String key, bool value) {
   final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
+
   setState(() {
-    _foodSelectionsByDate[dateKey]?[key] = value;
+    // Ensure map exists for the date
+    _foodSelectionsByDate.putIfAbsent(dateKey, () => {
+      "Breakfast": false,
+      "Lunch": false,
+      "Snacks": false,
+    });
+
+    _foodSelectionsByDate[dateKey]![key] = value;
   });
+}
+
+
+Future<List<String>> fetchWeekdays() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+
+  final response = await http.get(
+    Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/weekdays'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    final List<dynamic> data = json.decode(response.body);
+    return data.map((day) => day['day'] as String).toList();
+  } else {
+    throw Exception('Failed to load weekdays');
+  }
+}
+
+
+List<String> _weekdays = [];
+bool _isLoading = true;
+
+
+
+Future<void> _loadData() async {
+  try {
+    final days = await fetchWeekdays();
+    setState(() {
+      _weekdays = days;
+      _isLoading = false;
+    });
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
+  }
 }
 
 
@@ -333,85 +439,118 @@ void _toggleFood(String key, bool value) {
           // Calendar selector
           _dateScroller(),
 
+             _buildWeekdaysSection(),
+
 
           // Food List
-       Expanded(
+    Expanded(
   child: _loading
       ? const Center(child: CircularProgressIndicator())
       : _weeklyMenu == null
           ? const Center(child: Text("No menu available"))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 7, // Monday to Sunday
-              itemBuilder: (context, index) {
-                final dayMenu = _weeklyMenu?["$index"];
-                if (dayMenu == null) return const SizedBox();
-                
+          : Builder(
+  builder: (context) {
+    final weekdayIndex = _selectedDate.weekday - 1; // Mon=0
+    final dayMenu = _weeklyMenu?["$weekdayIndex"];
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                   
-               if (dayMenu["breakfast"] != null)
-  FoodTile(
-    keyName: "Breakfast-$index",
-    title: "Breakfast (${dayMenu["breakfast"]["price"]}₹)",
-    time: "8 : 30 am - 09 : 30 am",
-    items: dayMenu["breakfast"]["items"], // pass array
-checked: _foodSelectionsByDate[
-          DateFormat("yyyy-MM-dd").format(_selectedDate)
-        ]?["Breakfast"] ?? false,
+    // 🔹 If no food items for this day → show placeholder card
+    if (dayMenu == null ||
+        (dayMenu["breakfast"] == null &&
+         dayMenu["lunch"] == null &&
+         dayMenu["snacks"] == null)) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: const [
+                  Icon(Icons.fastfood, size: 40, color: Colors.grey),
+                  SizedBox(height: 12),
+                  Text(
+                    "No menu available for this day",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
-    onChanged: (v) => _toggleFood("Breakfast", v),
-  ),
+    // 🔹 Otherwise show actual menu
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+                    if (dayMenu["breakfast"] != null)
+                      FoodTile(
+                        keyName: "Breakfast-$weekdayIndex",
+                        title: "Breakfast (${dayMenu["breakfast"]["price"]}₹)",
+                        time: "8 : 30 am - 09 : 30 am",
+                        items: dayMenu["breakfast"]["items"],
+                        checked: _foodSelectionsByDate[
+                                    DateFormat("yyyy-MM-dd")
+                                        .format(_selectedDate)]?["Breakfast"] ??
+                                false,
+                        onChanged: (v) => _toggleFood("Breakfast", v),
+                      ),
 
-if (dayMenu["lunch"] != null)
-  FoodTile(
-    keyName: "Lunch-$index",
-    title: "Lunch (${dayMenu["lunch"]["price"]}₹)",
-    time: "12 : 30 pm - 01 : 30 pm",
-    items: dayMenu["lunch"]["items"],
-   checked: _foodSelectionsByDate[
-          DateFormat("yyyy-MM-dd").format(_selectedDate)
-        ]?["Lunch"] ?? false,
+                    if (dayMenu["lunch"] != null)
+                      FoodTile(
+                        keyName: "Lunch-$weekdayIndex",
+                        title: "Lunch (${dayMenu["lunch"]["price"]}₹)",
+                        time: "12 : 30 pm - 01 : 30 pm",
+                        items: dayMenu["lunch"]["items"],
+                        checked: _foodSelectionsByDate[
+                                    DateFormat("yyyy-MM-dd")
+                                        .format(_selectedDate)]?["Lunch"] ??
+                                false,
+                        onChanged: (v) => _toggleFood("Lunch", v),
+                      ),
 
-    onChanged: (v) => _toggleFood("Lunch", v),
-  ),
-
-if (dayMenu["snacks"] != null)
-  FoodTile(
-    keyName: "Snacks-$index",
-    title: "Snacks (${dayMenu["snacks"]["price"]}₹)",
-    time: "3 : 30 pm - 4 : 00 pm",
-    items: dayMenu["snacks"]["items"],
-checked: _foodSelectionsByDate[
-          DateFormat("yyyy-MM-dd").format(_selectedDate)
-        ]?["Snacks"] ?? false,
-
-    onChanged: (v) => _toggleFood("Snacks", v),
-  ),
-   const SizedBox(height: 20),
+                    if (dayMenu["snacks"] != null)
+                      FoodTile(
+                        keyName: "Snacks-$weekdayIndex",
+                        title: "Snacks (${dayMenu["snacks"]["price"]}₹)",
+                        time: "3 : 30 pm - 4 : 00 pm",
+                        items: dayMenu["snacks"]["items"],
+                        checked: _foodSelectionsByDate[
+                                    DateFormat("yyyy-MM-dd")
+                                        .format(_selectedDate)]?["Snacks"] ??
+                                false,
+                        onChanged: (v) => _toggleFood("Snacks", v),
+                      ),
                   ],
                 );
               },
             ),
 ),
-          // Pay Button
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            child:ElevatedButton(
-  onPressed: _isAnySelected ? _submitFoodForWeek : null,
-  style: ElevatedButton.styleFrom(
-    backgroundColor: _isAnySelected ? Colors.blue : const Color(0xFFCCCCCC),
-    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+     // Pay Button
+Container(
+  width: double.infinity,
+  margin: const EdgeInsets.all(16),
+  child: ElevatedButton(
+    onPressed: _isAnySelected ? _submitFoodForSelectedDate : null,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: _isAnySelected ? Colors.blue : const Color(0xFFCCCCCC),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+    ),
+    child: const Text("Pay & Confirm",
+        style: TextStyle(color: Colors.white, fontSize: 16)),
   ),
-  child: const Text("Pay & Confirm",
-      style: TextStyle(color: Colors.white, fontSize: 16)),
 ),
- ),
-        ],
+ ],
       ),
     );
   }
@@ -483,22 +622,24 @@ Widget _dateScroller() {
                         date.year == _centerDate.year;
 
                     return GestureDetector(
-                    onTap: () {
+onTap: () {
   setState(() {
     _centerDate = date;
     _selectedDate = date;
-
-    // initialize selections for this date if not exists
-    _foodSelectionsByDate.putIfAbsent(
-      DateFormat("yyyy-MM-dd").format(date),
-      () => {
-        "Breakfast": false,
-        "Lunch": false,
-        "Snacks": false,
-      },
-    );
   });
+
+  // initialize default selections
+  _foodSelectionsByDate.putIfAbsent(
+    DateFormat("yyyy-MM-dd").format(date),
+    () => {
+      "Breakfast": false,
+      "Lunch": false,
+      "Snacks": false,
+    },
+  );
+
   _fetchMenu();
+  _fetchScheduleForDate(date); // ✅ also fetch schedule status
   WidgetsBinding.instance.addPostFrameCallback((_) => _centerCurrentDate());
 },
 
@@ -607,6 +748,75 @@ Widget _dateScroller() {
               ),
             ],
           ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+Widget _buildWeekdaysSection() {
+  if (_isLoading) {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  if (_weekdays.isEmpty) {
+    return const Center(child: Text(""));
+  }
+
+  return Container(
+    padding: const EdgeInsets.all(12),
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 4,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Weekdays",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2E3192),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: _weekdays.asMap().entries.map((entry) {
+            final index = entry.key;
+            final day = entry.value;
+            final isSelected = _selectedDate.weekday - 1 == index;
+
+            return ChoiceChip(
+              label: Text(day),
+              selected: isSelected,
+              selectedColor: const Color(0xFF2E3192),
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFF2E3192),
+              ),
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() {
+                    // pick correct date for that weekday in current week
+                    _selectedDate =
+                        _startDate.add(Duration(days: index));
+                    _centerDate = _selectedDate;
+                    _fetchMenu();
+                  });
+                }
+              },
+            );
+          }).toList(),
         ),
       ],
     ),
