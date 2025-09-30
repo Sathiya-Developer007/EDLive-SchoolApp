@@ -190,7 +190,7 @@ Future<void> _fetchNotifications({bool loadMore = false}) async {
       }
     });
 
-    // prepare for next week
+    // prepare for next week fetch
     final periodStart = data['notifications']['period_start'];
     if (periodStart != null) {
       DateTime prevStart = DateTime.parse(periodStart);
@@ -218,6 +218,12 @@ Future<void> _fetchNotifications({bool loadMore = false}) async {
       _loading = false;
       _fetchingMore = false;
     });
+
+    // 🔹 If no data found in this week, auto fetch previous week
+    if (_notificationsByDate.isEmpty && _nextFetchDate != null) {
+      debugPrint("⚠️ No notifications this week. Fetching previous week...");
+      _fetchNotifications(loadMore: true);
+    }
   } catch (e) {
     setState(() {
       _loading = false;
