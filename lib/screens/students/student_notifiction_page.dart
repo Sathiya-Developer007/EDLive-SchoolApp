@@ -419,16 +419,15 @@ Expanded(
                                       alignment: Alignment.centerRight,
                                       child: TextButton(
                                         onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  NotificationRepliesPage(
-                                                itemId: item.id,
-                                                itemType: item.apiItemType,
-                                              ),
-                                            ),
-                                          );
+                                         Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => NotificationRepliesPage(
+      notificationItem: item, // pass the whole notification
+    ),
+  ),
+);
+
                                         },
                                         child: const Text("Reply"),
                                       ),

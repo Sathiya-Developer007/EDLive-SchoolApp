@@ -317,6 +317,7 @@ class _NotificationPageState extends State<NotificationPage> {
 // ----------------- NOTIFICATION DETAIL PAGE -----------------
 
 
+// ----------------- NOTIFICATION DETAIL PAGE -----------------
 class NotificationDetailPage extends StatefulWidget {
   final NotificationItem item;
 
@@ -333,7 +334,6 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
   String? _replyError;
 
   final NotificationService _service = NotificationService();
-
   NotificationReply? _selectedReply; // Selected message to reply
 
   @override
@@ -365,7 +365,6 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
     }
   }
 
-  // Flatten nested replies
   List<NotificationReply> _flattenReplies(List<NotificationReply> replies) {
     List<NotificationReply> list = [];
     for (var r in replies) {
@@ -383,25 +382,20 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
 
     return Scaffold(
       appBar: TeacherAppBar(),
-      drawer: MenuDrawer(),
+      drawer: const MenuDrawer(),
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Top Title + Back
+            // Back button + Title
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Text(
-                    "< Back",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 14,
-                    ),
-                  ),
+                  child: const Text("< Back",
+                      style: TextStyle(color: Colors.black, fontSize: 14)),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -420,9 +414,9 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                     ),
                     const SizedBox(width: 8),
                     const Text(
-                      "Replies",
+                      "Notification Details",
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF2E3192),
                       ),
@@ -441,34 +435,46 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 6,
-                      offset: Offset(0, 3),
-                    ),
+                        color: Colors.black12,
+                        blurRadius: 6,
+                        offset: Offset(0, 3)),
                   ],
                 ),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // Notification Details
+                    // ✅ Notification full details
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(widget.item.title,
                               style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          Text("${widget.item.moduleType} • ${widget.item.type}",
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2E3192))),
+                          const SizedBox(height: 6),
+                          Text(widget.item.subtitle,
                               style: const TextStyle(
-                                  fontSize: 13, color: Colors.black54)),
+                                  fontSize: 14, color: Colors.black87)),
+                          const SizedBox(height: 6),
+                          Text(
+                            "${widget.item.moduleType} • ${widget.item.type}",
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.black54),
+                          ),
                           const SizedBox(height: 4),
                           Text(
-                              DateFormat('dd/MM/yyyy HH:mm')
-                                  .format(widget.item.dateTime),
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.black45)),
+                            DateFormat('dd/MM/yyyy HH:mm')
+                                .format(widget.item.dateTime),
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.black45),
+                          ),
                         ],
                       ),
                     ),
@@ -489,77 +495,44 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                                         final isTeacher =
                                             reply.senderType == 'Teacher';
 
-                                        return GestureDetector(
-                                          onLongPress: () {
-                                            if (!isTeacher) {
-                                              setState(() {
-                                                _selectedReply = reply;
-                                              });
-                                            }
-                                          },
-                                          child: Align(
-                                            alignment: isTeacher
-                                                ? Alignment.centerRight
-                                                : Alignment.centerLeft,
-                                            child: Container(
-                                              margin:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 4,
-                                                      horizontal: 8),
-                                              padding: const EdgeInsets.all(10),
-                                              decoration: BoxDecoration(
-                                                color: isTeacher
-                                                    ? const Color(0xFF2E3192)
-                                                    : Colors.grey[300],
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  if (_selectedReply == reply)
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              4),
-                                                      decoration:
-                                                          BoxDecoration(
-                                                        color: Colors.grey[200],
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(6),
-                                                      ),
-                                                      child: Text(
-                                                        "Replying to: ${reply.messageText}",
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          fontStyle:
-                                                              FontStyle.italic,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  Text(
-                                                    reply.messageText,
-                                                    style: TextStyle(
-                                                      color: isTeacher
-                                                          ? Colors.white
-                                                          : Colors.black87,
-                                                    ),
+                                        return Align(
+                                          alignment: isTeacher
+                                              ? Alignment.centerRight
+                                              : Alignment.centerLeft,
+                                          child: Container(
+                                            margin: const EdgeInsets.symmetric(
+                                                vertical: 4, horizontal: 8),
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: isTeacher
+                                                  ? const Color(0xFF2E3192)
+                                                  : Colors.grey[300],
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  reply.messageText,
+                                                  style: TextStyle(
+                                                    color: isTeacher
+                                                        ? Colors.white
+                                                        : Colors.black87,
                                                   ),
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    "${reply.senderName} • ${DateFormat('dd/MM/yyyy HH:mm').format(reply.createdAt)}",
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: isTeacher
-                                                          ? Colors.white70
-                                                          : Colors.black54,
-                                                    ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  "${reply.senderName} • ${DateFormat('dd/MM/yyyy HH:mm').format(reply.createdAt)}",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isTeacher
+                                                        ? Colors.white70
+                                                        : Colors.black54,
                                                   ),
-                                                ],
-                                              ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         );
@@ -568,84 +541,44 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                     ),
 
                     // Reply input box
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_selectedReply != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              margin: const EdgeInsets.only(bottom: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      "Replying to: ${_selectedReply!.messageText}",
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          fontStyle: FontStyle.italic),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () =>
-                                        setState(() => _selectedReply = null),
-                                    child: const Icon(Icons.close, size: 16),
-                                  ),
-                                ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _msgController,
+                            decoration: InputDecoration(
+                              hintText: "Write a reply...",
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
                               ),
                             ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _msgController,
-                                  decoration: InputDecoration(
-                                    hintText: "Write a reply...",
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-  onPressed: () async {
-    if (_msgController.text.trim().isEmpty) return;
-    await _service.sendReply(
-      itemId: widget.item.id,
-      itemType: widget.item.moduleType,
-      message: _msgController.text.trim(),
-      // replyToId removed
-    );
-    _msgController.clear();
-    setState(() {
-      _selectedReply = null; // clear selected reply after sending
-    });
-    _fetchReplies();
-  },
-  style: ElevatedButton.styleFrom(
-    backgroundColor: const Color(0xFF2E3192),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  ),
-  child: const Icon(Icons.send, color: Colors.white),
-),
- ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            if (_msgController.text.trim().isEmpty) return;
+                            await _service.sendReply(
+                              itemId: widget.item.id,
+                              itemType: widget.item.moduleType,
+                              message: _msgController.text.trim(),
+                            );
+                            _msgController.clear();
+                            _fetchReplies();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E3192),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                          child: const Icon(Icons.send, color: Colors.white),
+                        ),
+                      ],
+                    )
                   ],
                 ),
               ),

@@ -34,8 +34,23 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
 
 bool get _isAnySelected {
   final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
-  return _foodSelectionsByDate[dateKey]?.containsValue(true) ?? false;
+  final selections = _foodSelectionsByDate[dateKey] ?? {};
+
+  final weekdayIndex = _selectedDate.weekday % 7; // Sunday=0
+  final dayMenu = _weeklyMenu?["$weekdayIndex"];
+
+  // ❌ if no menu at all, return false
+  if (dayMenu == null ||
+      (dayMenu["breakfast"] == null &&
+       dayMenu["lunch"] == null &&
+       dayMenu["snacks"] == null)) {
+    return false;
+  }
+
+  // ✅ at least one food checkbox selected
+  return selections.containsValue(true);
 }
+
 
 
 
@@ -202,8 +217,9 @@ Future<void> _submitFoodForSelectedDate() async {
     final token = prefs.getString("auth_token") ?? "";
     final studentId = prefs.getInt("student_id") ?? 0;
 
-    final weekdayIndex = _selectedDate.weekday - 1;
-    final dayMenu = _weeklyMenu?["$weekdayIndex"];
+ final weekdayIndex = _selectedDate.weekday % 7; // ✅
+final dayMenu = _weeklyMenu?["$weekdayIndex"];
+
 
     final body = {
       "student_id": studentId,
@@ -450,8 +466,8 @@ Future<void> _loadData() async {
           ? const Center(child: Text("No menu available"))
           : Builder(
   builder: (context) {
-    final weekdayIndex = _selectedDate.weekday - 1; // Mon=0
-    final dayMenu = _weeklyMenu?["$weekdayIndex"];
+    final weekdayIndex = _selectedDate.weekday % 7; // ✅ Sunday=0 ... Saturday=6
+final dayMenu = _weeklyMenu?["$weekdayIndex"];
 
     // 🔹 If no food items for this day → show placeholder card
     if (dayMenu == null ||
@@ -540,15 +556,17 @@ Container(
   width: double.infinity,
   margin: const EdgeInsets.all(16),
   child: ElevatedButton(
-    onPressed: _isAnySelected ? _submitFoodForSelectedDate : null,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: _isAnySelected ? Colors.blue : const Color(0xFFCCCCCC),
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-    ),
-    child: const Text("Pay & Confirm",
-        style: TextStyle(color: Colors.white, fontSize: 16)),
+  onPressed: _isAnySelected ? _submitFoodForSelectedDate : null,
+  style: ElevatedButton.styleFrom(
+    backgroundColor: _isAnySelected ? Colors.blue : const Color(0xFFCCCCCC),
+    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
   ),
+  child: const Text(
+    "Confirm",
+    style: TextStyle(color: Colors.white, fontSize: 16),
+  ),
+),
 ),
  ],
       ),
