@@ -287,47 +287,90 @@ class _TeacherSyllabusPageState extends State<TeacherSyllabusPage> {
                                                 itemBuilder: (context, index) {
                                                   final subject = _subjects[index];
                                                   return InkWell(
-                                                    onTap: () {
-                                                      if (_selectedClass == null) return;
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (_) => SyllabusDetailPage(
-                                                            classId: _selectedClass!.id,
-                                                            subjectId: subject.id,
-                                                            selectedClass: _selectedClass!.fullName,
-                                                            subject: subject.name,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                          vertical: 20, horizontal: 12),
-                                                      decoration: const BoxDecoration(
-                                                        border: Border(
-                                                          bottom: BorderSide(
-                                                              color: Color(0xFF999999), width: 0.3),
-                                                        ),
-                                                      ),
-                                                      child: Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                        children: [
-                                                          Text(subject.name,
-                                                              style: const TextStyle(
-                                                                  color: Color(0xFF2E3192),
-                                                                  fontWeight: FontWeight.w500)),
-                                                          SvgPicture.asset(
-                                                            'assets/icons/arrow_right.svg',
-                                                            height: 18,
-                                                            width: 18,
-                                                            color: Colors.grey,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
+  onTap: () {
+    if (_selectedClass == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SyllabusDetailPage(
+          classId: _selectedClass!.id,
+          subjectId: subject.id,
+          selectedClass: _selectedClass!.fullName,
+          subject: subject.name,
+        ),
+      ),
+    );
+  },
+  child: Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: const Offset(0, 3),
+        ),
+      ],
+      border: Border.all(color: Colors.grey.shade200),
+    ),
+    child: Row(
+      children: [
+        // Icon with colored background
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF29ABE2).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SvgPicture.asset(
+            'assets/icons/book.svg', // your subject icon
+            height: 22,
+            width: 22,
+            color: const Color(0xFF29ABE2),
+          ),
+        ),
+        const SizedBox(width: 16),
+
+        // Subject name + subtitle
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                subject.name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2E3192),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Click to view syllabus',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Arrow icon
+        SvgPicture.asset(
+          'assets/icons/arrow_right.svg',
+          height: 18,
+          width: 18,
+          color: Colors.grey.shade400,
+        ),
+      ],
+    ),
+  ),
+);
+ },
                                               ),
                                       ),
                                     ],
