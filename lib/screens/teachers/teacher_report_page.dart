@@ -289,104 +289,105 @@ Future<void> _loadStudentsByClass(int classId) async {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Class Dropdown
-                    isLoadingClasses
-                        ? const SizedBox(
-                            height: 42,
-                            width: 42,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Container(
-                            height: 42,
-                            width: 220,
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.grey.shade400),
-                            ),
-                            child: DropdownButton<TeacherClass>(
-                              value: selectedClass,
-                              isExpanded: true,
-                              underline: const SizedBox(),
-                              icon: const Icon(Icons.arrow_drop_down,
-                                  size: 28, color: Colors.black),
-                              hint: const Text("Select Class"),
-                              items: teacherClasses.map((cls) {
-                                return DropdownMenuItem(
-                                  value: cls,
-                                  child: Text(cls.fullName),
-                                );
-                              }).toList(),
-                              onChanged: (newClass) async {
-                                if (newClass != null) {
-                                  setState(() {
-                                    selectedClass = newClass;
-                                    isLoadingStudents = true;
-                                    isLoadingSubjects = true;
-                                  });
-                                  await _loadSubjectsByClass(newClass.id);
-                                  await _loadStudentsByClass(newClass.id);
-                                }
-                              },
-                            ),
-                          ),
+// Class Dropdown
+// Class Dropdown
+isLoadingClasses
+    ? const SizedBox(
+        height: 42,
+        width: 42,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      )
+    : Container(
+        height: 42,
+        width: MediaQuery.of(context).size.width * 0.4, // 📱 40% of screen width
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade400),
+        ),
+        child: DropdownButton<TeacherClass>(
+          value: selectedClass,
+          isExpanded: true, // 🔑 take full available width
+          underline: const SizedBox(),
+          icon: const Icon(Icons.arrow_drop_down,
+              size: 28, color: Colors.black),
+          hint: const Text("Select Class"),
+          items: teacherClasses.map((cls) {
+            return DropdownMenuItem(
+              value: cls,
+              child: Text(cls.fullName),
+            );
+          }).toList(),
+          onChanged: (newClass) async {
+            if (newClass != null) {
+              setState(() {
+                selectedClass = newClass;
+                isLoadingStudents = true;
+                isLoadingSubjects = true;
+              });
+              await _loadSubjectsByClass(newClass.id);
+              await _loadStudentsByClass(newClass.id);
+            }
+          },
+        ),
+      ),
 
-                    const SizedBox(height: 12),
+const SizedBox(height: 12),
 
-                    // Exam Dropdown
-                    ValueListenableBuilder<String>(
-                      valueListenable: selectedTerm,
-                      builder: (context, value, _) {
-                        if (isLoadingExamTypes) {
-                          return const SizedBox(
-                            height: 42,
-                            width: 42,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
-                        if (examTypes.isEmpty) {
-                          return const Text("No Exam Types");
-                        }
-                        return Container(
-                          height: 42,
-                          width: 220,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade400),
-                          ),
-                          child: DropdownButton<ExamType>(
-                            value: selectedExamType,
-                            isExpanded: true,
-                            underline: const SizedBox(),
-                            icon: const Icon(Icons.arrow_drop_down,
-                                size: 28, color: Colors.black),
-                            items: examTypes.map((exam) {
-                              return DropdownMenuItem(
-                                value: exam,
-                                child: Text(exam.examType),
-                              );
-                            }).toList(),
-                            onChanged: (newVal) async {
-                              if (newVal != null) {
-                                setState(() {
-                                  selectedExamType = newVal;
-                                  selectedTerm.value = newVal.examType;
-                                  isLoadingSubjects = true;
-                                });
-                                if (selectedClass != null) {
-                                  await _loadSubjectsByClass(selectedClass!.id);
-                                }
-                              }
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+// Exam Dropdown
+ValueListenableBuilder<String>(
+  valueListenable: selectedTerm,
+  builder: (context, value, _) {
+    if (isLoadingExamTypes) {
+      return const SizedBox(
+        height: 42,
+        width: 42,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    if (examTypes.isEmpty) {
+      return const Text("No Exam Types");
+    }
+    return Container(
+      height: 42,
+      width: MediaQuery.of(context).size.width * 0.4, // 📱 40% of screen width
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade400),
+      ),
+      child: DropdownButton<ExamType>(
+        value: selectedExamType,
+        isExpanded: true,
+        underline: const SizedBox(),
+        icon: const Icon(Icons.arrow_drop_down,
+            size: 28, color: Colors.black),
+        items: examTypes.map((exam) {
+          return DropdownMenuItem(
+            value: exam,
+            child: Text(exam.examType),
+          );
+        }).toList(),
+        onChanged: (newVal) async {
+          if (newVal != null) {
+            setState(() {
+              selectedExamType = newVal;
+              selectedTerm.value = newVal.examType;
+              isLoadingSubjects = true;
+            });
+            if (selectedClass != null) {
+              await _loadSubjectsByClass(selectedClass!.id);
+            }
+          }
+        },
+      ),
+    );
+  },
+),
+
+  ],
                 ),
               ],
             ),
