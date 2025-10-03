@@ -13,12 +13,13 @@ class CoCurricularActivitiesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-create: (_) => CoCurricularProvider()..fetchStats(),
+    final screenWidth = MediaQuery.of(context).size.width;
 
+    return ChangeNotifierProvider(
+      create: (_) => CoCurricularProvider()..fetchStats(),
       child: Scaffold(
         appBar: TeacherAppBar(),
-        drawer: MenuDrawer(),
+        drawer: const MenuDrawer(),
         body: Container(
           width: double.infinity,
           height: double.infinity,
@@ -28,11 +29,11 @@ create: (_) => CoCurricularProvider()..fetchStats(),
             children: [
               // Header
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Back + Add button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -47,41 +48,42 @@ create: (_) => CoCurricularProvider()..fetchStats(),
                             ),
                           ),
                         ),
-                   TextButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AddCoCurricularActivityPage(),
-      ),
-    );
-  },
-  style: TextButton.styleFrom(
-    backgroundColor:  Colors.blue, // Blue background
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20), // Rounded button
-    ),
-  ),
-  child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: const [
-      Icon(Icons.add, color: Colors.white, size: 18),
-      SizedBox(width: 6),
-      Text(
-        'Add',
-        style: TextStyle(
-          color: Colors.white, // White text
-          fontSize: 15,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ],
-  ),
-),
- ],
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AddCoCurricularActivityPage(),
+                              ),
+                            );
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.add, color: Colors.white, size: 18),
+                              SizedBox(width: 6),
+                              Text(
+                                'Add',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
+                    // Title with icon
                     Row(
                       children: [
                         Container(
@@ -116,35 +118,88 @@ create: (_) => CoCurricularProvider()..fetchStats(),
               const SizedBox(height: 10),
               // Scrollable white container
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.all(16),
-child: Consumer<CoCurricularProvider>(
-  builder: (context, provider, _) {
-    if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    } else if (provider.error != null) {
-      return Center(child: Text('Error: ${provider.error}'));
-    } else if (provider.stats.isEmpty) {
-      return const Center(child: Text('No stats found'));
-    }
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    child: SizedBox(
+                      width: screenWidth - 32, // Matches padding of 16 left + right
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Consumer<CoCurricularProvider>(
+                          builder: (context, provider, _) {
+                            if (provider.isLoading) {
+                              return const Center(child: CircularProgressIndicator());
+                            } else if (provider.error != null) {
+                              return Center(child: Text('Error: ${provider.error}'));
+                            } else if (provider.stats.isEmpty) {
+                              return const Center(child: Text('No stats found'));
+                            }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: provider.stats.map((stat) {
-          return _buildStatItem(stat);
-        }).toList(),
-      ),
-    );
-  },
-),
-  ),
+                            return Column(
+                              children: provider.stats.map((stat) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    // Optional: navigate to detail page
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Center(
+                                          child: Text(
+                                            stat.activityName,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2E3192),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "Category: ${stat.categoryName}",
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "Class: ${stat.className}",
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -154,57 +209,57 @@ child: Consumer<CoCurricularProvider>(
     );
   }
 
-Widget _buildStatItem(CoCurricularStat stat) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          stat.activityName,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: Color(0xFF2E3192),
+  // Optional helper widgets
+  Widget _buildStatItem(CoCurricularStat stat) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            stat.activityName,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Color(0xFF2E3192),
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text("Category: ${stat.categoryName}"),
-        Text("Class: ${stat.className}"),
-        // Text("Enrollments: ${stat.enrollmentCount}"),
-        const Divider(),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 4),
+          Text("Category: ${stat.categoryName}"),
+          Text("Class: ${stat.className}"),
+          const Divider(),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSection(String title, String description) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          description,
-          style: const TextStyle(
-            color: Color(0xFF2E3192),
-            fontSize: 14,
+          const SizedBox(height: 5),
+          Text(
+            description,
+            style: const TextStyle(
+              color: Color(0xFF2E3192),
+              fontSize: 14,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
-        const Divider(color: Colors.grey),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 5),
+          const Divider(color: Colors.grey),
+        ],
+      ),
+    );
+  }
 
   Widget _buildListItem(String title) {
     return Padding(

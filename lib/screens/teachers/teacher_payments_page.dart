@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
@@ -9,8 +8,6 @@ import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
 
 import 'package:school_app/models/teacher_payment_model.dart';
 import 'package:school_app/services/teacher_payment_service.dart';
-
-
 import 'package:school_app/providers/teacher_dashboard_provider.dart';
 
 class TeacherPaymentsPage extends StatefulWidget {
@@ -21,89 +18,64 @@ class TeacherPaymentsPage extends StatefulWidget {
 }
 
 class _TeacherPaymentsPageState extends State<TeacherPaymentsPage> {
- List<PaymentAssignment> payments = [];
+  List<PaymentAssignment> payments = [];
   bool isLoading = true;
 
- @override
-void initState() {
-  super.initState();
-  loadData();
-}
+  late PageController _pageController;
+  int _selectedTab = 0;
 
-Future<void> loadData() async {
-  setState(() => isLoading = true);
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedTab);
+    loadData();
+  }
 
-  final classIds = await fetchAssignedClasses();
-  if (classIds.isEmpty) {
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onTabTapped(int index) {
     setState(() {
-      payments = [];
-      isLoading = false;
+      _selectedTab = index;
     });
-    return;
-  }
-
-  await fetchPayments();
-}
-
-
-  // List<PaymentAssignment> payments = [];
-
-  Future<List<int>> fetchAssignedClasses() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token'); // assuming you store auth token
-
-    final response = await http.get(
-      Uri.parse('http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/staff/staff/teacher/class'),
-      headers: {
-        'accept': 'application/json',
-        'Authorization': 'Bearer $token', // if auth required
-      },
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
-
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
-      return data.map<int>((item) => item['class_id'] as int).toList();
-    } else {
-      throw Exception('Failed to load classes');
-    }
-  } catch (e) {
-    print("Error fetching classes: $e");
-    return [];
   }
-}
 
+  Future<void> loadData() async {
+    setState(() => isLoading = true);
 
-Future<void> fetchPayments() async {
-  try {
-    // Step 1: Get teacher's assigned classes
-    final teacherClasses = await TeacherClassService.fetchTeacherClasses();
-    final classIds = teacherClasses.map((c) => c.classId).toList();
+    try {
+      final teacherClasses = await TeacherClassService.fetchTeacherClasses();
+      final classIds = teacherClasses.map((c) => c.classId).toList();
 
-    // Step 2: Call payment API for these classes
-    final data = await PaymentService.fetchPaymentAssignments(
-      classIds: classIds,
-      academicYear: '2025-2026',
-    );
+      final data = await PaymentService.fetchPaymentAssignments(
+        classIds: classIds,
+        academicYear: '2025-2026',
+      );
 
-    setState(() {
-      payments = data;
-      isLoading = false;
-    });
+      setState(() {
+        payments = data;
+        isLoading = false;
+      });
 
-    // ✅ Step 3: After loading payments, mark as viewed in Dashboard
-    final dashboardProvider =
-        Provider.of<DashboardProvider>(context, listen: false);
-
-    for (var payment in data) {
-      dashboardProvider.markDashboardItemViewed(payment.id);
+      // Mark dashboard items as viewed
+      final dashboardProvider =
+          Provider.of<DashboardProvider>(context, listen: false);
+      for (var payment in data) {
+        dashboardProvider.markDashboardItemViewed(payment.id);
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      print("Error: $e");
     }
-  } catch (e) {
-    setState(() => isLoading = false);
-    print("Error: $e");
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -111,40 +83,104 @@ Future<void> fetchPayments() async {
       backgroundColor: const Color(0xFFC7E59E),
       appBar: TeacherAppBar(),
       drawer: const MenuDrawer(),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : payments.isEmpty
-                          ? const Center(child: Text("No payment data found."))
-                          : ListView.separated(
-                              itemCount: payments.length,
-                              separatorBuilder: (context, index) => const Divider(),
-                              itemBuilder: (context, index) {
-                                final item = payments[index];
-                                return _buildPaymentTile(item);
-                              },
-                            ),
-                ),
-              ),
-            ),
-          ],
+body: SafeArea(
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Header: back button + icon + title
+      _buildHeader(),
+
+      const SizedBox(height: 16),
+
+      // White container with tab bar + payment content
+      Expanded(
+  child: Container(
+    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 1,
+          blurRadius: 6,
+          offset: const Offset(0, 2),
         ),
-      ),
-    );
+      ],
+    ),
+    child: Column(
+      children: [
+        // Tab Bar (Payment fees)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(payments.length, (index) {
+              final item = payments[index];
+              return GestureDetector(
+                onTap: () => _onTabTapped(index),
+                child: Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _selectedTab == index ? Colors.blue.shade50 : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    item.feeName, // Tab title
+                    style: TextStyle(
+                      color: _selectedTab == index ? Colors.blue : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // PageView content for selected payment
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) => setState(() => _selectedTab = index),
+            itemCount: payments.length,
+            itemBuilder: (context, index) {
+              final item = payments[index];
+              return SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tab Title inside container
+                    Text(
+                      item.feeName,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E3192),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Payment tile content
+                    _buildPaymentTile(item),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+
+    ],
+  ),
+),
+ );
   }
 
   Widget _buildHeader() {
@@ -173,7 +209,8 @@ Future<void> fetchPayments() async {
                   'assets/icons/payments.svg',
                   width: 20,
                   height: 17,
-                  colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                  colorFilter:
+                      const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                 ),
               ),
               const SizedBox(width: 8),
@@ -192,39 +229,41 @@ Future<void> fetchPayments() async {
     );
   }
 
-Widget _buildPaymentTile(PaymentAssignment item) {
-  return GestureDetector(
-    onTap: () {
-      // ✅ Call the provider’s method instead of local method
-      final dashboardProvider =
-          Provider.of<DashboardProvider>(context, listen: false);
-      dashboardProvider.markDashboardItemViewed(item.id);
-    },
-    child: Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+  Widget _buildPaymentList(PaymentAssignment item) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ListView.separated(
+        itemCount: 1, // only this fee
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (_, __) => _buildPaymentTile(item),
       ),
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    );
+  }
+
+  Widget _buildPaymentTile(PaymentAssignment item) {
+    return Card(
+  color: Colors.white, // ✅ ensures the container is white
+  elevation: 3,
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
             /// Fee Name & Class
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    item.feeName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E3192),
-                    ),
-                  ),
-                ),
+                // Expanded(
+                //   child: Text(
+                //     item.feeName,
+                //     style: const TextStyle(
+                //       fontSize: 18,
+                //       fontWeight: FontWeight.bold,
+                //       color: Color(0xFF2E3192),
+                //     ),
+                //   ),
+                // ),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -236,7 +275,7 @@ Widget _buildPaymentTile(PaymentAssignment item) {
                     'Class ${item.className}-${item.section}',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontSize: 15,
                       color: Color(0xFF2E3192),
                     ),
                   ),
@@ -250,17 +289,14 @@ Widget _buildPaymentTile(PaymentAssignment item) {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Amount: ₹${item.baseAmount}",
-                  style: const TextStyle(fontSize: 15),
-                ),
+                Text("Amount: ₹${item.baseAmount}",
+                    style: const TextStyle(fontSize: 15)),
                 Text(
                   "Due: ${item.dueDate.split('T')[0]}",
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.redAccent,
-                  ),
+                      fontSize: 14,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.redAccent),
                 ),
               ],
             ),
@@ -275,24 +311,21 @@ Widget _buildPaymentTile(PaymentAssignment item) {
                   Text(
                     "Pending Students (${item.pendingCount}):",
                     style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                        fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
-                  ...item.pendingStudents.map((s) => Padding(
-                        padding: const EdgeInsets.only(left: 8.0, bottom: 2),
-                        child: Text(
-                          "- ${s.fullName} (${s.admissionNo})",
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      )),
+                  ...item.pendingStudents.map(
+                    (s) => Padding(
+                      padding: const EdgeInsets.only(left: 8.0, bottom: 2),
+                      child: Text("- ${s.fullName} (${s.admissionNo})",
+                          style: const TextStyle(fontSize: 13)),
+                    ),
+                  ),
                 ],
               ),
           ],
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
