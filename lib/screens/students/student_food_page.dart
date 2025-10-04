@@ -136,7 +136,12 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
   }
 
   Future<void> _submitFoodForWeek() async {
-    if (!_isAnySelected) return;
+    // Filter only days with at least one selected meal
+    final selectedDays = _foodSelectionsByDate.entries
+        .where((e) => e.value.containsValue(true))
+        .toList();
+
+    if (selectedDays.isEmpty) return;
 
     setState(() => _loading = true);
 
@@ -145,34 +150,35 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
       final token = prefs.getString("auth_token") ?? "";
       final studentId = prefs.getInt("student_id") ?? 0;
 
-      for (int weekdayIndex = 0; weekdayIndex < 7; weekdayIndex++) {
+      for (final entry in selectedDays) {
+        final dateKey = entry.key;
+        final selections = entry.value;
+
+        // Map dateKey to weekdayIndex to get menu
+        final date = DateTime.parse(dateKey);
+        final weekdayIndex = date.weekday % 7;
         final dayMenu = _weeklyMenu?["$weekdayIndex"];
-        if (dayMenu == null) continue;
 
-        final dateForDay = _startDate.add(Duration(days: weekdayIndex));
-        final formattedDate =
-            "${dateForDay.year}-${dateForDay.month.toString().padLeft(2, '0')}-${dateForDay.day.toString().padLeft(2, '0')}";
-
-       final body = {
-  "student_id": studentId,
-  "date": formattedDate,
-  "end_date": formattedDate, // ✅ added
-  "breakfast_menu_id":
-      (_foodSelections["Breakfast"]! &&
-          dayMenu["breakfast"]?["items"]?.isNotEmpty == true)
-          ? dayMenu["breakfast"]["items"][0]["id"]
-          : 0,
-  "lunch_menu_id":
-      (_foodSelections["Lunch"]! &&
-          dayMenu["lunch"]?["items"]?.isNotEmpty == true)
-          ? dayMenu["lunch"]["items"][0]["id"]
-          : 0,
-  "snacks_menu_id":
-      (_foodSelections["Snacks"]! &&
-          dayMenu["snacks"]?["items"]?.isNotEmpty == true)
-          ? dayMenu["snacks"]["items"][0]["id"]
-          : 0,
-};
+        final body = {
+          "student_id": studentId,
+          "date": dateKey,
+          "end_date": dateKey,
+          "breakfast_menu_id":
+              (selections["Breakfast"]! &&
+                  dayMenu?["breakfast"]?["items"]?.isNotEmpty == true)
+              ? dayMenu!["breakfast"]["items"][0]["id"]
+              : null,
+          "lunch_menu_id":
+              (selections["Lunch"]! &&
+                  dayMenu?["lunch"]?["items"]?.isNotEmpty == true)
+              ? dayMenu["lunch"]["items"][0]["id"]
+              : null,
+          "snacks_menu_id":
+              (selections["Snacks"]! &&
+                  dayMenu?["snacks"]?["items"]?.isNotEmpty == true)
+              ? dayMenu["snacks"]["items"][0]["id"]
+              : null,
+        };
 
         final url =
             "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/food/schedule";
@@ -187,15 +193,17 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
           body: jsonEncode(body),
         );
 
-        if (response.statusCode != 201) {
-          print("❌ Failed for $formattedDate => ${response.body}");
+        if (response.statusCode == 201) {
+          print("✅ Food schedule Booked for $dateKey");
         } else {
-          print("✅ Saved schedule for $formattedDate");
+          print("❌ Failed for $dateKey => ${response.body}");
         }
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Food schedule confirmed for all week!")),
+        const SnackBar(
+          content: Text("Food schedule Booked for all selected days!"),
+        ),
       );
     } catch (e) {
       print("Submit Week API Error: $e");
@@ -223,26 +231,26 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
       final weekdayIndex = _selectedDate.weekday % 7; // ✅
       final dayMenu = _weeklyMenu?["$weekdayIndex"];
 
-    final body = {
-  "student_id": studentId,
-  "date": dateKey,
-  "end_date": dateKey, // ✅ added
-  "breakfast_menu_id":
-      (selections["Breakfast"]! &&
-          dayMenu?["breakfast"]?["items"]?.isNotEmpty == true)
-          ? dayMenu!["breakfast"]["items"][0]["id"]
-          : null,
-  "lunch_menu_id":
-      (selections["Lunch"]! &&
-          dayMenu?["lunch"]?["items"]?.isNotEmpty == true)
-          ? dayMenu["lunch"]["items"][0]["id"]
-          : null,
-  "snacks_menu_id":
-      (selections["Snacks"]! &&
-          dayMenu?["snacks"]?["items"]?.isNotEmpty == true)
-          ? dayMenu["snacks"]["items"][0]["id"]
-          : null,
-};
+      final body = {
+        "student_id": studentId,
+        "date": dateKey,
+        "end_date": dateKey, // ✅ added
+        "breakfast_menu_id":
+            (selections["Breakfast"]! &&
+                dayMenu?["breakfast"]?["items"]?.isNotEmpty == true)
+            ? dayMenu!["breakfast"]["items"][0]["id"]
+            : null,
+        "lunch_menu_id":
+            (selections["Lunch"]! &&
+                dayMenu?["lunch"]?["items"]?.isNotEmpty == true)
+            ? dayMenu["lunch"]["items"][0]["id"]
+            : null,
+        "snacks_menu_id":
+            (selections["Snacks"]! &&
+                dayMenu?["snacks"]?["items"]?.isNotEmpty == true)
+            ? dayMenu["snacks"]["items"][0]["id"]
+            : null,
+      };
 
       final url =
           "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/food/schedule";
@@ -259,12 +267,12 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
 
       if (response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("✅ Order confirmed for $dateKey")),
+          SnackBar(content: Text("✅ Order Booked for $dateKey")),
         );
       } else {
         print("❌ Error ${response.statusCode}: ${response.body}");
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to confirm order")),
+          const SnackBar(content: Text("Failed to Book order")),
         );
       }
     } catch (e) {
@@ -277,9 +285,6 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
     }
   }
 
-  
-  
-  
   Future<void> _fetchMenu() async {
     setState(() => _loading = true);
 
@@ -370,41 +375,45 @@ class _StudentFoodPageState extends State<StudentFoodPage> {
     }
   }
 
- void _previousMonth() {
-  setState(() {
-    _selectedMonth = DateTime(
-      _selectedMonth.year,
-      _selectedMonth.month - 1,
-      1,
-    );
+  void _previousMonth() {
+    setState(() {
+      _selectedMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month - 1,
+        1,
+      );
 
-    // ✅ Reset week section to first week of month
-    _selectedDate = _selectedMonth;
-    _centerDate = _selectedDate;
-    _startDate = _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
-    _generateVisibleDates();
-    _fetchMenu();
-    _fetchScheduleForDate(_selectedDate);
-  });
-}
+      // ✅ Reset week section to first week of month
+      _selectedDate = _selectedMonth;
+      _centerDate = _selectedDate;
+      _startDate = _centerDate.subtract(
+        Duration(days: _centerDate.weekday - 1),
+      );
+      _generateVisibleDates();
+      _fetchMenu();
+      _fetchScheduleForDate(_selectedDate);
+    });
+  }
 
-void _nextMonth() {
-  setState(() {
-    _selectedMonth = DateTime(
-      _selectedMonth.year,
-      _selectedMonth.month + 1,
-      1,
-    );
+  void _nextMonth() {
+    setState(() {
+      _selectedMonth = DateTime(
+        _selectedMonth.year,
+        _selectedMonth.month + 1,
+        1,
+      );
 
-    // ✅ Reset week section to first week of month
-    _selectedDate = _selectedMonth;
-    _centerDate = _selectedDate;
-    _startDate = _centerDate.subtract(Duration(days: _centerDate.weekday - 1));
-    _generateVisibleDates();
-    _fetchMenu();
-    _fetchScheduleForDate(_selectedDate);
-  });
-}
+      // ✅ Reset week section to first week of month
+      _selectedDate = _selectedMonth;
+      _centerDate = _selectedDate;
+      _startDate = _centerDate.subtract(
+        Duration(days: _centerDate.weekday - 1),
+      );
+      _generateVisibleDates();
+      _fetchMenu();
+      _fetchScheduleForDate(_selectedDate);
+    });
+  }
 
   void _previousWeek() {
     setState(() {
@@ -533,28 +542,28 @@ void _nextMonth() {
                         children: [
                           // ✅ Day tab = your existing UI
                           _buildDayTabUI(),
+                          _buildWeekTabUI(),
+                          _buildMonthTabUI(), // 📌 Week placeholder
+                          // const Center(
+                          //   child: Text(
+                          //     "Weekly food schedule will appear here",
+                          //     style: TextStyle(
+                          //       fontSize: 16,
+                          //       color: Colors.black54,
+                          //     ),
+                          //   ),
+                          // ),
 
-                          // 📌 Week placeholder
-                          const Center(
-                            child: Text(
-                              "Weekly food schedule will appear here",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ),
-
-                          // 📌 Month placeholder
-                          const Center(
-                            child: Text(
-                              "Monthly food schedule will appear here",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ),
+                          // // 📌 Month placeholder
+                          // const Center(
+                          //   child: Text(
+                          //     "Monthly food schedule will appear here",
+                          //     style: TextStyle(
+                          //       fontSize: 16,
+                          //       color: Colors.black54,
+                          //     ),
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
@@ -670,7 +679,7 @@ void _nextMonth() {
                   },
                 ),
         ),
-        // Confirm Button
+        // Book Button
         Container(
           width: double.infinity,
           margin: const EdgeInsets.all(16),
@@ -686,7 +695,7 @@ void _nextMonth() {
               ),
             ),
             child: const Text(
-              "Confirm",
+              "Book",
               style: TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
@@ -838,80 +847,330 @@ void _nextMonth() {
                 ),
 
                 // Left arrow
-              // Left arrow
-Positioned(
-  left: 0,
-  top: 0,
-  bottom: 0,
-  child: GestureDetector(
-    behavior: HitTestBehavior.translucent,
-    onTap: () {
-      setState(() {
-        _centerDate = _centerDate.subtract(const Duration(days: 7));
-        _selectedDate = _centerDate; // ✅ update selected date
-        _startDate = _centerDate.subtract(
-          Duration(days: _centerDate.weekday - 1),
-        );
-        _generateVisibleDates();
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _centerCurrentDate();
-        _fetchMenu();
-        _fetchScheduleForDate(_selectedDate); // ✅ update weekdays section
-      });
-    },
-    child: const SizedBox(
-      width: 30,
-      height: 70,
-      child: Icon(
-        Icons.arrow_back_ios,
-        size: 20,
-        color: Colors.black87,
-      ),
-    ),
-  ),
-),
+                // Left arrow
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () {
+                      setState(() {
+                        _centerDate = _centerDate.subtract(
+                          const Duration(days: 7),
+                        );
+                        _selectedDate = _centerDate; // ✅ update selected date
+                        _startDate = _centerDate.subtract(
+                          Duration(days: _centerDate.weekday - 1),
+                        );
+                        _generateVisibleDates();
+                      });
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _centerCurrentDate();
+                        _fetchMenu();
+                        _fetchScheduleForDate(
+                          _selectedDate,
+                        ); // ✅ update weekdays section
+                      });
+                    },
+                    child: const SizedBox(
+                      width: 30,
+                      height: 70,
+                      child: Icon(
+                        Icons.arrow_back_ios,
+                        size: 20,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
 
-// Right arrow
-Positioned(
-  right: 0,
-  top: 0,
-  bottom: 0,
-  child: GestureDetector(
-    behavior: HitTestBehavior.translucent,
-    onTap: () {
-      setState(() {
-        _centerDate = _centerDate.add(const Duration(days: 7));
-        _selectedDate = _centerDate; // ✅ update selected date
-        _startDate = _centerDate.subtract(
-          Duration(days: _centerDate.weekday - 1),
-        );
-        _generateVisibleDates();
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _centerCurrentDate();
-        _fetchMenu();
-        _fetchScheduleForDate(_selectedDate); // ✅ update weekdays section
-      });
-    },
-    child: const SizedBox(
-      width: 30,
-      height: 70,
-      child: Icon(
-        Icons.arrow_forward_ios,
-        size: 20,
-        color: Colors.black87,
-      ),
-    ),
-  ),
-),
- ],
+                // Right arrow
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () {
+                      setState(() {
+                        _centerDate = _centerDate.add(const Duration(days: 7));
+                        _selectedDate = _centerDate; // ✅ update selected date
+                        _startDate = _centerDate.subtract(
+                          Duration(days: _centerDate.weekday - 1),
+                        );
+                        _generateVisibleDates();
+                      });
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _centerCurrentDate();
+                        _fetchMenu();
+                        _fetchScheduleForDate(
+                          _selectedDate,
+                        ); // ✅ update weekdays section
+                      });
+                    },
+                    child: const SizedBox(
+                      width: 30,
+                      height: 70,
+                      child: Icon(
+                        Icons.arrow_forward_ios,
+                        size: 20,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
+Widget _buildWeekTabUI() {
+  if (_loading) {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  if (_weeklyMenu == null) {
+    return const Center(child: Text("No menu available"));
+  }
+
+  // Generate week dates (Mon–Sun)
+  final weekDates = List.generate(7, (i) => _startDate.add(Duration(days: i)));
+
+  return Column(
+    children: [
+      // 🔹 Week navigation with arrows
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios, size: 20),
+              onPressed: () {
+                setState(() {
+                  _startDate = _startDate.subtract(const Duration(days: 7));
+                  _selectedDate = _startDate; // reset selection to first day
+                });
+              },
+            ),
+            Text(
+              "${DateFormat('dd MMM').format(weekDates.first)} - ${DateFormat('dd MMM').format(weekDates.last)}",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward_ios, size: 20),
+              onPressed: () {
+                setState(() {
+                  _startDate = _startDate.add(const Duration(days: 7));
+                  _selectedDate = _startDate; // reset selection to first day
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+
+      // 🔹 Horizontal week date selector
+    // 🔹 Horizontal week date selector
+SizedBox(
+  height: 70,
+  child: ListView.builder(
+    scrollDirection: Axis.horizontal,
+    itemCount: weekDates.length,
+    itemBuilder: (context, index) {
+      final date = weekDates[index];
+      final dateKey = DateFormat("yyyy-MM-dd").format(date);
+
+      final isSelected = _selectedDate.year == date.year &&
+          _selectedDate.month == date.month &&
+          _selectedDate.day == date.day;
+
+      final hasSelection =
+          _foodSelectionsByDate[dateKey]?.containsValue(true) ?? false;
+
+      return GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedDate = date;
+          });
+        },
+        child: Container(
+          width: 50, // ✅ same as month tab
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.blue : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: hasSelection ? Colors.green : Colors.grey.shade300,
+              width: hasSelection ? 2 : 1,
+            ),
+            boxShadow: [
+              if (isSelected)
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                DateFormat('EEE').format(date),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                date.day.toString(),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  ),
+),
+
+      const SizedBox(height: 12),
+
+      // 🔹 Show only selected day’s menu
+      Expanded(
+        child: Builder(
+          builder: (context) {
+            final weekdayIndex = _selectedDate.weekday % 7;
+            final dayMenu = _weeklyMenu?["$weekdayIndex"];
+            final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
+
+            _foodSelectionsByDate.putIfAbsent(
+              dateKey,
+              () => {"Breakfast": false, "Lunch": false, "Snacks": false},
+            );
+
+            if (dayMenu == null ||
+                (dayMenu["breakfast"] == null &&
+                    dayMenu["lunch"] == null &&
+                    dayMenu["snacks"] == null)) {
+             return ListView(
+  padding: const EdgeInsets.all(16),
+  children: [
+    Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: const [
+            Icon(Icons.fastfood, size: 40, color: Colors.grey),
+            SizedBox(height: 12),
+            Text(
+              "No menu available for this day",
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ],
+);
+
+            }
+
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (dayMenu["breakfast"] != null)
+                  FoodTile(
+                    keyName: "Breakfast-$weekdayIndex",
+                    title: "Breakfast (${dayMenu["breakfast"]["price"]}₹)",
+                    time: "8 : 30 am - 09 : 30 am",
+                    items: dayMenu["breakfast"]["items"],
+                    checked:
+                        _foodSelectionsByDate[dateKey]?["Breakfast"] ?? false,
+                    onChanged: (v) => setState(() {
+                      _foodSelectionsByDate[dateKey]!["Breakfast"] = v;
+                    }),
+                  ),
+                if (dayMenu["lunch"] != null)
+                  FoodTile(
+                    keyName: "Lunch-$weekdayIndex",
+                    title: "Lunch (${dayMenu["lunch"]["price"]}₹)",
+                    time: "12 : 30 pm - 01 : 30 pm",
+                    items: dayMenu["lunch"]["items"],
+                    checked:
+                        _foodSelectionsByDate[dateKey]?["Lunch"] ?? false,
+                    onChanged: (v) => setState(() {
+                      _foodSelectionsByDate[dateKey]!["Lunch"] = v;
+                    }),
+                  ),
+                if (dayMenu["snacks"] != null)
+                  FoodTile(
+                    keyName: "Snacks-$weekdayIndex",
+                    title: "Snacks (${dayMenu["snacks"]["price"]}₹)",
+                    time: "3 : 30 pm - 4 : 00 pm",
+                    items: dayMenu["snacks"]["items"],
+                    checked:
+                        _foodSelectionsByDate[dateKey]?["Snacks"] ?? false,
+                    onChanged: (v) => setState(() {
+                      _foodSelectionsByDate[dateKey]!["Snacks"] = v;
+                    }),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+
+      // 🔹 Book button
+      Container(
+        width: double.infinity,
+        margin: const EdgeInsets.all(16),
+        child: ElevatedButton(
+          onPressed: _foodSelectionsByDate.values.any(
+            (day) => day.containsValue(true),
+          )
+              ? _submitFoodForWeek
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _foodSelectionsByDate.values.any(
+              (day) => day.containsValue(true),
+            )
+                ? Colors.blue
+                : const Color(0xFFCCCCCC),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          child: const Text(
+            "Book All Selected Days",
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _buildWeekdaysSection() {
     if (_isLoading) {
@@ -975,6 +1234,279 @@ Positioned(
       ),
     );
   }
+
+Widget _buildMonthTabUI() {
+  final firstDayOfMonth = DateTime(
+    _selectedMonth.year,
+    _selectedMonth.month,
+    1,
+  );
+  final lastDayOfMonth = DateTime(
+    _selectedMonth.year,
+    _selectedMonth.month + 1,
+    0,
+  );
+  final totalDays = lastDayOfMonth.day;
+
+  final monthDates = List.generate(
+    totalDays,
+    (i) => firstDayOfMonth.add(Duration(days: i)),
+  );
+
+  return Column(
+    children: [
+      // 🔹 Month header with arrows
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_left, size: 32),
+              onPressed: () {
+                setState(() {
+                  _selectedMonth = DateTime(
+                    _selectedMonth.year,
+                    _selectedMonth.month - 1,
+                  );
+                  _selectedDate = DateTime(
+                    _selectedMonth.year,
+                    _selectedMonth.month,
+                    1,
+                  );
+                });
+              },
+            ),
+            Text(
+              DateFormat('MMMM yyyy').format(_selectedMonth),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.arrow_right, size: 32),
+              onPressed: () {
+                setState(() {
+                  _selectedMonth = DateTime(
+                    _selectedMonth.year,
+                    _selectedMonth.month + 1,
+                  );
+                  _selectedDate = DateTime(
+                    _selectedMonth.year,
+                    _selectedMonth.month,
+                    1,
+                  );
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+
+      // 🔹 Horizontal scrollable month days
+      SizedBox(
+        height: 70,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: monthDates.length,
+          itemBuilder: (context, index) {
+            final date = monthDates[index];
+            final dateKey = DateFormat("yyyy-MM-dd").format(date);
+            final isSelected =
+                _selectedDate.year == date.year &&
+                _selectedDate.month == date.month &&
+                _selectedDate.day == date.day;
+
+            final hasSelection =
+                _foodSelectionsByDate[dateKey]?.containsValue(true) ?? false;
+
+            return GestureDetector(
+              onTap: () async {
+                setState(() {
+                  _selectedDate = date;
+                });
+                _foodSelectionsByDate.putIfAbsent(
+                  dateKey,
+                  () => {"Breakfast": false, "Lunch": false, "Snacks": false},
+                );
+                await _fetchMenu();
+                await _fetchScheduleForDate(date);
+              },
+              child: Container(
+                width: 50,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.blue : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: hasSelection ? Colors.green : Colors.grey.shade300,
+                    width: hasSelection ? 2 : 1,
+                  ),
+                  boxShadow: [
+                    if (isSelected)
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      DateFormat('EEE').format(date),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      date.day.toString(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isSelected ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+
+      const SizedBox(height: 12),
+
+      // 🔹 Menu list
+      Expanded(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _weeklyMenu == null
+                ? _buildNoMenuCard()
+                : Builder(
+                    builder: (context) {
+                      final weekdayIndex = _selectedDate.weekday % 7;
+                      final dayMenu = _weeklyMenu?["$weekdayIndex"];
+                      final dateKey = DateFormat("yyyy-MM-dd").format(_selectedDate);
+
+                      if (dayMenu == null ||
+                          (dayMenu["breakfast"] == null &&
+                              dayMenu["lunch"] == null &&
+                              dayMenu["snacks"] == null)) {
+                        return _buildNoMenuCard();
+                      }
+
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          if (dayMenu["breakfast"] != null)
+                            FoodTile(
+                              keyName: "Breakfast-$weekdayIndex",
+                              title:
+                                  "Breakfast (${dayMenu["breakfast"]["price"]}₹)",
+                              time: "8 : 30 am - 09 : 30 am",
+                              items: dayMenu["breakfast"]["items"],
+                              checked:
+                                  _foodSelectionsByDate[dateKey]?["Breakfast"] ??
+                                      false,
+                              onChanged: (v) => _toggleFood("Breakfast", v),
+                            ),
+                          if (dayMenu["lunch"] != null)
+                            FoodTile(
+                              keyName: "Lunch-$weekdayIndex",
+                              title:
+                                  "Lunch (${dayMenu["lunch"]["price"]}₹)",
+                              time: "12 : 30 pm - 01 : 30 pm",
+                              items: dayMenu["lunch"]["items"],
+                              checked:
+                                  _foodSelectionsByDate[dateKey]?["Lunch"] ??
+                                      false,
+                              onChanged: (v) => _toggleFood("Lunch", v),
+                            ),
+                          if (dayMenu["snacks"] != null)
+                            FoodTile(
+                              keyName: "Snacks-$weekdayIndex",
+                              title:
+                                  "Snacks (${dayMenu["snacks"]["price"]}₹)",
+                              time: "3 : 30 pm - 4 : 00 pm",
+                              items: dayMenu["snacks"]["items"],
+                              checked:
+                                  _foodSelectionsByDate[dateKey]?["Snacks"] ??
+                                      false,
+                              onChanged: (v) => _toggleFood("Snacks", v),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+      ),
+
+      // 🔹 Book button
+      Container(
+        width: double.infinity,
+        margin: const EdgeInsets.all(16),
+        child: ElevatedButton(
+          onPressed: _foodSelectionsByDate.values
+                  .any((day) => day.containsValue(true))
+              ? _submitFoodForWeek
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                _foodSelectionsByDate.values.any((day) => day.containsValue(true))
+                    ? Colors.blue
+                    : const Color(0xFFCCCCCC),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          child: const Text(
+            "Book All Selected Days",
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+// 🔹 Common card for "No menu"
+Widget _buildNoMenuCard() {
+  return ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: const [
+              Icon(Icons.fastfood, size: 40, color: Colors.grey),
+              SizedBox(height: 12),
+              Text(
+                "No menu available for this day",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
 
   static Widget _dayTile(String day, String date, bool selected) {
     return Container(
