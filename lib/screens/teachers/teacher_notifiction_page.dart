@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
-
 import 'package:school_app/services/teacher_notification_service.dart';
 import 'package:school_app/models/teacher_notification_reply_model.dart';
 
@@ -41,14 +40,14 @@ class NotificationItem {
 }
 
 // ----------------- PAGE -----------------
-class NotificationPage extends StatefulWidget {
-  const NotificationPage({super.key});
+class TeacherNotificationPage extends StatefulWidget {
+  const TeacherNotificationPage({super.key});
 
   @override
-  State<NotificationPage> createState() => _NotificationPageState();
+  State<TeacherNotificationPage> createState() => _TeacherNotificationPageState();
 }
 
-class _NotificationPageState extends State<NotificationPage> {
+class _TeacherNotificationPageState extends State<TeacherNotificationPage> {
   Map<String, List<NotificationItem>> _notificationsByDate = {};
   bool _loading = true;
   bool _fetchingMore = false;
@@ -68,8 +67,7 @@ class _NotificationPageState extends State<NotificationPage> {
       final token = prefs.getString("auth_token");
       if (token == null) return;
 
-      final url =
-          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed";
+      final url = "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed";
 
       await http.post(
         Uri.parse(url),
@@ -162,6 +160,12 @@ class _NotificationPageState extends State<NotificationPage> {
         _loading = false;
         _fetchingMore = false;
       });
+
+      // Auto fetch previous week if empty
+      if (_notificationsByDate.isEmpty && _nextFetchDate != null) {
+        debugPrint("⚠️ No notifications this week. Fetching previous week...");
+        _fetchNotifications(loadMore: true);
+      }
     } catch (e) {
       setState(() {
         _loading = false;
@@ -277,7 +281,7 @@ class _NotificationPageState extends State<NotificationPage> {
                                                       Navigator.push(
                                                         context,
                                                         MaterialPageRoute(
-                                                          builder: (_) => NotificationDetailPage(item: item),
+                                                          builder: (_) => TeacherNotificationDetailPage(item: item),
                                                         ),
                                                       );
                                                     },
@@ -312,29 +316,23 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 }
 
-
-
-// ----------------- NOTIFICATION DETAIL PAGE -----------------
-
-
-// ----------------- NOTIFICATION DETAIL PAGE -----------------
-class NotificationDetailPage extends StatefulWidget {
+// ----------------- DETAIL PAGE -----------------
+class TeacherNotificationDetailPage extends StatefulWidget {
   final NotificationItem item;
 
-  NotificationDetailPage({super.key, required this.item});
+  TeacherNotificationDetailPage({super.key, required this.item});
 
   @override
-  State<NotificationDetailPage> createState() => _NotificationDetailPageState();
+  State<TeacherNotificationDetailPage> createState() => _TeacherNotificationDetailPageState();
 }
 
-class _NotificationDetailPageState extends State<NotificationDetailPage> {
+class _TeacherNotificationDetailPageState extends State<TeacherNotificationDetailPage> {
   final TextEditingController _msgController = TextEditingController();
   List<NotificationReply> _replies = [];
   bool _loadingReplies = true;
   String? _replyError;
 
   final NotificationService _service = NotificationService();
-  NotificationReply? _selectedReply; // Selected message to reply
 
   @override
   void initState() {
@@ -388,62 +386,57 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Back button + Title
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: const Text("< Back",
-                      style: TextStyle(color: Colors.black, fontSize: 14)),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2E3192),
-                      ),
-                      child: SvgPicture.asset(
-                        'assets/icons/notification.svg',
-                        height: 20,
-                        width: 20,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      "Notification Details",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E3192),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: const Text("< Back", style: TextStyle(color: Colors.black, fontSize: 14)),
             ),
+            const SizedBox(height: 12),
+           Row(
+  crossAxisAlignment: CrossAxisAlignment.center,
+  children: [
+    // Back button
+    GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: const Icon(Icons.arrow_back, color: Colors.black, size: 20),
+    ),
+    const SizedBox(width: 12),
 
-            // Main content container
+    // Notification icon
+    Container(
+      padding: const EdgeInsets.all(8),
+      decoration: const BoxDecoration(color: Color(0xFF2E3192)),
+      child: SvgPicture.asset(
+        'assets/icons/notification.svg',
+        height: 20,
+        width: 20,
+        color: Colors.white,
+      ),
+    ),
+    const SizedBox(width: 8),
+
+    // Title
+    const Text(
+      "Notification Details",
+      style: TextStyle(
+        fontSize: 26,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF2E3192),
+      ),
+    ),
+  ],
+),
+
+            const SizedBox(height: 12),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [
-                    BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 6,
-                        offset: Offset(0, 3)),
-                  ],
+                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))],
                 ),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // ✅ Notification full details
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -454,33 +447,20 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(widget.item.title,
-                              style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF2E3192))),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2E3192))),
                           const SizedBox(height: 6),
                           Text(widget.item.subtitle,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.black87)),
+                              style: const TextStyle(fontSize: 14, color: Colors.black87)),
                           const SizedBox(height: 6),
-                          Text(
-                            "${widget.item.moduleType} • ${widget.item.type}",
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.black54),
-                          ),
+                          Text("${widget.item.moduleType} • ${widget.item.type}",
+                              style: const TextStyle(fontSize: 13, color: Colors.black54)),
                           const SizedBox(height: 4),
-                          Text(
-                            DateFormat('dd/MM/yyyy HH:mm')
-                                .format(widget.item.dateTime),
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.black45),
-                          ),
+                          Text(DateFormat('dd/MM/yyyy HH:mm').format(widget.item.dateTime),
+                              style: const TextStyle(fontSize: 12, color: Colors.black45)),
                         ],
                       ),
                     ),
                     const Divider(),
-
-                    // Replies List
                     Expanded(
                       child: _loadingReplies
                           ? const Center(child: CircularProgressIndicator())
@@ -492,44 +472,30 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                                       itemCount: flattenedReplies.length,
                                       itemBuilder: (context, index) {
                                         final reply = flattenedReplies[index];
-                                        final isTeacher =
-                                            reply.senderType == 'Teacher';
+                                        final isTeacher = reply.senderType == 'Teacher';
 
                                         return Align(
-                                          alignment: isTeacher
-                                              ? Alignment.centerRight
-                                              : Alignment.centerLeft,
+                                          alignment: isTeacher ? Alignment.centerRight : Alignment.centerLeft,
                                           child: Container(
-                                            margin: const EdgeInsets.symmetric(
-                                                vertical: 4, horizontal: 8),
+                                            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                                             padding: const EdgeInsets.all(10),
                                             decoration: BoxDecoration(
-                                              color: isTeacher
-                                                  ? const Color(0xFF2E3192)
-                                                  : Colors.grey[300],
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
+                                              color: isTeacher ? const Color(0xFF2E3192) : Colors.grey[300],
+                                              borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   reply.messageText,
-                                                  style: TextStyle(
-                                                    color: isTeacher
-                                                        ? Colors.white
-                                                        : Colors.black87,
-                                                  ),
+                                                  style: TextStyle(color: isTeacher ? Colors.white : Colors.black87),
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
                                                   "${reply.senderName} • ${DateFormat('dd/MM/yyyy HH:mm').format(reply.createdAt)}",
                                                   style: TextStyle(
                                                     fontSize: 11,
-                                                    color: isTeacher
-                                                        ? Colors.white70
-                                                        : Colors.black54,
+                                                    color: isTeacher ? Colors.white70 : Colors.black54,
                                                   ),
                                                 ),
                                               ],
@@ -539,8 +505,6 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                                       },
                                     ),
                     ),
-
-                    // Reply input box
                     Row(
                       children: [
                         Expanded(
@@ -548,11 +512,8 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                             controller: _msgController,
                             decoration: InputDecoration(
                               hintText: "Write a reply...",
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
                             ),
                           ),
                         ),
@@ -570,10 +531,8 @@ class _NotificationDetailPageState extends State<NotificationDetailPage> {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2E3192),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20)),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           child: const Icon(Icons.send, color: Colors.white),
                         ),

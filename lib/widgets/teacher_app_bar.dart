@@ -59,7 +59,7 @@ class TeacherAppBar extends StatelessWidget implements PreferredSizeWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => NotificationPage()),
+          MaterialPageRoute(builder: (_) => TeacherNotificationPage()),
         );
       },
       child: SvgPicture.asset(

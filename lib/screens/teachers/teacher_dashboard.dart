@@ -73,7 +73,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
   onTap: () {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => NotificationPage()),
+      MaterialPageRoute(builder: (_) => TeacherNotificationPage()),
     );
   },
 ),
