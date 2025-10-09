@@ -4,9 +4,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart'; 
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
 
 import 'teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
+
+
+import 'package:school_app/services/teacher_profile_service.dart';
+
+
 
 class TeacherProfilePage extends StatefulWidget {
   final int staffId; // 👈 pass staffId of logged-in teacher
@@ -19,6 +27,11 @@ class TeacherProfilePage extends StatefulWidget {
 class _TeacherProfilePageState extends State<TeacherProfilePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+
+
+    File? _selectedImage;
+
   final List<String> _tabs = [
     "Basic",
     "Responsibilities",
@@ -48,6 +61,38 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
     _tabController = TabController(length: _tabs.length, vsync: this);
     fetchTeacherProfile();
   }
+
+
+Future<void> pickAndUploadImage() async {
+  final picker = ImagePicker();
+  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  if (pickedFile == null) return;
+
+  setState(() {
+    _selectedImage = File(pickedFile.path);
+  });
+
+  try {
+    final newImagePath = await TeacherProfileService().updateProfileImage(
+      staffId: widget.staffId,
+      imageFile: _selectedImage!,
+    );
+
+    if (newImagePath != null) {
+      setState(() {
+        teacherData?['profile_image'] = newImagePath;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profile image updated successfully")),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  }
+}
+
 
   Future<void> fetchTeacherProfile() async {
     try {
@@ -119,30 +164,33 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
 
           // 👤 Profile Picture & Name Centered
           Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.grey,
-                  backgroundImage: teacherData?['profile_image'] != null
-                      ? NetworkImage(
-                          "http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData!['profile_image']}")
-                      : null,
-                  child: teacherData?['profile_image'] == null
-                      ? const Icon(Icons.person,
-                          size: 70, color: Colors.white)
-                      : null,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  teacherData?['full_name'] ?? "Loading...",
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
+            child:Stack(
+  children: [
+    CircleAvatar(
+      radius: 60,
+      backgroundColor: Colors.grey,
+      backgroundImage: teacherData?['profile_image'] != null && teacherData!['profile_image'] != ""
+          ? NetworkImage("http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData!['profile_image']}")
+          : null,
+      child: teacherData?['profile_image'] == null || teacherData!['profile_image'] == ""
+          ? const Icon(Icons.person, size: 70, color: Colors.white)
+          : null,
+    ),
+    Positioned(
+      bottom: 0,
+      right: 0,
+      child: GestureDetector(
+        onTap: pickAndUploadImage,
+        child: CircleAvatar(
+          radius: 18,
+          backgroundColor: Colors.white,
+          child: const Icon(Icons.camera_alt, color: Colors.blue, size: 20),
+        ),
+      ),
+    ),
+  ],
+)
+),
 
           // 🧭 Tab Bar
           TabBar(
@@ -158,7 +206,9 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+ Widget _buildInfoRow(String label, String value) {
+  if (label.toLowerCase().contains("phone") && value.isNotEmpty) {
+    // Make phone numbers clickable
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: RichText(
@@ -166,14 +216,76 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
           style: const TextStyle(color: Colors.black, fontSize: 14),
           children: [
             TextSpan(
-                text: label,
+                text: "$label ",
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            TextSpan(text: " $value"),
+            WidgetSpan(
+              child: GestureDetector(
+                onTap: () async {
+                  final phoneNumbers = value.split(','); // if multiple numbers
+                  final url = Uri.parse('tel:${phoneNumbers[0].trim()}');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url);
+                  }
+                },
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                      color: Colors.blue, decoration: TextDecoration.underline),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  } else if (label.toLowerCase().contains("email") && value.isNotEmpty) {
+    // Make email clickable
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: Colors.black, fontSize: 14),
+          children: [
+            TextSpan(
+                text: "$label ",
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            WidgetSpan(
+              child: GestureDetector(
+                onTap: () async {
+                  final url = Uri.parse('mailto:$value');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url);
+                  }
+                },
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                      color: Colors.blue, decoration: TextDecoration.underline),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+  // Default plain text
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: RichText(
+      text: TextSpan(
+        style: const TextStyle(color: Colors.black, fontSize: 14),
+        children: [
+          TextSpan(
+              text: "$label ",
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          TextSpan(text: value),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildDetailCard(
       {required String title, required Map<String, String> items}) {
@@ -196,21 +308,56 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-              flex: 2,
-              child: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(flex: 3, child: Text(value)),
-        ],
-      ),
-    );
-  }
+ Widget _buildDetailRow(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+            flex: 2,
+            child: Text(label,
+                style: const TextStyle(fontWeight: FontWeight.bold))),
+        Expanded(
+            flex: 3,
+            child: value == "View"
+                ? GestureDetector(
+                    onTap: () async {
+                      // Build full URL
+                      String url = "";
+                      if (label == "PF Doc") {
+                        url =
+                            "http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData?['service']?[0]['pf_doc']}";
+                      } else if (label == "Docs") {
+                        url =
+                            "http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData?['experience']?[0]['exp_docs']}";
+                      }
+
+                      if (await canLaunchUrl(Uri.parse(url))) {
+                        await launchUrl(Uri.parse(url),
+                            mode: LaunchMode.externalApplication);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Cannot open document")),
+                        );
+                      }
+                    },
+                    child: Row(
+                      children: const [
+                        Icon(Icons.picture_as_pdf, color: Colors.red),
+                        SizedBox(width: 6),
+                        Text("View",
+                            style: TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline)),
+                      ],
+                    ),
+                  )
+                : Text(value)),
+      ],
+    ),
+  );
+}
 
   Widget _buildProfileCard() {
     return Card(
@@ -316,7 +463,7 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
     );
   }
 
-  Widget _buildServiceTab() {
+ Widget _buildServiceTab() {
   final services = teacherData?['service'] as List<dynamic>? ?? [];
   final experience = teacherData?['experience'] as List<dynamic>? ?? [];
 
@@ -332,7 +479,9 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
                 "Total Leaves": srv['total_leaves'].toString(),
                 "Used Leaves": srv['used_leaves'].toString(),
                 "PF Number": srv['pf_number'] ?? "",
-                "PF Doc": srv['pf_doc'] ?? "",
+                "PF Doc": (srv['pf_doc'] != null && srv['pf_doc'] != "")
+                    ? "View"
+                    : "-",
               },
             )),
         const SizedBox(height: 16),
@@ -343,14 +492,16 @@ class _TeacherProfilePageState extends State<TeacherProfilePage>
                 "Designation": exp['designation'] ?? "",
                 "From": _formatDate(exp['from_date']),
                 "To": _formatDate(exp['to_date']),
-                "Docs": exp['exp_docs'] ?? "",
+                "Docs": (exp['exp_docs'] != null && exp['exp_docs'] != "")
+                    ? "View"
+                    : "-",
               },
             )),
       ],
     ),
   );
 }
-  
+
 // import 'package:url_launcher/url_launcher.dart';
 
 Widget _buildEducationTab() {
@@ -363,7 +514,7 @@ Widget _buildEducationTab() {
         Card(
           elevation: 3,
           child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal, // 👈 enable horizontal scroll
+            scrollDirection: Axis.horizontal,
             child: DataTable(
               columns: const [
                 DataColumn(label: Text("Degree")),
@@ -381,10 +532,15 @@ Widget _buildEducationTab() {
                         ? GestureDetector(
                             onTap: () async {
                               final url =
-                                  "http://schoolmanagement.canadacentral.cloudapp.azure.com/content/uploads/education/${edu['certificate']}";
+                                  "http://schoolmanagement.canadacentral.cloudapp.azure.com${edu['certificate']}";
                               if (await canLaunchUrl(Uri.parse(url))) {
                                 await launchUrl(Uri.parse(url),
                                     mode: LaunchMode.externalApplication);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text("Could not open PDF")),
+                                );
                               }
                             },
                             child: Row(

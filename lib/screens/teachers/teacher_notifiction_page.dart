@@ -384,49 +384,48 @@ class _TeacherNotificationDetailPageState extends State<TeacherNotificationDetai
       backgroundColor: const Color(0xFFF9F7A5),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: const Text("< Back", style: TextStyle(color: Colors.black, fontSize: 14)),
-            ),
-            const SizedBox(height: 12),
-           Row(
-  crossAxisAlignment: CrossAxisAlignment.center,
+        child:Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
   children: [
-    // Back button
+    // Top-left Back button
     GestureDetector(
       onTap: () => Navigator.pop(context),
-      child: const Icon(Icons.arrow_back, color: Colors.black, size: 20),
-    ),
-    const SizedBox(width: 12),
-
-    // Notification icon
-    Container(
-      padding: const EdgeInsets.all(8),
-      decoration: const BoxDecoration(color: Color(0xFF2E3192)),
-      child: SvgPicture.asset(
-        'assets/icons/notification.svg',
-        height: 20,
-        width: 20,
-        color: Colors.white,
+      child: const Padding(
+        padding: EdgeInsets.only(top: 5.0, left: 5.0),
+        child: Text("< Back", style: TextStyle(color: Colors.black, fontSize: 15)),
       ),
     ),
-    const SizedBox(width: 8),
+    const SizedBox(height: 12),
 
-    // Title
-    const Text(
-      "Notification Details",
-      style: TextStyle(
-        fontSize: 26,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF2E3192),
-      ),
+    // Title + Notification icon
+    Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Notification icon
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(color: Color(0xFF2E3192)),
+          child: SvgPicture.asset(
+            'assets/icons/notification.svg',
+            height: 20,
+            width: 20,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // Title
+        const Text(
+          "Notification Details",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2E3192),
+          ),
+        ),
+      ],
     ),
-  ],
-),
-
-            const SizedBox(height: 12),
+    const SizedBox(height: 12),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(

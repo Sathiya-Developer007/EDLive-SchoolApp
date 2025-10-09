@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
+
+import 'package:school_app/services/student_profile_img_change.dart';
 
 class StudentProfilePage extends StatefulWidget {
   final int studentId;
@@ -18,6 +21,10 @@ class StudentProfilePage extends StatefulWidget {
 class _StudentProfilePageState extends State<StudentProfilePage> {
   bool loading = true;
   Map<String, dynamic>? data;
+
+
+  final uploader = StudentProfileImageUploader();
+
 
   @override
   void initState() {
@@ -77,22 +84,39 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     );
   }
 
-  Widget _networkImage(String? imageUrl, {double size = 120}) {
-    return ClipOval(
-      child: imageUrl != null && imageUrl.isNotEmpty
-          ? Image.network(
-              imageUrl,
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return _placeholderImage(size);
-              },
-            )
-          : _placeholderImage(size),
-    );
+  final String _imgBase = 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000';
+
+
+ Widget _networkImage(String? imageUrl, {double size = 120}) {
+  String? fullUrl;
+
+  if (imageUrl != null && imageUrl.isNotEmpty) {
+    if (imageUrl.startsWith('/')) {
+      // Relative path from API
+      fullUrl = '$_imgBase$imageUrl';
+    } else if (imageUrl.startsWith('http')) {
+      // Full URL already
+      fullUrl = imageUrl;
+    } else {
+      // Local path (picked image)
+      fullUrl = imageUrl;
+    }
   }
 
+  return ClipOval(
+    child: fullUrl != null
+        ? Image.network(
+            fullUrl,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _placeholderImage(size);
+            },
+          )
+        : _placeholderImage(size),
+  );
+}
   Widget _placeholderImage(double size) {
     return Container(
       width: size,
@@ -119,7 +143,8 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     final parent = data!['parent'] ?? {};
     final health = data!['health'] ?? {};
     final caste = data!['caste_religion'] ?? {};
-    final imgBase = 'http://schoolmanagement.canadacentral.cloudapp.azure.com';
+final imgBase = 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000';
+
 
     return DefaultTabController(
       length: 3,
@@ -144,27 +169,35 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                         style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
                   const SizedBox(height: 6),
-                  Center(
-                    child: Column(
-                      children: [
-                        _networkImage(
-                          data!['profile_img'] != null
-                              ? '$imgBase${data!['profile_img']}'
-                              : null,
-                          size: 120,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          data!['full_name'] ?? '',
-                          style: const TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+Center(
+  child: Column(
+    children: [
+
+GestureDetector(
+  onTap: () => uploader.pickImage(
+    widget.studentId,
+    onSuccess: () => _load(),
+    onError: () => ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Image upload failed')),
+    ),
+  ),
+  child: _networkImage(uploader.selectedImage?.path ?? data!['profile_img']),
+),
+
+ 
+ 
+ const SizedBox(height: 6),
+      Text(
+        data!['full_name'] ?? '',
+        style: const TextStyle(
+            fontSize: 18,
+            color: Colors.white,
+            fontWeight: FontWeight.w600),
+      ),
+    ],
+  ),
+),
+   ],
               ),
             ),
 
