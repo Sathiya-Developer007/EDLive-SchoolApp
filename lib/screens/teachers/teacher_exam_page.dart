@@ -162,7 +162,7 @@ class _TeacherExamPageState extends State<TeacherExamPage>
                 Container(
                   margin: const EdgeInsets.all(12),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  height: MediaQuery.of(context).size.height * 0.65,
+                  height: MediaQuery.of(context).size.height * 0.69,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
@@ -233,10 +233,10 @@ class _TeacherExamPageState extends State<TeacherExamPage>
                                     ),
                             ),
                             const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.more_horiz),
-                              onPressed: () {},
-                            ),
+                            // IconButton(
+                            //   icon: const Icon(Icons.more_horiz),
+                            //   onPressed: () {},
+                            // ),
                           ],
                         ),
                       ),
@@ -255,17 +255,17 @@ class _TeacherExamPageState extends State<TeacherExamPage>
                               children: [
                                 Text('Other Exams'),
                                 SizedBox(width: 4),
-                                CircleAvatar(
-                                  radius: 8,
-                                  backgroundColor: Colors.purple,
-                                  child: Text(
-                                    '1',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                                // CircleAvatar(
+                                //   radius: 8,
+                                //   backgroundColor: Colors.purple,
+                                //   child: Text(
+                                //     '1',
+                                //     style: TextStyle(
+                                //       fontSize: 10,
+                                //       color: Colors.white,
+                                //     ),
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),

@@ -5,6 +5,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 
+import 'package:school_app/widgets/teacher_app_bar.dart';
+import 'teacher_menu_drawer.dart';
+
 import 'package:school_app/services/announce_exam_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -124,6 +127,9 @@ void initState() {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: TeacherAppBar(),
+      drawer: MenuDrawer(),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),

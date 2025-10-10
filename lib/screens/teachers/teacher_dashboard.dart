@@ -212,20 +212,31 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
     iconPath: 'assets/icons/transport.svg',
     color: const Color(0xFFCCCCFF),
     centerContent: true,
-    onTap: () {
-      final now = DateTime.now();
-      final academicYear = '${now.year}-${now.year + 1}';
+onTap: () async {
+  final prefs = await SharedPreferences.getInstance();
+  final userDataString = prefs.getString('user_data');
+  int staffId = 0;
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TransportPage(
-            staffId: 1, // or get dynamically from login
-            academicYear: academicYear,
-          ),
-        ),
-      );
-    },
+  if (userDataString != null) {
+    final userData = json.decode(userDataString);
+    if (userData['staffid'] != null && userData['staffid'].isNotEmpty) {
+      staffId = userData['staffid'][0]; // first staffId
+    }
+  }
+
+  final now = DateTime.now();
+  final academicYear = '${now.year}-${now.year + 1}';
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TransportPage(
+        staffId: staffId,
+        academicYear: academicYear,
+      ),
+    ),
+  );
+},
   ),
 ),
 

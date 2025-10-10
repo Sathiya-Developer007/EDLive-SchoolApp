@@ -111,6 +111,21 @@ class MyApp extends StatelessWidget {
     required this.selectedChild,
   });
 
+
+  Future<int> _getStaffId() async {
+  final prefs = await SharedPreferences.getInstance();
+  final userDataString = prefs.getString('user_data');
+
+  if (userDataString != null) {
+    final userData = json.decode(userDataString);
+    if (userData['staffid'] != null && userData['staffid'].isNotEmpty) {
+      return userData['staffid'][0]; // pick first staffId
+    }
+  }
+  throw Exception('Staff ID not found');
+}
+
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -156,10 +171,27 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const ToDoListPage());
           case '/classtime':
             return MaterialPageRoute(builder: (_) => const ClassTimePageView());
-         case '/profile':
+      case '/profile':
   return MaterialPageRoute(
-    builder: (_) => TeacherProfilePage(staffId: 1), // replace with actual staffId
+    builder: (_) => FutureBuilder<int>(
+      future: _getStaffId(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        } else if (snapshot.hasError || !snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: Text('Failed to load profile')),
+          );
+        } else {
+          final staffId = snapshot.data!;
+          return TeacherProfilePage(staffId: staffId);
+        }
+      },
+    ),
   );
+
 
           case '/settings':
             return MaterialPageRoute(builder: (_) => const SettingsPage());

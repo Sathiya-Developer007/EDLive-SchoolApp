@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
+import 'package:school_app/widgets/teacher_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_app/models/class_section.dart';
 import 'package:school_app/services/class_section_service.dart';
@@ -111,6 +113,8 @@ Future<void> _announceMeeting(int meetingId) async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: TeacherAppBar(),
+      drawer: MenuDrawer(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),

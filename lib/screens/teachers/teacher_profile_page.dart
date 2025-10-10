@@ -81,6 +81,7 @@ Future<void> pickAndUploadImage() async {
     if (newImagePath != null) {
       setState(() {
         teacherData?['profile_image'] = newImagePath;
+        _selectedImage = null; // clear temporary file
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile image updated successfully")),
@@ -166,17 +167,23 @@ Future<void> pickAndUploadImage() async {
           Center(
             child:Stack(
   children: [
-    CircleAvatar(
-      radius: 60,
-      backgroundColor: Colors.grey,
-      backgroundImage: teacherData?['profile_image'] != null && teacherData!['profile_image'] != ""
-          ? NetworkImage("http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData!['profile_image']}")
+CircleAvatar(
+  radius: 60,
+  backgroundColor: Colors.grey[300],
+  backgroundImage: _selectedImage != null
+      ? FileImage(_selectedImage!)
+      : (teacherData?['profile_image'] != null &&
+              teacherData!['profile_image'].toString().isNotEmpty)
+          ? NetworkImage(
+              "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000${teacherData!['profile_image']}?v=${DateTime.now().millisecondsSinceEpoch}",
+            )
           : null,
-      child: teacherData?['profile_image'] == null || teacherData!['profile_image'] == ""
-          ? const Icon(Icons.person, size: 70, color: Colors.white)
-          : null,
-    ),
-    Positioned(
+  child: (teacherData?['profile_image'] == null ||
+          teacherData!['profile_image'].toString().isEmpty)
+      ? const Icon(Icons.person, size: 70, color: Colors.white)
+      : null,
+),
+ Positioned(
       bottom: 0,
       right: 0,
       child: GestureDetector(
