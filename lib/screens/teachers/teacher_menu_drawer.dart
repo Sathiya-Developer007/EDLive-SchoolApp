@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:restart_app/restart_app.dart';
+import 'dart:convert';
 
+
+import 'teacher_achivement_page.dart';
+import 'teacher_report_page.dart';
+import 'teacher_payments_page.dart';
+import 'teacher_transport.dart';
+import 'teacher_message_page.dart';
 
 class MenuDrawer extends StatefulWidget {
   const MenuDrawer({super.key});
@@ -112,36 +119,100 @@ class _MenuDrawerState extends State<MenuDrawer> {
                         onTap: () async {
                           setState(() => _selectedIndex = index);
 
-                         if (item['label'] == 'Logout') {
-  // 1. Clear all stored data
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.clear(); // Clear everything, not just auth_token
+                          if (item['label'] == 'Logout') {
+                            // 1. Clear all stored data
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs
+                                .clear(); // Clear everything, not just auth_token
 
-  // 2. Reset any app state if using Provider/Riverpod/GetX
-  // Example with Provider:
-  // context.read<AuthProvider>().logout();
+                            // 2. Reset any app state if using Provider/Riverpod/GetX
+                            // Example with Provider:
+                            // context.read<AuthProvider>().logout();
 
-  // 3. Navigate to login page and remove all previous routes
-  Navigator.pushNamedAndRemoveUntil(
+                            // 3. Navigate to login page and remove all previous routes
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/', // Replace with your login route if different
+                              (route) => false,
+                            );
+
+                            // 4. Force a full app restart
+                            await Restart.restartApp(); // Requires restart_app package
+                          } else if (item['route'] == '/achievements') {
+  Navigator.push(
     context,
-    '/', // Replace with your login route if different
-    (route) => false,
+    MaterialPageRoute(
+      builder: (context) => const TeacherAchievementPage(),
+    ),
   );
+} else if (item['route'] == '/reports') { // ✅ Add this
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TeacherReportPage(),
+      ),
+    );
+  }
 
-  // 4. Force a full app restart
-  await Restart.restartApp(); // Requires restart_app package
+  else if (item['route'] == '/payments') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const TeacherPaymentsPage(),
+    ),
+  );
 }
- else if ([
-                            '/todo',
-                            '/classtime',
-                            '/settings',
-                            '/attendance',
-                            '/exams',
-                            '/syllabus', // ✅ Add this
-                            '/events',
-                          ].contains(item['route'])) {
-                            Navigator.pushNamed(context, item['route']);
-                          } else {
+
+else if (item['route'] == '/transport') {
+  final prefs = await SharedPreferences.getInstance();
+  final userDataString = prefs.getString('user_data');
+  int staffId = 0;
+
+  if (userDataString != null) {
+    final userData = json.decode(userDataString);
+    if (userData['staffid'] != null && userData['staffid'].isNotEmpty) {
+      staffId = userData['staffid'][0]; // first staffId
+    }
+  }
+
+  final now = DateTime.now();
+  final academicYear = '${now.year}-${now.year + 1}';
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => TransportPage(
+        staffId: staffId,
+        academicYear: academicYear,
+      ),
+    ),
+  );
+}
+
+else if (item['route'] == '/message') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const TeacherMessagePage(),
+    ),
+  );
+}
+
+
+
+  else if ([
+    '/todo',
+    '/classtime',
+    '/settings',
+    '/attendance',
+    '/exams',
+    '/syllabus',
+    '/events',
+  ].contains(item['route'])) {
+    Navigator.pushNamed(context, item['route']);
+  
+}
+ {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
