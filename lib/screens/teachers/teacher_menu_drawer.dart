@@ -10,6 +10,12 @@ import 'teacher_report_page.dart';
 import 'teacher_payments_page.dart';
 import 'teacher_transport.dart';
 import 'teacher_message_page.dart';
+import 'teacher_pta_page.dart';
+import 'teacher_add_library_book_page.dart';
+import 'teacher_specialcare_page.dart';
+import 'teacher_co_curricular_page.dart';
+import 'teacher_resource_page.dart';
+import 'teacher_quick_notes.dart';
 
 class MenuDrawer extends StatefulWidget {
   const MenuDrawer({super.key});
@@ -198,6 +204,62 @@ else if (item['route'] == '/message') {
   );
 }
 
+else if (item['route'] == '/pta') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const TeacherPTAPage(),
+    ),
+  );
+}
+
+
+else if (item['route'] == '/library') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AddLibraryBookPage(),
+    ),
+  );
+}
+
+
+else if (item['route'] == '/special_care') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const SpecialCarePage(),
+    ),
+  );
+}
+
+else if (item['route'] == '/co_curricular') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const CoCurricularActivitiesPage(),
+    ),
+  );
+}
+
+else if (item['route'] == '/resources') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const TeacherResourcePage(),
+    ),
+  );
+}
+
+
+else if (item['route'] == '/quick_notes') {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const TeacherQuickNotesPage(),
+    ),
+  );
+}
 
 
   else if ([
