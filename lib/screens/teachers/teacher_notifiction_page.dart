@@ -27,16 +27,20 @@ class NotificationItem {
     required this.type,
   });
 
-  factory NotificationItem.fromJson(Map<String, dynamic> json) {
-    return NotificationItem(
-      id: json['id'],
-      title: json['title'] ?? '',
-      subtitle: json['content'] ?? '',
-      moduleType: json['module_type'] ?? '',
-      dateTime: DateTime.tryParse(json['notification_date'] ?? json['timestamp'] ?? '') ?? DateTime.now(),
-      type: json['type'] ?? '',
-    );
-  }
+ factory NotificationItem.fromJson(Map<String, dynamic> json) {
+  // Prefer timestamp for accurate time display
+  final timestampStr = json['timestamp'] ?? json['notification_date'] ?? '';
+  final parsedDate = DateTime.tryParse(timestampStr) ?? DateTime.now();
+
+  return NotificationItem(
+    id: json['id'],
+    title: json['title'] ?? '',
+    subtitle: json['content'] ?? '',
+    moduleType: json['module_type'] ?? '',
+    dateTime: parsedDate,
+    type: json['type'] ?? '',
+  );
+}
 }
 
 // ----------------- PAGE -----------------
@@ -87,93 +91,98 @@ class _TeacherNotificationPageState extends State<TeacherNotificationPage> {
     }
   }
 
-  Future<void> _fetchNotifications({bool loadMore = false}) async {
-    try {
-      if (loadMore) {
-        setState(() => _fetchingMore = true);
-      } else {
-        setState(() {
-          _loading = true;
-          _error = null;
-          _notificationsByDate.clear();
-          _nextFetchDate = DateTime.now();
-        });
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("auth_token");
-      if (token == null) {
-        setState(() {
-          _loading = false;
-          _fetchingMore = false;
-          _error = "No token found, please login again.";
-        });
-        return;
-      }
-
-      final dateToFetch = _nextFetchDate!;
-      final formattedDate = DateFormat('yyyy-MM-dd').format(dateToFetch);
-
-      final url =
-          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?date=$formattedDate";
-
-      final response = await http.get(Uri.parse(url), headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      });
-
-      if (response.statusCode != 200) throw Exception("Failed to fetch notifications");
-
-      final data = json.decode(response.body);
-      if (data['success'] != true) throw Exception("API returned error");
-
-      final notificationsData =
-          data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
-
-      notificationsData.forEach((dateStr, list) {
-        final List items = list as List;
-        if (items.isNotEmpty) {
-          _notificationsByDate.putIfAbsent(dateStr, () => []);
-          _notificationsByDate[dateStr]!.addAll(
-              items.map((e) => NotificationItem.fromJson(e)).toList());
-        }
-      });
-
-      // Prepare next fetch date
-      final periodStart = data['notifications']['period_start'];
-      if (periodStart != null) {
-        DateTime prevStart = DateTime.parse(periodStart);
-        _nextFetchDate = prevStart.isBefore(DateTime(2020)) ? null : prevStart.subtract(const Duration(days: 1));
-      } else {
-        _nextFetchDate = null;
-      }
-
-      // Sort notifications
-      _notificationsByDate.forEach((key, value) => value.sort((a, b) => b.dateTime.compareTo(a.dateTime)));
-
-      final sortedGrouped = Map.fromEntries(
-        _notificationsByDate.entries.toList()..sort((a, b) => b.key.compareTo(a.key)),
-      );
-
+ Future<void> _fetchNotifications({bool loadMore = false}) async {
+  try {
+    if (loadMore) {
+      setState(() => _fetchingMore = true);
+    } else {
       setState(() {
-        _notificationsByDate = sortedGrouped;
-        _loading = false;
-        _fetchingMore = false;
-      });
-
-      // Auto fetch previous week if empty
-      if (_notificationsByDate.isEmpty && _nextFetchDate != null) {
-        debugPrint("⚠️ No notifications this week. Fetching previous week...");
-        _fetchNotifications(loadMore: true);
-      }
-    } catch (e) {
-      setState(() {
-        _loading = false;
-        _fetchingMore = false;
-        _error = "Something went wrong: $e";
+        _loading = true;
+        _error = null;
+        _notificationsByDate.clear();
+        _nextFetchDate = DateTime.now();
       });
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+    if (token == null) {
+      setState(() {
+        _loading = false;
+        _fetchingMore = false;
+        _error = "No token found, please login again.";
+      });
+      return;
+    }
+
+    // Use _nextFetchDate or today if null
+    final dateToFetch = _nextFetchDate ?? DateTime.now();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(dateToFetch);
+
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/daily-notifications?date=$formattedDate";
+
+    final response = await http.get(Uri.parse(url), headers: {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    });
+
+    if (response.statusCode != 200) throw Exception("Failed to fetch notifications");
+
+    final data = json.decode(response.body);
+    if (data['success'] != true) throw Exception("API returned error");
+
+    final notificationsData =
+        data['notifications']['notifications'] as Map<String, dynamic>? ?? {};
+
+    bool hasData = false;
+    notificationsData.forEach((dateStr, list) {
+      final List items = list as List;
+      if (items.isNotEmpty) {
+        hasData = true;
+        _notificationsByDate.putIfAbsent(dateStr, () => []);
+        _notificationsByDate[dateStr]!.addAll(
+            items.map((e) => NotificationItem.fromJson(e)).toList());
+      }
+    });
+
+    // Prepare next fetch date (for previous 7 days)
+    final periodStart = data['notifications']['period_start'];
+    if (periodStart != null && periodStart.isNotEmpty) {
+      DateTime prevStart = DateTime.parse(periodStart);
+      _nextFetchDate = prevStart.subtract(const Duration(days: 1));
+    } else {
+      _nextFetchDate = null;
+    }
+
+    // Sort notifications
+    _notificationsByDate.forEach((key, value) =>
+        value.sort((a, b) => b.dateTime.compareTo(a.dateTime)));
+
+    final sortedGrouped = Map.fromEntries(
+      _notificationsByDate.entries.toList()..sort((a, b) => b.key.compareTo(a.key)),
+    );
+
+    setState(() {
+      _notificationsByDate = sortedGrouped;
+      _loading = false;
+      _fetchingMore = false;
+    });
+
+    // 🔁 Auto-fetch previous week if current response empty but more dates exist
+    if (!hasData && _nextFetchDate != null) {
+      debugPrint(
+          "⚠️ No notifications for ${formattedDate}. Fetching previous week from ${_nextFetchDate}...");
+      await _fetchNotifications(loadMore: true);
+    }
+  } catch (e) {
+    setState(() {
+      _loading = false;
+      _fetchingMore = false;
+      _error = "Something went wrong: $e";
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -226,11 +235,15 @@ class _TeacherNotificationPageState extends State<TeacherNotificationPage> {
                                     children: [
                                       Padding(
                                         padding: const EdgeInsets.symmetric(vertical: 8),
-                                        child: Text(
-                                          DateFormat('dd/MM/yyyy').format(DateTime.parse(date)),
-                                          style: const TextStyle(
-                                              fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2E3192)),
-                                        ),
+                                        child:Text(
+  DateFormat('dd/MMM/yyyy').format(DateTime.parse(date)),
+  style: const TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: Color(0xFF2E3192),
+  ),
+),
+
                                       ),
                                       ...items.map((item) {
                                         if (!_viewedIds.contains(item.id)) {
@@ -263,7 +276,8 @@ class _TeacherNotificationPageState extends State<TeacherNotificationPage> {
                                                   ],
                                                 ),
                                                 const SizedBox(height: 4),
-                                                Text(DateFormat('HH:mm').format(item.dateTime),
+                                                Text(DateFormat('hh:mm a').format(item.dateTime)
+,
                                                     style: const TextStyle(fontSize: 12, color: Colors.black54)),
                                                 const SizedBox(height: 6),
                                                 Text(item.title,
@@ -303,7 +317,11 @@ class _TeacherNotificationPageState extends State<TeacherNotificationPage> {
                                         ? const Center(child: CircularProgressIndicator())
                                         : ElevatedButton(
                                             onPressed: () => _fetchNotifications(loadMore: true),
-                                            child: const Text("View the notifications from the past 7 days"),
+                                            child: const Text("View Past Notifications"),
+                                            // child: const Text("Load previous notifications"),
+                                            // View the notifications from the past 7 days
+                                            
+
                                           ),
                                   ),
                               ],
@@ -454,9 +472,12 @@ class _TeacherNotificationDetailPageState extends State<TeacherNotificationDetai
                           Text("${widget.item.moduleType} • ${widget.item.type}",
                               style: const TextStyle(fontSize: 13, color: Colors.black54)),
                           const SizedBox(height: 4),
-                          Text(DateFormat('dd/MM/yyyy HH:mm').format(widget.item.dateTime),
-                              style: const TextStyle(fontSize: 12, color: Colors.black45)),
-                        ],
+                       Text(
+  DateFormat('dd/MMM/yyyy hh:mm a').format(widget.item.dateTime),
+  style: const TextStyle(fontSize: 12, color: Colors.black45),
+),
+
+  ],
                       ),
                     ),
                     const Divider(),
@@ -490,13 +511,15 @@ class _TeacherNotificationDetailPageState extends State<TeacherNotificationDetai
                                                   style: TextStyle(color: isTeacher ? Colors.white : Colors.black87),
                                                 ),
                                                 const SizedBox(height: 2),
-                                                Text(
-                                                  "${reply.senderName} • ${DateFormat('dd/MM/yyyy HH:mm').format(reply.createdAt)}",
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isTeacher ? Colors.white70 : Colors.black54,
-                                                  ),
-                                                ),
+Text(
+  "${reply.senderName} • ${DateFormat('dd/MMM/yyyy hh:mm a').format(reply.createdAt)}",
+  style: TextStyle(
+    fontSize: 11,
+    color: isTeacher ? Colors.white70 : Colors.black54,
+  ),
+),
+
+
                                               ],
                                             ),
                                           ),
