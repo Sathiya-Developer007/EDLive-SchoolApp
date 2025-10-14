@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:restart_app/restart_app.dart';
 import 'dart:convert';
 
-
 import 'teacher_achivement_page.dart';
 import 'teacher_report_page.dart';
 import 'teacher_payments_page.dart';
@@ -145,136 +144,121 @@ class _MenuDrawerState extends State<MenuDrawer> {
                             // 4. Force a full app restart
                             await Restart.restartApp(); // Requires restart_app package
                           } else if (item['route'] == '/achievements') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const TeacherAchievementPage(),
-    ),
-  );
-} else if (item['route'] == '/reports') { // ✅ Add this
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TeacherReportPage(),
-      ),
-    );
-  }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TeacherAchievementPage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/reports') {
+                            // ✅ Add this
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const TeacherReportPage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/payments') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TeacherPaymentsPage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/transport') {
+                            final prefs = await SharedPreferences.getInstance();
+                            final userDataString = prefs.getString('user_data');
+                            int staffId = 0;
 
-  else if (item['route'] == '/payments') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const TeacherPaymentsPage(),
-    ),
-  );
-}
+                            if (userDataString != null) {
+                              final userData = json.decode(userDataString);
+                              if (userData['staffid'] != null &&
+                                  userData['staffid'].isNotEmpty) {
+                                staffId =
+                                    userData['staffid'][0]; // first staffId
+                              }
+                            }
 
-else if (item['route'] == '/transport') {
-  final prefs = await SharedPreferences.getInstance();
-  final userDataString = prefs.getString('user_data');
-  int staffId = 0;
+                            final now = DateTime.now();
+                            final academicYear = '${now.year}-${now.year + 1}';
 
-  if (userDataString != null) {
-    final userData = json.decode(userDataString);
-    if (userData['staffid'] != null && userData['staffid'].isNotEmpty) {
-      staffId = userData['staffid'][0]; // first staffId
-    }
-  }
-
-  final now = DateTime.now();
-  final academicYear = '${now.year}-${now.year + 1}';
-
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => TransportPage(
-        staffId: staffId,
-        academicYear: academicYear,
-      ),
-    ),
-  );
-}
-
-else if (item['route'] == '/message') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const TeacherMessagePage(),
-    ),
-  );
-}
-
-else if (item['route'] == '/pta') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const TeacherPTAPage(),
-    ),
-  );
-}
-
-
-else if (item['route'] == '/library') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const AddLibraryBookPage(),
-    ),
-  );
-}
-
-
-else if (item['route'] == '/special_care') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const SpecialCarePage(),
-    ),
-  );
-}
-
-else if (item['route'] == '/co_curricular') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const CoCurricularActivitiesPage(),
-    ),
-  );
-}
-
-else if (item['route'] == '/resources') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const TeacherResourcePage(),
-    ),
-  );
-}
-
-
-else if (item['route'] == '/quick_notes') {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const TeacherQuickNotesPage(),
-    ),
-  );
-}
-
-
-  else if ([
-    '/todo',
-    '/classtime',
-    '/settings',
-    '/attendance',
-    '/exams',
-    '/syllabus',
-    '/events',
-  ].contains(item['route'])) {
-    Navigator.pushNamed(context, item['route']);
-  
-}
- {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TransportPage(
+                                  staffId: staffId,
+                                  academicYear: academicYear,
+                                ),
+                              ),
+                            );
+                          } else if (item['route'] == '/message') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TeacherMessagePage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/pta') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const TeacherPTAPage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/library') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const AddLibraryBookPage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/special_care') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SpecialCarePage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/co_curricular') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const CoCurricularActivitiesPage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/resources') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TeacherResourcePage(),
+                              ),
+                            );
+                          } else if (item['route'] == '/quick_notes') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TeacherQuickNotesPage(),
+                              ),
+                            );
+                          } else if ([
+                            '/todo',
+                            '/classtime',
+                            '/settings',
+                            '/attendance',
+                            '/exams',
+                            '/syllabus',
+                            '/events',
+                          ].contains(item['route'])) {
+                            Navigator.pushNamed(context, item['route']);
+                          }
+                          {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(

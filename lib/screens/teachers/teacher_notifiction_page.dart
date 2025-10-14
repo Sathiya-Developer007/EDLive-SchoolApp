@@ -63,9 +63,8 @@ class _TeacherNotificationPageState extends State<TeacherNotificationPage> {
   Map<int, bool> _hasReplies = {};
   Map<int, bool> _hasUnreadReplies = {}; // for red dot
   Map<int, int> _unreadReplyCount = {}; // store count of new replies
-// Map<int, int> _unreadReplyCount = {}; // how many unread replies
-Map<int, bool> _hasReadReplies = {};  // has the teacher already read it
-
+  // Map<int, int> _unreadReplyCount = {}; // how many unread replies
+  Map<int, bool> _hasReadReplies = {}; // has the teacher already read it
 
   @override
   void initState() {
@@ -73,46 +72,48 @@ Map<int, bool> _hasReadReplies = {};  // has the teacher already read it
     _fetchNotifications();
   }
 
-Future<void> _checkReplies(int itemId, String itemType) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final savedReadIds = prefs.getStringList('readReplies_$itemId') ?? [];
+  Future<void> _checkReplies(int itemId, String itemType) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedReadIds = prefs.getStringList('readReplies_$itemId') ?? [];
 
-    final replies = await NotificationService().fetchReplies(
-      itemId: itemId,
-      itemType: itemType,
-    );
+      final replies = await NotificationService().fetchReplies(
+        itemId: itemId,
+        itemType: itemType,
+      );
 
-    // Flatten all nested replies
-    List<NotificationReply> flatten(List<NotificationReply> list) {
-      List<NotificationReply> all = [];
-      for (var r in list) {
-        all.add(r);
-        if (r.replies.isNotEmpty) {
-          all.addAll(flatten(r.replies));
+      // Flatten all nested replies
+      List<NotificationReply> flatten(List<NotificationReply> list) {
+        List<NotificationReply> all = [];
+        for (var r in list) {
+          all.add(r);
+          if (r.replies.isNotEmpty) {
+            all.addAll(flatten(r.replies));
+          }
         }
+        return all;
       }
-      return all;
+
+      final allReplies = flatten(replies);
+
+      // Count replies not by teacher + not read
+      int unreadCount = allReplies
+          .where(
+            (r) =>
+                r.senderType != "Teacher" &&
+                !savedReadIds.contains(r.id.toString()),
+          )
+          .length;
+
+      if (mounted) {
+        setState(() {
+          _unreadReplyCount[itemId] = unreadCount;
+        });
+      }
+    } catch (e) {
+      debugPrint("⚠️ Error checking replies for $itemId: $e");
     }
-
-    final allReplies = flatten(replies);
-
-    // Count replies not by teacher + not read
-    int unreadCount = allReplies
-        .where((r) =>
-            r.senderType != "Teacher" &&
-            !savedReadIds.contains(r.id.toString()))
-        .length;
-
-    if (mounted) {
-      setState(() {
-        _unreadReplyCount[itemId] = unreadCount;
-      });
-    }
-  } catch (e) {
-    debugPrint("⚠️ Error checking replies for $itemId: $e");
   }
-}
 
   Future<void> _markAsViewed(int id) async {
     try {
@@ -223,11 +224,11 @@ Future<void> _checkReplies(int itemId, String itemType) async {
         _fetchingMore = false;
       });
 
-     for (var entry in _notificationsByDate.entries) {
-  for (var item in entry.value) {
-    _checkReplies(item.id, item.moduleType);
-  }
-}
+      for (var entry in _notificationsByDate.entries) {
+        for (var item in entry.value) {
+          _checkReplies(item.id, item.moduleType);
+        }
+      }
 
       // 🔁 Auto-fetch previous week if current response empty but more dates exist
       if (!hasData && _nextFetchDate != null) {
@@ -361,19 +362,19 @@ Future<void> _checkReplies(int itemId, String itemType) async {
                                             ),
                                           ],
                                         ),
+                                        const SizedBox(height: 2),
+                                        // Text(
+                                        //   DateFormat(
+                                        //     // 'hh:mm a',
+                                        //   ).format(item.dateTime),
+                                        //   style: const TextStyle(
+                                        //     fontSize: 12,
+                                        //     color: Colors.black54,
+                                        //   ),
+                                        // ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          DateFormat(
-                                            'hh:mm a',
-                                          ).format(item.dateTime),
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          item.title,
+                                          item.title, 
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14,
@@ -390,75 +391,105 @@ Future<void> _checkReplies(int itemId, String itemType) async {
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                         const SizedBox(height: 8),
-                                    Align(
-  alignment: Alignment.centerRight,
-  child: Stack(
-    clipBehavior: Clip.none,
-    children: [
-      TextButton(
-        onPressed: () async {
-  await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => TeacherNotificationDetailPage(item: item),
-    ),
-  );
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: Stack(
+                                            clipBehavior: Clip.none,
+                                            children: [
+                                              TextButton(
+                                                onPressed: () async {
+                                                  await Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          TeacherNotificationDetailPage(
+                                                            item: item,
+                                                          ),
+                                                    ),
+                                                  );
 
-  // After coming back → mark as read locally
-  final prefs = await SharedPreferences.getInstance();
-  final replies = await NotificationService()
-      .fetchReplies(itemId: item.id, itemType: item.moduleType);
+                                                  // After coming back → mark as read locally
+                                                  final prefs =
+                                                      await SharedPreferences.getInstance();
+                                                  final replies =
+                                                      await NotificationService()
+                                                          .fetchReplies(
+                                                            itemId: item.id,
+                                                            itemType:
+                                                                item.moduleType,
+                                                          );
 
-  // Flatten and store all reply IDs as read
-  List<int> allIds = [];
-  void flatten(List<NotificationReply> list) {
-    for (var r in list) {
-      allIds.add(r.id);
-      if (r.replies.isNotEmpty) flatten(r.replies);
-    }
-  }
+                                                  // Flatten and store all reply IDs as read
+                                                  List<int> allIds = [];
+                                                  void flatten(
+                                                    List<NotificationReply>
+                                                    list,
+                                                  ) {
+                                                    for (var r in list) {
+                                                      allIds.add(r.id);
+                                                      if (r.replies.isNotEmpty)
+                                                        flatten(r.replies);
+                                                    }
+                                                  }
 
-  flatten(replies);
+                                                  flatten(replies);
 
-  prefs.setStringList(
-      'readReplies_${item.id}', allIds.map((e) => e.toString()).toList());
+                                                  prefs.setStringList(
+                                                    'readReplies_${item.id}',
+                                                    allIds
+                                                        .map(
+                                                          (e) => e.toString(),
+                                                        )
+                                                        .toList(),
+                                                  );
 
-  // Hide red dot
-  setState(() {
-    _unreadReplyCount[item.id] = 0;
-  });
-},
- child: const Text("Reply"),
-      ),
+                                                  // Hide red dot
+                                                  setState(() {
+                                                    _unreadReplyCount[item.id] =
+                                                        0;
+                                                  });
+                                                },
+                                                child: const Text("Reply"),
+                                              ),
 
-      // 🔴 Show reply count inside red circle
-      if ((_unreadReplyCount[item.id] ?? 0) > 0)
-        Positioned(
-          right: -6,
-          top: -4,
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
-            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-            child: Center(
-              child: Text(
-                '${_unreadReplyCount[item.id]}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ),
-    ],
-  ),
-),
-  ],
+                                              // 🔴 Show reply count inside red circle
+                                              if ((_unreadReplyCount[item.id] ??
+                                                      0) >
+                                                  0)
+                                                Positioned(
+                                                  right: -6,
+                                                  top: -4,
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.all(4),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color: Colors.red,
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                    constraints:
+                                                        const BoxConstraints(
+                                                          minWidth: 18,
+                                                          minHeight: 18,
+                                                        ),
+                                                    child: Center(
+                                                      child: Text(
+                                                        '${_unreadReplyCount[item.id]}',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );
@@ -625,53 +656,56 @@ class _TeacherNotificationDetailPageState
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                  Container(
-  height: 150, // 👈 Fixed height for container
-  padding: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: const Color(0xFFF1F1F1),
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: SingleChildScrollView( // 👈 Makes inner content scrollable
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.item.title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2E3192),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          widget.item.subtitle,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          "${widget.item.moduleType} • ${widget.item.type}",
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          DateFormat('dd/MMM/yyyy hh:mm a').format(widget.item.dateTime),
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black45,
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+                    Container(
+                      height: 150, // 👈 Fixed height for container
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F1F1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: SingleChildScrollView(
+                        // 👈 Makes inner content scrollable
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.item.title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E3192),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              widget.item.subtitle,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "${widget.item.moduleType} • ${widget.item.type}",
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat(
+                                // 'dd/MMM/yyyy hh:mm a',
+                              ).format(widget.item.dateTime),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
 
                     const Divider(),
                     Expanded(

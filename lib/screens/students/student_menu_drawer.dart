@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:convert';
 
- import 'package:restart_app/restart_app.dart';
+import 'package:restart_app/restart_app.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'student_timetable.dart';
@@ -12,6 +12,9 @@ import 'student_syllabus_page.dart'; // ✅ Adjust the path if needed
 import 'student_events_holidays_page.dart'; // Adjust the path as needed
 import 'student_school_bus_page.dart';
 import 'student_settings_page.dart';
+import 'student_payments_page.dart';
+import 'student_report_page.dart';
+import 'student_achievement_page.dart';
 
 class StudentMenuDrawer extends StatefulWidget {
   const StudentMenuDrawer({super.key});
@@ -24,15 +27,14 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
   int? selectedIndex;
 
   String getPastAcademicYear() {
-  final now = DateTime.now();
-  // If current month >= June, academic year started last year
-  if (now.month >= 6) {
-    return "${now.year - 1}-${now.year}";
-  } else {
-    return "${now.year - 2}-${now.year - 1}";
+    final now = DateTime.now();
+    // If current month >= June, academic year started last year
+    if (now.month >= 6) {
+      return "${now.year - 1}-${now.year}";
+    } else {
+      return "${now.year - 2}-${now.year - 1}";
+    }
   }
-}
-
 
   final List<Map<String, String>> _menuItems = const [
     {'icon': 'todo.svg', 'label': 'My to do list', 'route': '/student-todo'},
@@ -51,7 +53,7 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
     },
     {'icon': 'school.svg', 'label': 'My School', 'route': '/school'},
     {'icon': 'calendar.svg', 'label': 'Calendar', 'route': '/calendar'},
-{'icon': 'settings.svg', 'label': 'Settings', 'route': '/student-settings'},
+    {'icon': 'settings.svg', 'label': 'Settings', 'route': '/student-settings'},
     {'icon': 'logout.svg', 'label': 'Logout', 'route': '/'},
   ];
 
@@ -100,115 +102,183 @@ class _StudentMenuDrawerState extends State<StudentMenuDrawer> {
                         item['label'] ?? '',
                         style: const TextStyle(color: Colors.white),
                       ),
-                    onTap: () async {
-  setState(() {
-    selectedIndex = index;
-  });
+                      onTap: () async {
+                        setState(() {
+                          selectedIndex = index;
+                        });
 
+                        final prefs = await SharedPreferences.getInstance();
+
+                        if (item['label'] == 'Logout') {
+                          // 1. Clear all stored data
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs
+                              .clear(); // Clear everything, not just auth_token
+
+                          // 2. Navigate to login page and remove all previous routes
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/', // Replace with your login route if different
+                            (route) => false,
+                          );
+
+                          // 3. (Optional) Force full app restart to ensure no leftover state
+                          await Restart.restartApp(); // Requires restart_app package
+                        } else if (item['label'] == 'Timetable') {
+                          final selectedChildString = prefs.getString(
+                            'selected_child',
+                          );
+                          if (selectedChildString == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "No child selected. Please select a child.",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final selectedChild = jsonDecode(selectedChildString);
+                          final studentId = selectedChild['id'].toString();
+                          final academicYear = getPastAcademicYear();
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentTimeTablePage(
+                                academicYear: academicYear,
+                                studentId: studentId,
+                              ),
+                            ),
+                          );
+                        } else if (item['label'] == 'Attendance') {
+                          final studentId = prefs.getInt('student_id');
+                          if (studentId != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    StudentAttendancePage(studentId: studentId),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Student ID not found. Please login again.",
+                                ),
+                              ),
+                            );
+                          }
+                        } else if (item['label'] == 'My to do list') {
+                          Navigator.pushNamed(context, '/student-todo');
+                        } else if (item['label'] == 'Exams') {
+                          final studentIdInt = prefs.getInt('student_id');
+                          if (studentIdInt == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Student ID not found'),
+                              ),
+                            );
+                            return;
+                          }
+                          final studentId = studentIdInt.toString();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  StudentExamsScreen(studentId: studentId),
+                            ),
+                          );
+                        } else if (item['label'] == 'Syllabus') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const StudentSyllabusPage(),
+                            ),
+                          );
+                        } else if (item['label'] == 'Events & Holidays') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const EventsHolidaysPage(
+                                startInMonthView: true,
+                              ),
+                            ),
+                          );
+                        } else if (item['label'] == 'School bus') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const StudentSchoolBusPage(),
+                            ),
+                          );
+                        } else if (item['label'] == 'Settings') {
+                          Navigator.pushNamed(context, '/student-settings');
+                        }
+
+                        else if (item['label'] == 'Fees') {
+  // 👇 Add this new navigation block
   final prefs = await SharedPreferences.getInstance();
+  final studentIdInt = prefs.getInt('student_id');
+  if (studentIdInt == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Student ID not found')),
+    );
+    return;
+  }
 
-if (item['label'] == 'Logout') {
-  // 1. Clear all stored data
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.clear(); // Clear everything, not just auth_token
+  final studentId = studentIdInt.toString();
 
-  // 2. Navigate to login page and remove all previous routes
-  Navigator.pushNamedAndRemoveUntil(
+  Navigator.push(
     context,
-    '/', // Replace with your login route if different
-    (route) => false,
+    MaterialPageRoute(
+      builder: (_) => StudentPaymentsPage(studentId: studentId),
+    ),
   );
-
-  // 3. (Optional) Force full app restart to ensure no leftover state
-  await Restart.restartApp(); // Requires restart_app package
 }
 
-  else if (item['label'] == 'Timetable') {
-    final selectedChildString = prefs.getString('selected_child');
-    if (selectedChildString == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No child selected. Please select a child.")),
-      );
-      return;
-    }
-
-    final selectedChild = jsonDecode(selectedChildString);
-    final studentId = selectedChild['id'].toString();
-    final academicYear = getPastAcademicYear();
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentTimeTablePage(
-          academicYear: academicYear,
-          studentId: studentId,
-        ),
-      ),
+else if (item['label'] == 'Reports') {
+  final prefs = await SharedPreferences.getInstance();
+  final studentIdInt = prefs.getInt('student_id');
+  if (studentIdInt == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Student ID not found')),
     );
-  } 
-  else if (item['label'] == 'Attendance') {
-    final studentId = prefs.getInt('student_id');
-    if (studentId != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StudentAttendancePage(studentId: studentId),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Student ID not found. Please login again.")),
-      );
-    }
-  } 
-  else if (item['label'] == 'My to do list') {
-    Navigator.pushNamed(context, '/student-todo');
-  } 
-  else if (item['label'] == 'Exams') {
-    final studentIdInt = prefs.getInt('student_id');
-    if (studentIdInt == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Student ID not found')),
-      );
-      return;
-    }
-    final studentId = studentIdInt.toString();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StudentExamsScreen(studentId: studentId),
-      ),
-    );
-  } 
-  else if (item['label'] == 'Syllabus') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const StudentSyllabusPage(),
-      ),
-    );
-  } 
-  else if (item['label'] == 'Events & Holidays') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const EventsHolidaysPage(startInMonthView: true),
-      ),
-    );
-  } 
-  else if (item['label'] == 'School bus') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const StudentSchoolBusPage(),
-      ),
-    );
-  } 
-  else if (item['label'] == 'Settings') {
-    Navigator.pushNamed(context, '/student-settings');
+    return;
   }
-},
- ),
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => StudentReportPage(studentId: studentIdInt),
+    ),
+  );
+}
+
+else if (item['label'] == 'Achievements') {
+  final prefs = await SharedPreferences.getInstance();
+  final studentIdInt = prefs.getInt('student_id');
+  final classId = prefs.getInt('class_id'); // make sure class_id is saved in SharedPreferences
+
+  if (studentIdInt == null || classId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Student ID or Class ID not found')),
+    );
+    return;
+  }
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => StudentAchievementPage(classId: classId),
+    ),
+  );
+}
+
+                      },
+                    ),
                   );
                 },
               ),

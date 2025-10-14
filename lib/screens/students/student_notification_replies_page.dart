@@ -197,14 +197,15 @@ Center(
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              DateFormat('dd/MM/yyyy HH:mm')
-                  .format(widget.notificationItem.dateTime),
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black54,
-              ),
-            ),
+         Text(
+  DateFormat('dd/MMM/yyyy')
+      .format(widget.notificationItem.dateTime),
+  style: const TextStyle(
+    fontSize: 12,
+    color: Colors.black54,
+  ),
+),
+
           ],
         ),
       ),
@@ -294,15 +295,14 @@ Center(
                                                 ),
                                               ),
                                               const SizedBox(height: 2),
-                                              Text(
-                                                "${reply.senderName} • ${DateFormat('dd/MM/yyyy HH:mm').format(reply.createdAt)}",
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: isStudent
-                                                      ? Colors.white70
-                                                      : Colors.black54,
-                                                ),
-                                              ),
+                                             Text(
+  "${reply.senderName} • ${DateFormat('dd/MM/yyyy hh:mm a').format(reply.createdAt)}",
+  style: TextStyle(
+    fontSize: 11,
+    color: isStudent ? Colors.white70 : Colors.black54,
+  ),
+),
+
                                             ],
                                           ),
                                         ),
