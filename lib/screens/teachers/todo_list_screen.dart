@@ -221,6 +221,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
     final tasks = provider.tasks;
 
     return Scaffold(
+       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF87CEEB),
       drawer: MenuDrawer(),
       appBar: TeacherAppBar(),
@@ -431,12 +432,23 @@ class _ToDoListPageState extends State<ToDoListPage> {
     );
   }
 
-  Widget _buildAddForm() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(color: Colors.white),
+Widget _buildAddForm() {
+  final bottomInset = MediaQuery.of(context).viewInsets.bottom; // keyboard height
+
+  return AnimatedContainer(
+    duration: const Duration(milliseconds: 200),
+    padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset > 0 ? bottomInset : 10),
+    // 👆 gives extra bottom padding when keyboard opens
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+        ],
+      ),
+      child: SingleChildScrollView( // 👈 allows content to scroll inside
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -465,7 +477,10 @@ class _ToDoListPageState extends State<ToDoListPage> {
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.calendar_today), onPressed: _pickDate),
+                IconButton(
+                  icon: const Icon(Icons.calendar_today),
+                  onPressed: _pickDate,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -487,7 +502,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
                 hintText: 'Enter description...',
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
@@ -516,8 +531,9 @@ class _ToDoListPageState extends State<ToDoListPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTaskDetail(Map<String, dynamic> task) {
     final className =

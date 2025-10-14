@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+
 
 import 'student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
@@ -23,48 +25,88 @@ class _StudentToDoListPageState extends State<StudentToDoListPage> {
   List<Map<String, dynamic>> _classList = [];
   Map<String, dynamic>? _selectedTask; // 🔹 selected task for detail view
 
-  @override
-  void initState() {
-    super.initState();
+
+  Timer? _autoRefreshTimer; 
+
+@override
+void initState() {
+  super.initState();
+  _fetchTasks();
+  _fetchClassList();
+
+  // 🔁 Auto-refresh every 20 seconds (you can adjust the interval)
+  _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (timer) {
     _fetchTasks();
-    _fetchClassList();
-  }
+  });
+}
 
-  Future<void> _fetchTasks() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-      final studentId = prefs.getInt('student_id');
 
-      if (token == null || studentId == null) return;
 
-      final url = Uri.parse(
-          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student/$studentId');
+@override
+void dispose() {
+  _autoRefreshTimer?.cancel(); // stop the timer when leaving the screen
+  super.dispose();
+}
 
-      final response = await http.get(url, headers: {
-        "Authorization": "Bearer $token",
-        "Content-Type": "application/json",
-      });
+ Future<void> _fetchTasks() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final studentId = prefs.getInt('student_id');
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+    if (token == null || studentId == null) return;
+
+    final url = Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos/student/$studentId');
+
+    final response = await http.get(url, headers: {
+      "Authorization": "Bearer $token",
+      "Content-Type": "application/json",
+    });
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      final newTasks = List<Map<String, dynamic>>.from(data);
+
+      // 🔍 Compare old vs new task data
+      if (!_areTaskListsEqual(_tasks, newTasks)) {
         setState(() {
-          _tasks = List<Map<String, dynamic>>.from(data);
+          _tasks = newTasks;
           _isLoading = false;
         });
 
-        for (var task in _tasks) {
+        // Mark all as viewed (only for new tasks)
+        for (var task in newTasks) {
           if (task['id'] != null) {
             await _markDashboardViewed(studentId, token, task['id']);
           }
         }
       } else {
-        setState(() => _isLoading = false);
+        // No change → just stop loading spinner if still showing
+        if (_isLoading) setState(() => _isLoading = false);
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
+    } else {
+      if (_isLoading) setState(() => _isLoading = false);
+    }
+  } catch (e) {
+    if (_isLoading) setState(() => _isLoading = false);
+  }
+}
+
+
+bool _areTaskListsEqual(List<Map<String, dynamic>> oldList, List<Map<String, dynamic>> newList) {
+  if (oldList.length != newList.length) return false;
+
+  for (int i = 0; i < oldList.length; i++) {
+    if (oldList[i]['id'] != newList[i]['id'] ||
+        oldList[i]['title'] != newList[i]['title'] ||
+        oldList[i]['description'] != newList[i]['description'] ||
+        oldList[i]['date'] != newList[i]['date']) {
+      return false;
     }
   }
+  return true;
+}
 
   Future<void> _markDashboardViewed(
       int studentId, String token, int todoId) async {
