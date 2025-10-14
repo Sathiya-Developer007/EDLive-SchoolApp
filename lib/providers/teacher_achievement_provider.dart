@@ -9,26 +9,25 @@ class AchievementProvider with ChangeNotifier {
 
   bool get loading => _loading;
 
-  /// Add Achievement
-  /// Returns the created Achievement object
   Future<Achievement> addAchievement(Achievement achievement) async {
     _loading = true;
     notifyListeners();
 
     try {
-      // Send the Achievement object directly
+      print("Provider: Calling service with achievement: ${achievement.toJson()}");
       final createdAchievement = await _service.createAchievement(achievement);
 
-      print("Achievement created: ${createdAchievement.toJson()}");
+      print("Provider: Achievement created successfully: ${createdAchievement.toJson()}");
 
-      return createdAchievement;
-    } catch (e, stack) {
-      print("Error adding achievement: $e");
-      print(stack);
-      rethrow;
-    } finally {
       _loading = false;
       notifyListeners();
+      return createdAchievement;
+    } catch (e, stack) {
+      print("Provider Error: $e");
+      print("Provider Stack: $stack");
+      _loading = false;
+      notifyListeners();
+      rethrow;
     }
   }
 }

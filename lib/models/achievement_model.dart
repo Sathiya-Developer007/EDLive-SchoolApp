@@ -25,34 +25,32 @@ class Achievement {
     required this.academicYearId,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      "studentId": studentId,
-      "title": title,
-      "description": description,
-      "categoryId": categoryId,
-      "achievementDate": achievementDate,
-      "awardedBy": awardedBy,
-      "imageUrl": imageUrl,
-      "isVisible": isVisible,
-      "classId": classId,
-      "academicYearId": academicYearId,
-    };
-  }
-
-  factory Achievement.fromJson(Map<String, dynamic> json) {
-    return Achievement(
-      id: json['id'],
-      studentId: json['student_id'] ?? 0,
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      categoryId: json['category'] ?? 0,
-      achievementDate: json['achievement_date'] ?? '',
-      awardedBy: json['awarded_by'] ?? '',
-      imageUrl: json['evidence_url'] ?? '',
-      isVisible: json['visibility'] ?? 'school',
-      classId: json['class_id'] ?? 0,
-      academicYearId: json['academic_year'] ?? 0,
-    );
-  }
+Map<String, dynamic> toJson() {
+  return {
+    "studentId": studentId,
+    "title": title,
+    "description": description,
+    "categoryId": categoryId,
+    "achievementDate": achievementDate,
+    "awardedBy": awardedBy,
+    "imageUrl": imageUrl,
+    "isVisible": isVisible,
+    "classId": classId,
+    "academicYearId": academicYearId,
+  };
 }
+factory Achievement.fromJson(Map<String, dynamic> json) {
+  return Achievement(
+    id: json['id'],
+    studentId: json['student_id'] ?? json['studentId'] ?? 0,
+    title: json['title'] ?? '',
+    description: json['description'] ?? '',
+    categoryId: json['category'] ?? json['categoryId'] ?? '',
+    achievementDate: (json['achievement_date'] ?? json['achievementDate'] ?? '').toString().split("T").first,
+    awardedBy: json['awarded_by'] ?? json['awardedBy'] ?? '',
+    imageUrl: json['evidence_url'] ?? json['imageUrl'] ?? '',
+    isVisible: json['visibility'] ?? json['isVisible'] ?? 'school',
+    classId: json['class_id'] ?? json['classId'] ?? 0,
+    academicYearId: int.tryParse((json['academic_year'] ?? json['academicYearId'] ?? '2024').toString()) ?? 2024,
+  );
+}}

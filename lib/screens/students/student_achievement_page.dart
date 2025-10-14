@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'package:flutter_svg/flutter_svg.dart';
 
 // ----------------- MODEL -----------------
 class Achievement {
@@ -91,26 +93,81 @@ class StudentAchievementPage extends StatefulWidget {
   const StudentAchievementPage({super.key, required this.classId});
 
   @override
-  State<StudentAchievementPage> createState() =>
-      _StudentAchievementPageState();
+  State<StudentAchievementPage> createState() => _StudentAchievementPageState();
 }
 
 class _StudentAchievementPageState extends State<StudentAchievementPage> {
   late Future<List<Achievement>> futureAchievements;
+  List<Achievement> _currentAchievements = [];
+  Set<int> _viewedIds = {}; // ✅ Track achievements already marked as viewed
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     futureAchievements = fetchAchievements();
+
+    // Auto-refresh every 10 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _checkForNewAchievements();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkForNewAchievements() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+      if (token.isEmpty) return;
+
+      final response = await http.get(
+        Uri.parse(
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible?classId=${widget.classId}",
+        ),
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List jsonData = json.decode(response.body);
+        final newList = jsonData.map((e) => Achievement.fromJson(e)).toList();
+
+        newList.sort((a, b) {
+          final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1900);
+          final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1900);
+          return dateB.compareTo(dateA);
+        });
+
+        bool hasNewAchievement = false;
+        if (newList.isNotEmpty &&
+            (_currentAchievements.isEmpty ||
+                newList.first.id != _currentAchievements.first.id)) {
+          hasNewAchievement = true;
+        }
+
+        if (hasNewAchievement && mounted) {
+          setState(() {
+            futureAchievements = Future.value(newList);
+            _currentAchievements = newList;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("⚠️ Error checking for new achievements: $e");
+    }
   }
 
   Future<List<Achievement>> fetchAchievements() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
-
-    if (token.isEmpty) {
-      throw Exception("⚠️ Missing token");
-    }
+    if (token.isEmpty) throw Exception("⚠️ Missing token");
 
     final response = await http.get(
       Uri.parse(
@@ -124,21 +181,15 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
 
     if (response.statusCode == 200) {
       final List jsonData = json.decode(response.body);
-      final achievements =
-          jsonData.map((e) => Achievement.fromJson(e)).toList();
+      final achievements = jsonData.map((e) => Achievement.fromJson(e)).toList();
 
-      // Sort by createdAt (latest first)
       achievements.sort((a, b) {
         final dateA = DateTime.tryParse(a.createdAt) ?? DateTime(1900);
         final dateB = DateTime.tryParse(b.createdAt) ?? DateTime(1900);
         return dateB.compareTo(dateA);
       });
 
-      // ✅ Automatically mark all as viewed
-      for (var item in achievements) {
-        _markAchievementViewed(item.id);
-      }
-
+      _currentAchievements = achievements;
       return achievements;
     } else {
       throw Exception('Failed to load achievements');
@@ -146,10 +197,12 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
   }
 
   Future<void> _markAchievementViewed(int achievementId) async {
+    // ✅ Only mark if not already viewed
+    if (_viewedIds.contains(achievementId)) return;
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
     final studentId = prefs.getInt('student_id');
-
     if (studentId == null || token.isEmpty) return;
 
     try {
@@ -159,10 +212,7 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
 
       final response = await http.post(
         url,
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
+        headers: {"Authorization": "Bearer $token", "Content-Type": "application/json"},
         body: jsonEncode({
           "item_type": "achievements",
           "item_id": achievementId,
@@ -170,6 +220,7 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
       );
 
       if (response.statusCode == 200) {
+        _viewedIds.add(achievementId); // ✅ Mark locally
         debugPrint("✅ Achievement $achievementId marked as viewed");
       } else {
         debugPrint("❌ Failed to mark viewed: ${response.statusCode}");
@@ -188,29 +239,53 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Back button
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: const Text(
                 "< Back",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: Colors.black, fontSize: 16),
               ),
             ),
           ),
-          // Achievement list
+Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+  child: Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(8),
+        decoration: const BoxDecoration(
+          color: Color(0xFF2E3192),
+          borderRadius: BorderRadius.all(Radius.circular(8)), // optional
+        ),
+        child: SvgPicture.asset(
+          "assets/icons/achievements.svg",
+          width: 20,
+          height: 20,
+          color: Colors.white,
+        ),
+      ),
+      const SizedBox(width: 8),
+      const Text(
+        "Achievements",
+        style: TextStyle(
+          fontSize: 27,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF2E3192),
+        ),
+      ),
+    ],
+  ),
+),
+
           Expanded(
             child: FutureBuilder<List<Achievement>>(
               future: futureAchievements,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                    child:
-                        CircularProgressIndicator(color: Color(0xFF2E3192)),
+                    child: CircularProgressIndicator(color: Color(0xFF2E3192)),
                   );
                 } else if (snapshot.hasError) {
                   return Center(child: Text("Error: ${snapshot.error}"));
@@ -225,13 +300,18 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
                   itemCount: achievements.length,
                   itemBuilder: (context, index) {
                     final item = achievements[index];
+
+                    // ✅ Call viewed API when item is first built in the list
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _markAchievementViewed(item.id);
+                    });
+
                     return GestureDetector(
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                AchievementDetailPage(achievement: item),
+                            builder: (_) => AchievementDetailPage(achievement: item),
                           ),
                         );
                       },
@@ -325,8 +405,7 @@ class AchievementDetailPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      buildAchievementImage(achievement.evidenceUrl,
-                          height: 220),
+                      buildAchievementImage(achievement.evidenceUrl, height: 220),
                       const SizedBox(height: 16),
                       Text(
                         achievement.title,
@@ -339,61 +418,50 @@ class AchievementDetailPage extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         achievement.description,
-                        style: const TextStyle(
-                            fontSize: 15, color: Colors.black87),
+                        style: const TextStyle(fontSize: 15, color: Colors.black87),
                       ),
                       const Divider(height: 28),
                       Row(
                         children: [
-                          const Text("Student: ",
-                              style: TextStyle(fontSize: 14)),
+                          const Text("Student: ", style: TextStyle(fontSize: 14)),
                           Text(achievement.fullName,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Text("Category: ",
-                              style: TextStyle(fontSize: 14)),
+                          const Text("Category: ", style: TextStyle(fontSize: 14)),
                           Text(achievement.category,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Text("Awarded by: ",
-                              style: TextStyle(fontSize: 14)),
+                          const Text("Awarded by: ", style: TextStyle(fontSize: 14)),
                           Text(achievement.awardedBy,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Text("Date: ",
-                              style: TextStyle(fontSize: 14)),
+                          const Text("Date: ", style: TextStyle(fontSize: 14)),
                           Text(
                             achievement.achievementDate.isNotEmpty
                                 ? achievement.achievementDate.split('T').first
                                 : 'N/A',
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Text("Visibility: ",
-                              style: TextStyle(fontSize: 14)),
+                          const Text("Visibility: ", style: TextStyle(fontSize: 14)),
                           Text(achievement.visibility,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ],
