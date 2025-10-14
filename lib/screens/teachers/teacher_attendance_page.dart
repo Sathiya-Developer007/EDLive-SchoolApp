@@ -140,6 +140,7 @@ class TeacherAttendanceDayTab extends StatefulWidget {
 
 class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
   int totalAbsentees = 0;
+  bool isAttendanceMarked = false; // ✅ New flag to check if attendance is marked
 
   String? selectedClass;
   int? selectedClassId;
@@ -210,6 +211,7 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
       morningTaps = List.filled(students.length, 0);
       afternoonTaps = List.filled(students.length, 0);
       totalAbsentees = 0;
+      isAttendanceMarked = false; // ✅ Reset flag
 
       for (int i = 0; i < students.length; i++) {
         final student = students[i];
@@ -228,6 +230,11 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
             morningTaps[i] = data['is_present_morning'] == true ? 1 : 2;
             afternoonTaps[i] = data['is_present_afternoon'] == true ? 1 : 2;
 
+            // ✅ Check if attendance is marked for this student
+            if (data['is_present_morning'] != null || data['is_present_afternoon'] != null) {
+              isAttendanceMarked = true;
+            }
+
             if (data['is_present_morning'] == false ||
                 data['is_present_afternoon'] == false) {
               totalAbsentees++;
@@ -245,37 +252,38 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
     }
   }
 
+
   Future<void> refetchSingleStudentAttendance(int index, String session) async {
-  final student = students[index];
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('auth_token') ?? '';
+    final student = students[index];
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? '';
 
-  try {
-    final response = await http.get(
-      Uri.parse(
-        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/student?studentId=${student.id}&date=${DateFormat('yyyy-MM-dd').format(selectedDate)}',
-      ),
-      headers: {'Authorization': 'Bearer $token', 'accept': '*/*'},
-    );
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/attendance/student?studentId=${student.id}&date=${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+        ),
+        headers: {'Authorization': 'Bearer $token', 'accept': '*/*'},
+      );
 
-    if (response.statusCode == 200) {
-      final List<dynamic> dataList = jsonDecode(response.body);
-      if (dataList.isNotEmpty) {
-        final Map<String, dynamic> data = dataList[0];
+      if (response.statusCode == 200) {
+        final List<dynamic> dataList = jsonDecode(response.body);
+        if (dataList.isNotEmpty) {
+          final Map<String, dynamic> data = dataList[0];
 
-        setState(() {
-          if (session == "morning") {
-            morningTaps[index] = data['is_present_morning'] == true ? 1 : 2;
-          } else if (session == "afternoon") {
-            afternoonTaps[index] = data['is_present_afternoon'] == true ? 1 : 2;
-          }
-        });
+          setState(() {
+            if (session == "morning") {
+              morningTaps[index] = data['is_present_morning'] == true ? 1 : 2;
+            } else if (session == "afternoon") {
+              afternoonTaps[index] = data['is_present_afternoon'] == true ? 1 : 2;
+            }
+          });
+        }
       }
+    } catch (e) {
+      print("Error refetching attendance: $e");
     }
-  } catch (e) {
-    print("Error refetching attendance: $e");
   }
-}
 
   Future<void> toggleAttendance({
     required int studentId,
@@ -315,6 +323,20 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
     }
   }
 
+  // ✅ Check if selected date is today
+   bool get isToday {
+    final now = DateTime.now();
+    return selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+  }
+
+  // ✅ Check if selected date is in the future
+  bool get isFutureDate {
+    final now = DateTime.now();
+    return selectedDate.isAfter(DateTime(now.year, now.month, now.day));
+  }
+
   void _goToPreviousDay() async {
     setState(() {
       selectedDate = selectedDate.subtract(const Duration(days: 1));
@@ -326,13 +348,16 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
   }
 
   void _goToNextDay() async {
-    setState(() {
-      selectedDate = selectedDate.add(const Duration(days: 1));
-      isLoading = true;
-    });
+    // ✅ Allow navigation to future dates for viewing, but disable attendance editing
+    if (!isFutureDate) {
+      setState(() {
+        selectedDate = selectedDate.add(const Duration(days: 1));
+        isLoading = true;
+      });
 
-    await fetchAttendanceStatus();
-    setState(() => isLoading = false);
+      await fetchAttendanceStatus();
+      setState(() => isLoading = false);
+    }
   }
 
   Widget getAttendanceIcon(int state) {
@@ -342,7 +367,35 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
       case 2:
         return Icon(Icons.close, color: Colors.red, size: 24);
       default:
-        return Icon(Icons.check_box_outline_blank, color: Colors.grey.shade400, size: 20);
+        return Icon(Icons.check_box_outline_blank, 
+                   color: isToday ? Colors.grey.shade400 : Colors.grey.shade300, 
+                   size: 20);
+    }
+  }
+
+  // ✅ Get the appropriate message based on attendance status
+  String get attendanceMessage {
+    if (!isToday && !isAttendanceMarked) {
+      return "No attendance"; // ✅ Show "No attendance" for past dates without attendance
+    } else if (totalAbsentees == 0 && isAttendanceMarked) {
+      return "No absentees"; // ✅ Show "No absentees" when attendance is marked and no one is absent
+    } else if (totalAbsentees > 0) {
+      return "$totalAbsentees absentee${totalAbsentees > 1 ? 's' : ''}"; // ✅ Show count of absentees
+    } else {
+      return "No attendance"; // ✅ Default message
+    }
+  }
+
+  // ✅ Get the color for the attendance message
+  Color get attendanceMessageColor {
+    if (!isToday && !isAttendanceMarked) {
+      return Colors.grey; // ✅ Grey for "No attendance" in past dates
+    } else if (totalAbsentees == 0 && isAttendanceMarked) {
+      return Colors.green; // ✅ Green for "No absentees"
+    } else if (totalAbsentees > 0) {
+      return Colors.red; // ✅ Red for absentees count
+    } else {
+      return Colors.grey; // ✅ Default grey
     }
   }
 
@@ -364,17 +417,44 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(onPressed: _goToPreviousDay, icon: const Icon(Icons.arrow_left, size: 28, color: Colors.black)),
+                  // ✅ Always allow going to previous days (view only)
+                  IconButton(
+                    onPressed: _goToPreviousDay,
+                    icon: const Icon(Icons.arrow_left, size: 28, color: Colors.black),
+                  ),
                   const SizedBox(width: 12),
-                  Text(formattedDate, style: const TextStyle(fontSize: 18, color: Color(0xFF2E3192), fontWeight: FontWeight.bold)),
+                  Text(
+                    formattedDate,
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: isToday ? Color(0xFF2E3192) : Colors.grey,
+                      fontWeight: FontWeight.bold
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  IconButton(onPressed: _goToNextDay, icon: const Icon(Icons.arrow_right, size: 28, color: Colors.grey)),
+                  // ✅ Disable going to future dates
+                  IconButton(
+                    onPressed: isFutureDate ? null : _goToNextDay,
+                    icon: Icon(Icons.arrow_right, size: 28, 
+                              color: isFutureDate ? Colors.grey : Colors.black),
+                  ),
                 ],
               ),
-              Text(dayName, style: const TextStyle(fontSize: 14)),
               Text(
-                totalAbsentees == 0 ? "No absentees" : "$totalAbsentees absentee${totalAbsentees > 1 ? 's' : ''}",
-                style: const TextStyle(color: Colors.red, fontSize: 14),
+                dayName,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isToday ? Colors.black : Colors.grey,
+                ),
+              ),
+              // ✅ Use the dynamic attendance message
+              Text(
+                attendanceMessage,
+                style: TextStyle(
+                  color: attendanceMessageColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               Align(
@@ -419,6 +499,19 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
                   Expanded(flex: 1, child: Text("AN", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
                 ],
               ),
+              // ✅ Show view-only message for past dates
+              if (!isToday)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    "View Only - Past Date",
+                    style: TextStyle(
+                      color: Colors.orange.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -434,42 +527,66 @@ class _TeacherAttendanceDayTabState extends State<TeacherAttendanceDayTab> {
                 decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade300))),
                 child: Row(
                   children: [
-                    Expanded(flex: 3, child: Text("${index + 1}. ${student.name}")),
+                    Expanded(
+                      flex: 3, 
+                      child: Text(
+                        "${index + 1}. ${student.name}",
+                        style: TextStyle(
+                          color: isToday ? Colors.black : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
                     Expanded(
                       flex: 1,
                       child: GestureDetector(
-                      onTap: () async {
-  setState(() => morningTaps[index] = (morningTaps[index] + 1) % 3);
-  if (morningTaps[index] != 0) {
-    await toggleAttendance(
-      studentId: student.id,
-      classId: selectedClassId!,
-      session: "morning",
-      isPresent: morningTaps[index] == 1,
-    );
-    await refetchSingleStudentAttendance(index, "morning");
-  }
-},
-  child: Center(child: getAttendanceIcon(morningTaps[index])),
+                        // ✅ Only allow tapping if it's today
+                        onTap: isToday ? () async {
+                          setState(() => morningTaps[index] = (morningTaps[index] + 1) % 3);
+                          if (morningTaps[index] != 0) {
+                            await toggleAttendance(
+                              studentId: student.id,
+                              classId: selectedClassId!,
+                              session: "morning",
+                              isPresent: morningTaps[index] == 1,
+                            );
+                            await refetchSingleStudentAttendance(index, "morning");
+                            
+                            // ✅ Update attendance marked status after toggle
+                            setState(() {
+                              isAttendanceMarked = true;
+                            });
+                          }
+                        } : null,
+                        child: Center(
+                          child: getAttendanceIcon(morningTaps[index]),
+                        ),
                       ),
                     ),
                     Container(width: 12, height: double.infinity, color: const Color(0xFFE6E6E6)),
                     Expanded(
                       flex: 1,
                       child: GestureDetector(
-                  onTap: () async {
-  setState(() => afternoonTaps[index] = (afternoonTaps[index] + 1) % 3);
-  if (afternoonTaps[index] != 0) {
-    await toggleAttendance(
-      studentId: student.id,
-      classId: selectedClassId!,
-      session: "afternoon",
-      isPresent: afternoonTaps[index] == 1,
-    );
-    await refetchSingleStudentAttendance(index, "afternoon");
-  }
-},
-        child: Center(child: getAttendanceIcon(afternoonTaps[index])),
+                        // ✅ Only allow tapping if it's today
+                        onTap: isToday ? () async {
+                          setState(() => afternoonTaps[index] = (afternoonTaps[index] + 1) % 3);
+                          if (afternoonTaps[index] != 0) {
+                            await toggleAttendance(
+                              studentId: student.id,
+                              classId: selectedClassId!,
+                              session: "afternoon",
+                              isPresent: afternoonTaps[index] == 1,
+                            );
+                            await refetchSingleStudentAttendance(index, "afternoon");
+                            
+                            // ✅ Update attendance marked status after toggle
+                            setState(() {
+                              isAttendanceMarked = true;
+                            });
+                          }
+                        } : null,
+                        child: Center(
+                          child: getAttendanceIcon(afternoonTaps[index]),
+                        ),
                       ),
                     ),
                   ],
@@ -643,7 +760,7 @@ class _TeacherAttendanceMonthTabState extends State<TeacherAttendanceMonthTab> {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.arrow_right, color: Colors.grey),
+                    icon: const Icon(Icons.arrow_right, color: Colors.black),
                     onPressed: goToNextMonth,
                   ),
                 ],
@@ -885,7 +1002,7 @@ if (classId == null) return;
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.arrow_right, size: 28, color: Colors.grey),
+                    icon: const Icon(Icons.arrow_right, size: 28, color: Colors.black),
                     onPressed: () => _changeYear(1),
                   ),
                 ],

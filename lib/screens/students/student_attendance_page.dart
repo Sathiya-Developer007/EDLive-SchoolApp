@@ -662,7 +662,7 @@ class _AttendanceCalendarTabState extends State<AttendanceCalendarTab> {
                               child: const Icon(
                                 Icons.arrow_forward_ios,
                                 size: 16,
-                                color: Color(0xFFE6E6E6),
+                                color: Colors.black,
                               ),
                             ),
                           ],

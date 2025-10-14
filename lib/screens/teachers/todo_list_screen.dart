@@ -124,17 +124,21 @@ class _ToDoListPageState extends State<ToDoListPage> {
     }
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
+Future<void> _pickDate() async {
+  final picked = await showDatePicker(
+    context: context,
+    initialDate: _selectedDate ?? DateTime.now(),
+    firstDate: DateTime.now(), // 👈 restricts to today onwards
+    lastDate: DateTime(2100),
+    helpText: 'Select a Date', // optional: custom title
+    cancelText: 'Cancel',
+    confirmText: 'Select',
+  );
+
+  if (picked != null) {
+    setState(() => _selectedDate = picked);
   }
+}
 
   Future<void> _submitTask() async {
     if (_authToken == null) {
