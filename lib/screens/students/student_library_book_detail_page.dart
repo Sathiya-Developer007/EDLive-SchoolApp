@@ -213,45 +213,49 @@ class _StudentBookDetailPageState extends State<StudentBookDetailPage> {
                                 ),
 
                                 // 🔹 Copies Tab
-                                ListView.builder(
-                                  padding: const EdgeInsets.all(16),
-                                  itemCount: copies.length,
-                                  itemBuilder: (context, index) {
-                                    final copy = copies[index];
-                                    return Card(
-                                      elevation: 2,
-                                      margin:
-                                          const EdgeInsets.only(bottom: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                      ),
-                                      child: ListTile(
-                                        leading: const Icon(Icons.qr_code,
-                                            color: Colors.blue),
-                                        title:
-                                            Text("Barcode: ${copy.barcode}"),
-                                        subtitle: Text(
-                                            "Condition: ${copy.condition}"),
-                                        trailing: copy.status == "Available"
-                                            ? ElevatedButton(
-                                                onPressed: () =>
-                                                    _checkoutCopy(copy),
-                                                child:
-                                                    const Text("Checkout"),
-                                              )
-                                            : Text(
-                                                copy.status,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                              copies.isEmpty
+    ? const Center(
+        child: Text(
+          'No Copies in this Book',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            // color: Colors.grey,
+          ),
+        ),
+      )
+    : ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: copies.length,
+        itemBuilder: (context, index) {
+          final copy = copies[index];
+          return Card(
+            elevation: 2,
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.qr_code, color: Colors.blue),
+              title: Text("Barcode: ${copy.barcode}"),
+              subtitle: Text("Condition: ${copy.condition}"),
+              trailing: copy.status == "Available"
+                  ? ElevatedButton(
+                      onPressed: () => _checkoutCopy(copy),
+                      child: const Text("Checkout"),
+                    )
+                  : Text(
+                      copy.status,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+            ),
+          );
+        },
+      )
+  ],
                             ),
                           ),
                         ],

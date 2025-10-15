@@ -205,7 +205,7 @@ bool _areTaskListsEqual(List<Map<String, dynamic>> oldList, List<Map<String, dyn
                 Icon(Icons.menu_book, color: Colors.indigo[900], size: 32),
                 const SizedBox(width: 8),
                 Text(
-                  'My to-do list',
+                  'Home Work',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,

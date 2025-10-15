@@ -5,6 +5,7 @@ import 'student_menu_drawer.dart';
 import '../../models/student_exam_model.dart';
 import '../../services/exam_service.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 class StudentExamsScreen extends StatefulWidget {
   final String studentId;
@@ -19,28 +20,66 @@ class _StudentExamsScreenState extends State<StudentExamsScreen> {
   bool isLoading = true;
   String errorMsg = '';
   StudentExam? _selectedExam; // 🔹 for detail view
+   Timer? _refreshTimer; // 🔹 Timer
 
   @override
   void initState() {
     super.initState();
     loadExams();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      loadExams();
+    });
   }
 
-  Future<void> loadExams() async {
-    try {
-      final data = await ExamService.fetchExams(widget.studentId);
+  @override
+  void dispose() {
+    _refreshTimer?.cancel(); // 🔹 cancel timer when leaving page
+    super.dispose();
+  }
+
+
+Future<void> loadExams() async {
+  try {
+    final data = await ExamService.fetchExams(widget.studentId);
+
+    // 🔹 Sort by examDate (latest first)
+    data.sort((a, b) => b.examDate.compareTo(a.examDate));
+
+    // 🔹 Compare with existing list — refresh only if different
+    bool hasChanged = false;
+
+    if (data.length != examList.length) {
+      hasChanged = true;
+    } else {
+      for (int i = 0; i < data.length; i++) {
+        if (data[i].id != examList[i].id ||
+            data[i].examDate != examList[i].examDate ||
+            data[i].title != examList[i].title ||
+            data[i].description != examList[i].description) {
+          hasChanged = true;
+          break;
+        }
+      }
+    }
+
+    if (hasChanged) {
       setState(() {
         examList = data;
-        isLoading = false;
-      });
-    } catch (e) {
-      print('❌ Error fetching student exams: $e');
-      setState(() {
-        errorMsg = 'Error loading exams';
-        isLoading = false;
       });
     }
+
+    if (isLoading) {
+      setState(() => isLoading = false);
+    }
+  } catch (e) {
+    print('❌ Error fetching student exams: $e');
+    setState(() {
+      errorMsg = 'Error loading exams';
+      isLoading = false;
+    });
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -157,8 +196,8 @@ class _StudentExamsScreenState extends State<StudentExamsScreen> {
                                               ),
                                               const SizedBox(height: 6),
                                               Text(
-                                                DateFormat('d, MMM yyyy, h:mm a')
-                                                    .format(exam.examDate.toLocal()),
+                                               DateFormat('d, MMM yyyy, h:mm a').format(exam.examDate)
+,
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   color: Colors.black87,
@@ -224,7 +263,8 @@ class _StudentExamsScreenState extends State<StudentExamsScreen> {
 
             // Date
             Text(
-              DateFormat('d, MMM yyyy, h:mm a').format(exam.examDate.toLocal()),
+DateFormat('d, MMM yyyy, h:mm a').format(exam.examDate)
+,
               style: const TextStyle(fontSize: 14, color: Colors.black87),
             ),
             const SizedBox(height: 8),

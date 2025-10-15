@@ -263,7 +263,7 @@ Future<void> _pickDate() async {
           Icon(Icons.menu_book, color: Colors.indigo[900], size: 32),
           const SizedBox(width: 8),
           Text(
-            'To-Do List',
+            'Home Work',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,

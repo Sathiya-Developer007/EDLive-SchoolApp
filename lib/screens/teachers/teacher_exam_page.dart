@@ -208,13 +208,16 @@ class _TeacherExamPageState extends State<TeacherExamPage>
                                             value.id.toString(),
                                           );
 
-                                          // ✅ Store selected classId in SharedPreferences
                                           final prefs =
                                               await SharedPreferences.getInstance();
                                           await prefs.setString(
                                             'classId',
                                             value.id.toString(),
                                           );
+                                          await prefs.setString(
+                                            'className',
+                                            value.fullName,
+                                          ); // ✅ store class name too
                                         }
                                       },
 
@@ -295,142 +298,151 @@ class _TeacherExamPageState extends State<TeacherExamPage>
     );
   }
 
- Widget _buildClassTestsTab() {
-  if (isExamLoading) {
-    return const Center(child: CircularProgressIndicator());
-  }
+  Widget _buildClassTestsTab() {
+    if (isExamLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-  // ✅ Sort exams by date here first
- final sortedExams = List<TeacherExam>.from(exams)
-  ..sort((a, b) => DateTime.parse(b.examDate).compareTo(DateTime.parse(a.examDate)));
+    // ✅ Sort exams by date here first
+    final sortedExams = List<TeacherExam>.from(exams)
+      ..sort(
+        (a, b) =>
+            DateTime.parse(b.examDate).compareTo(DateTime.parse(a.examDate)),
+      );
 
-  return Padding(
-    padding: const EdgeInsets.all(12),
-    child: ListView(
-      children: [
-        Center(
-          child: SizedBox(
-            width: 220,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                  builder: (context) => AnnounceClassTestPage(
-  className: selectedClass?.fullName ?? '',
-),
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: ListView(
+        children: [
+          Center(
+            child: SizedBox(
+              width: 220,
+              child: ElevatedButton(
+                onPressed: () async {
+                await Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => AnnounceClassTestPage(
+      className: selectedClass?.fullName ?? '', // display in UI
+    ),
+  ),
+);
 
+                  // ✅ Refresh exam list automatically when returning
+                  if (selectedClass != null) {
+                    fetchExamsForClass(selectedClass!.id.toString());
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  minimumSize: const Size(double.infinity, 45),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
-                minimumSize: const Size(double.infinity, 45),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
                 ),
-              ),
-              child: const Text(
-                'Announce a class test',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+                child: const Text(
+                  'Announce a class test',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-        // ✅ Map the sorted list to widgets
-        ...sortedExams.map((exam) {
-          return Column(
+          // ✅ Map the sorted list to widgets
+          ...sortedExams.map((exam) {
+            return Column(
+              children: [
+                _buildTestSection(exam: exam),
+                const Divider(color: Color(0xFFB3B3B3), thickness: 1),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTestSection({required TeacherExam exam, bool showTitle = true}) {
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildTestSection(exam: exam),
-              const Divider(color: Color(0xFFB3B3B3), thickness: 1),
-            ],
-          );
-        }).toList(),
-      ],
-    ),
-  );
-}
-Widget _buildTestSection({
-  required TeacherExam exam,
-  bool showTitle = true,
-}) {
-  return Stack(
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (showTitle)
-              Align(
-                alignment: Alignment.center,
+              if (showTitle)
+                Align(
+                  alignment: Alignment.center,
+                  child: Text(
+                    exam.examType,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Color(0xFF29ABE2),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  exam.examType,
+                  exam.examDate.split('T').first,
                   style: const TextStyle(
-                    fontSize: 18,
-                    color: Color(0xFF29ABE2),
+                    fontSize: 14,
+                    color: Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                exam.examDate.split('T').first,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 6),
+              Text(
+                exam.subject,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  exam.description,
+                  style: const TextStyle(fontSize: 13),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              exam.subject,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(
-                exam.description,
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-      ),
-      Positioned(
-        top: 0,
-        right: 0,
-        child: IconButton(
-          icon: SvgPicture.asset(
-            'assets/icons/pencil.svg',
-            height: 20,
-            width: 20,
-            color: Colors.black,
+            ],
           ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-               builder: (context) => AnnounceClassTestPage(
-  examId: exam.id,
-  className: selectedClass?.fullName ?? '',
-),
-
-              ),
-            );
-          },
         ),
-      ),
-    ],
-  );
-}
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IconButton(
+            icon: SvgPicture.asset(
+              'assets/icons/pencil.svg',
+              height: 20,
+              width: 20,
+              color: Colors.black,
+            ),
+            onPressed: () async {
+             await Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => AnnounceClassTestPage(
+      examId: exam.id,
+      className: selectedClass?.fullName ?? '',
+    ),
+  ),
+);
+
+              // ✅ Auto-refresh after editing
+              if (selectedClass != null) {
+                fetchExamsForClass(selectedClass!.id.toString());
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }
