@@ -98,14 +98,20 @@ Row(
         ),
         padding: const EdgeInsets.symmetric(horizontal: 25),
       ),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AnnounceMeetingPage(),
-          ),
-        );
-      },
+  onPressed: () async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const AnnounceMeetingPage(),
+    ),
+  );
+
+  // Refresh only if a meeting was successfully created
+  if (result == true) {
+    setState(() {}); // triggers rebuild and reloads FutureBuilders
+  }
+},
+
       child: const Text(
         "Announce a meeting",
         style: TextStyle(fontSize: 14, color: Colors.white),

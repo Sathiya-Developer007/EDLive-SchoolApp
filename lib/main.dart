@@ -24,6 +24,11 @@ import 'screens/students/student_todo_list_screen.dart';
 import 'package:school_app/screens/students/student_profile_page.dart';
 import 'screens/students/student_timetable.dart';
 import 'screens/students/student_settings_page.dart';
+import 'screens/students/student_achievement_page.dart  ';
+import 'package:school_app/screens/students/student_payments_page.dart';
+import 'screens/students/student_messages_page.dart';
+import 'screens/students/student_library_page.dart';
+import 'screens/students/student_exams_screen.dart';
 
 import 'providers/student_settings_provider.dart';
 
@@ -111,20 +116,18 @@ class MyApp extends StatelessWidget {
     required this.selectedChild,
   });
 
-
   Future<int> _getStaffId() async {
-  final prefs = await SharedPreferences.getInstance();
-  final userDataString = prefs.getString('user_data');
+    final prefs = await SharedPreferences.getInstance();
+    final userDataString = prefs.getString('user_data');
 
-  if (userDataString != null) {
-    final userData = json.decode(userDataString);
-    if (userData['staffid'] != null && userData['staffid'].isNotEmpty) {
-      return userData['staffid'][0]; // pick first staffId
+    if (userDataString != null) {
+      final userData = json.decode(userDataString);
+      if (userData['staffid'] != null && userData['staffid'].isNotEmpty) {
+        return userData['staffid'][0]; // pick first staffId
+      }
     }
+    throw Exception('Staff ID not found');
   }
-  throw Exception('Staff ID not found');
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -171,27 +174,26 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const ToDoListPage());
           case '/classtime':
             return MaterialPageRoute(builder: (_) => const ClassTimePageView());
-      case '/profile':
-  return MaterialPageRoute(
-    builder: (_) => FutureBuilder<int>(
-      future: _getStaffId(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        } else if (snapshot.hasError || !snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: Text('Failed to load profile')),
-          );
-        } else {
-          final staffId = snapshot.data!;
-          return TeacherProfilePage(staffId: staffId);
-        }
-      },
-    ),
-  );
-
+          case '/profile':
+            return MaterialPageRoute(
+              builder: (_) => FutureBuilder<int>(
+                future: _getStaffId(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  } else if (snapshot.hasError || !snapshot.hasData) {
+                    return const Scaffold(
+                      body: Center(child: Text('Failed to load profile')),
+                    );
+                  } else {
+                    final staffId = snapshot.data!;
+                    return TeacherProfilePage(staffId: staffId);
+                  }
+                },
+              ),
+            );
 
           case '/settings':
             return MaterialPageRoute(builder: (_) => const SettingsPage());
@@ -233,6 +235,32 @@ class MyApp extends StatelessWidget {
           case '/student-settings':
             return MaterialPageRoute(
               builder: (_) => const StudentSettingsPage(),
+            );
+
+          case '/student-library': // ✅ NEW ROUTE
+            return MaterialPageRoute(
+              builder: (_) => const StudentLibraryPage(),
+            );
+
+          case '/student-achievements':
+            final args = settings.arguments as Map<String, dynamic>;
+            final classId = args['classId'] as int;
+            return MaterialPageRoute(
+              builder: (_) => StudentAchievementPage(classId: classId),
+            );
+
+          case '/student-payments':
+            final args = settings.arguments as Map<String, dynamic>;
+            final studentId = args['studentId'] as String;
+            return MaterialPageRoute(
+              builder: (_) => StudentPaymentsPage(studentId: studentId),
+            );
+
+          case '/student-messages':
+            final args = settings.arguments as Map<String, dynamic>;
+            final studentId = args['studentId'] as int;
+            return MaterialPageRoute(
+              builder: (_) => StudentMessagesPage(studentId: studentId),
             );
 
           // Teacher menu routes
