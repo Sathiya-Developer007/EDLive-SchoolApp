@@ -41,7 +41,6 @@ import 'providers/teacher_achievement_provider.dart';
 import 'providers/teacher_library_provider.dart';
 import 'providers/teacher_library_copy_provider.dart';
 import 'providers/teacher_library_member_provider.dart';
-import 'providers/library_status_provider.dart';
 import 'providers/library_books_list_provider.dart';
 import 'providers/library_book_detail_provider.dart';
 import 'providers/student_notification_dashboard_provider.dart';
@@ -84,7 +83,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LibraryProvider()),
         ChangeNotifierProvider(create: (_) => LibraryCopyProvider()),
         ChangeNotifierProvider(create: (_) => LibraryMemberProvider()),
-        ChangeNotifierProvider(create: (_) => LibraryStatusProvider()),
         ChangeNotifierProvider(create: (_) => LibraryBooksListProvider()),
         ChangeNotifierProvider(create: (_) => LibraryBookDetailProvider()),
         ChangeNotifierProvider(create: (_) => DashboardCountsProvider()),

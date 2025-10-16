@@ -32,14 +32,15 @@ class LibraryMember {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      "user_id": userId,
-      "user_type": userType,
-      "membership_number": membershipNumber,
-      "membership_start": membershipStart,
-      "membership_end": membershipEnd,
-      "max_books": maxBooks,
-    };
-  }
+ Map<String, dynamic> toJson() {
+  return {
+    "user_id": userId,
+    "user_type": userType, // <-- make sure it's exactly 'student', 'faculty', or 'staff'
+    "membership_number": membershipNumber,
+    "membership_start": membershipStart,
+    "membership_end": membershipEnd,
+    "max_books": maxBooks,
+  };
+}
+
 }
