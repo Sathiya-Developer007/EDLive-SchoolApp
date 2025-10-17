@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
+
 
 class StudentActivitiesPage extends StatefulWidget {
   final int studentId;
@@ -20,64 +23,86 @@ class StudentActivitiesPage extends StatefulWidget {
   State<StudentActivitiesPage> createState() => _StudentActivitiesPageState();
 }
 
+
 class _StudentActivitiesPageState extends State<StudentActivitiesPage> {
   bool isLoading = true;
   List<dynamic> activities = [];
   String? errorMessage;
-  Map<String, dynamic>? _selectedActivity; // 🔹 selected activity for detail view
+  Map<String, dynamic>? _selectedActivity;
+
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     fetchStudentActivities();
+
+    // Poll every 15 seconds (adjust as needed)
+    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      fetchStudentActivities(autoUpdate: true);
+    });
   }
 
-  Future<void> fetchStudentActivities() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("auth_token");
 
-      if (token == null) {
-        setState(() => errorMessage = "No auth token found");
-        return;
-      }
+Future<void> fetchStudentActivities({bool autoUpdate = false}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
 
-      final url =
-          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/co-curricular/student-activities"
-          "?studentId=${widget.studentId}&academicYear=${widget.academicYear}";
+    if (token == null) {
+      if (!autoUpdate) setState(() => errorMessage = "No auth token found");
+      return;
+    }
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "accept": "application/json",
-        },
-      );
+    final url =
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/co-curricular/student-activities"
+        "?studentId=${widget.studentId}&academicYear=${widget.academicYear}";
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        "Authorization": "Bearer $token",
+        "accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+
+      if (autoUpdate) {
+        // 🔹 Only update if new data is different
+        if (!listEquals(activities, data)) {
+          setState(() => activities = data);
+        }
+      } else {
         setState(() {
           activities = data;
           isLoading = false;
         });
-      } else {
+      }
+    } else {
+      if (!autoUpdate) {
         setState(() {
           errorMessage = "Failed to fetch activities: ${response.statusCode}";
           isLoading = false;
         });
       }
-    } catch (e) {
+    }
+  } catch (e) {
+    if (!autoUpdate) {
       setState(() {
         errorMessage = "Error: $e";
         isLoading = false;
       });
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
