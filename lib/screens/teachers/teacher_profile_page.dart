@@ -332,13 +332,14 @@ CircleAvatar(
                     onTap: () async {
                       // Build full URL
                       String url = "";
-                      if (label == "PF Doc") {
-                        url =
-                            "http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData?['service']?[0]['pf_doc']}";
-                      } else if (label == "Docs") {
-                        url =
-                            "http://schoolmanagement.canadacentral.cloudapp.azure.com${teacherData?['experience']?[0]['exp_docs']}";
-                      }
+                    if (label == "PF Doc") {
+  url =
+      "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/content/uploads${teacherData?['service']?[0]['pf_doc']}";
+} else if (label == "Docs") {
+  url =
+      "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/content/uploads${teacherData?['experience']?[0]['exp_docs']}";
+}
+
 
                       if (await canLaunchUrl(Uri.parse(url))) {
                         await launchUrl(Uri.parse(url),
@@ -539,7 +540,7 @@ Widget _buildEducationTab() {
                         ? GestureDetector(
                             onTap: () async {
                               final url =
-                                  "http://schoolmanagement.canadacentral.cloudapp.azure.com${edu['certificate']}";
+                                  "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/content/uploads${edu['certificate']}";
                               if (await canLaunchUrl(Uri.parse(url))) {
                                 await launchUrl(Uri.parse(url),
                                     mode: LaunchMode.externalApplication);
