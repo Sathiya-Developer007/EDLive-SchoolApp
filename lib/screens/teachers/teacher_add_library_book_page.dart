@@ -233,31 +233,178 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
     }
   }
 
+  Future<bool> checkMembershipNumberExists(String membershipNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    final response = await http.get(
+      Uri.parse(
+        'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/library/members',
+      ),
+      headers: {
+        'accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['success'] == true && data['data'] != null) {
+        final members = List<Map<String, dynamic>>.from(data['data']);
+        return members.any(
+          (m) =>
+              (m['membership_number']?.toString().toLowerCase() ?? '') ==
+              membershipNumber.toLowerCase(),
+        );
+      }
+    }
+
+    throw Exception('Failed to verify membership number');
+  }
+
   /// Submit Member
   Future<void> _submitMember() async {
     if (!_formKeyMember.currentState!.validate()) return;
 
+    final membershipNumber = _membershipNumberController.text.trim();
+    final isDuplicate = await checkMembershipNumberExists(membershipNumber);
+
+    if (isDuplicate) {
+      // Membership number already exists → show alert and stop
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Duplicate Membership Number"),
+          content: Text(
+            "Membership number '$membershipNumber' is already in use.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+      return; // ❌ Stop submission
+    }
+
+    // ✅ Continue with submission if unique
     final member = LibraryMember(
       userId: int.tryParse(_userIdController.text) ?? 0,
       userType: _userTypeController.text,
-      membershipNumber: _membershipNumberController.text,
+      membershipNumber: membershipNumber,
       membershipStart: _membershipStartController.text,
       membershipEnd: _membershipEndController.text,
       maxBooks: int.tryParse(_maxBooksController.text) ?? 0,
     );
 
-    final provider = Provider.of<LibraryMemberProvider>(context, listen: false);
-    final success = await provider.addMember(member);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Member added successfully ✅")),
+      final response = await http.post(
+        Uri.parse(
+          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/library/members',
+        ),
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "user_id": member.userId,
+          "user_type": member.userType,
+          "membership_number": member.membershipNumber,
+          "membership_start": member.membershipStart,
+          "membership_end": member.membershipEnd,
+          "max_books": member.maxBooks,
+        }),
       );
-      _clearMemberFields();
-    } else {
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Member added successfully ✅")),
+        );
+        _clearMemberFields();
+        return;
+      }
+
+      // Handle already active membership
+      if (data['error']?.toString().contains(
+            "already has an active library membership",
+          ) ??
+          false) {
+        await _showExistingMemberDialog(member.userId!);
+        return;
+      }
+
+      // Generic failure
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed: ${provider.error ?? "Unknown error"}")),
+        SnackBar(content: Text("Failed: ${data['error'] ?? 'Unknown error'}")),
       );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  Future<void> _showExistingMemberDialog(int userId) async {
+    try {
+      final members = await LibraryService().fetchMembers();
+      final existing = members.firstWhere(
+        (m) => m['user_id'] == userId,
+        orElse: () => null,
+      );
+
+      if (existing == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("User already has an active membership."),
+          ),
+        );
+        return;
+      }
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Already a Member"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("User: ${existing['user_name'] ?? '-'}"),
+              Text("Type: ${existing['user_type'] ?? '-'}"),
+              Text("Membership #: ${existing['membership_number'] ?? '-'}"),
+              Text("Start: ${existing['membership_start'] ?? '-'}"),
+              Text("End: ${existing['membership_end'] ?? '-'}"),
+              Text("Max Books: ${existing['max_books'] ?? '-'}"),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Optionally switch to Member Status tab
+                _tabController.animateTo(3);
+              },
+              child: const Text("View Members"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Close"),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error fetching member info: $e")));
     }
   }
 
@@ -767,6 +914,40 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
     );
   }
 
+  Future<void> _pickStartDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(), // 👈 past days disabled
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      setState(() {
+        _membershipStartController.text = pickedDate
+            .toIso8601String()
+            .split('T')
+            .first;
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(), // 👈 past days disabled
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      setState(() {
+        _membershipEndController.text = pickedDate
+            .toIso8601String()
+            .split('T')
+            .first;
+      });
+    }
+  }
+
   Widget _buildAddMemberForm() {
     final provider = Provider.of<LibraryMemberProvider>(context);
 
@@ -783,70 +964,136 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
 
         final students = snapshot.data ?? [];
 
-        return Form(
-          key: _formKeyMember,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DropdownButtonFormField<int>(
-                decoration: InputDecoration(
-                  labelText: "Select Student",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                items: students.map((student) {
-                  return DropdownMenuItem<int>(
-                    value: student.id,
-                    child: Text("${student.name} (${student.admissionNo})"),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    _userIdController.text = value.toString();
-                    _userTypeController.text =
-                        "student"; // ✅ must match exactly
-                  }
-                },
-
-                validator: (val) {
-                  if (val == null) return "Please select a student";
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildTextField(_membershipNumberController, "Membership Number"),
-              _buildTextField(
-                _membershipStartController,
-                "Membership Start (YYYY-MM-DD)",
-                keyboard: TextInputType.datetime,
-              ),
-              _buildTextField(
-                _membershipEndController,
-                "Membership End (YYYY-MM-DD)",
-              ),
-              _buildTextField(
-                _maxBooksController,
-                "Max Books",
-                keyboard: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              provider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton.icon(
-                      onPressed: _submitMember,
-                      icon: const Icon(Icons.person_add),
-                      label: const Text("Add Member"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 20.0,
+            horizontal: 0,
+          ), // Top & Bottom spacing
+          child: Form(
+            key: _formKeyMember,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Student Dropdown
+                DropdownButtonFormField<int>(
+                  decoration: InputDecoration(
+                    labelText: "Select Student",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-            ],
+                  ),
+                  items: students.map((student) {
+                    return DropdownMenuItem<int>(
+                      value: student.id,
+                      child: Text("${student.name} (${student.admissionNo})"),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      _userIdController.text = value.toString();
+                      _userTypeController.text = "Student";
+                    }
+                  },
+                  validator: (val) {
+                    if (val == null) return "Please select a student";
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 20), // internal spacing
+                _buildTextField(
+                  _membershipNumberController,
+                  "Membership Number",
+                ),
+                const SizedBox(height: 7),
+
+                // Membership Start
+                TextFormField(
+                  controller: _membershipStartController,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: "Membership Start",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: const Icon(
+                        Icons.calendar_today,
+                  color: Color(0xFF2E3192),
+                      ),
+                      onPressed: _pickStartDate,
+                    ),
+                  ),
+                  validator: (val) =>
+                      val == null || val.isEmpty ? "Select a start date" : null,
+                ),
+                const SizedBox(height: 20),
+
+                // Membership End
+                TextFormField(
+                  controller: _membershipEndController,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: "Membership End",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: const Icon(
+                        Icons.calendar_today,
+                  color: Color(0xFF2E3192),
+                      ),
+                      onPressed: _pickEndDate,
+                    ),
+                  ),
+                  validator: (val) =>
+                      val == null || val.isEmpty ? "Select an end date" : null,
+                ),
+                const SizedBox(height: 20),
+
+                // Max Books
+                TextFormField(
+                  controller: _maxBooksController,
+                  decoration: InputDecoration(
+                    labelText: "Max Books (1–5)",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (val) {
+                    final num = int.tryParse(val ?? '');
+                    if (num == null) return "Enter a valid number";
+                    if (num < 1 || num > 5) return "Only 1–5 books allowed";
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 30), // extra spacing before button
+                // Submit Button
+                provider.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton.icon(
+  onPressed: _submitMember,
+  icon: const Icon(Icons.person_add),
+  label: const Text(
+    "Add Member",
+    style: TextStyle(
+      fontSize: 18, // Increase the font size here
+      fontWeight: FontWeight.bold, // optional: make it bold
+    ),
+  ),
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.orange,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 24),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+  ),
+),
+
+              ],
+            ),
           ),
         );
       },
