@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_app/screens/students/student_menu_drawer.dart';
 import 'package:school_app/widgets/student_app_bar.dart';
+import 'dart:async';
 
 /// ---------------- MODEL ----------------
 class StudentMessage {
@@ -74,10 +75,7 @@ class MessageService {
         "Authorization": "Bearer $token",
         "Content-Type": "application/json",
       },
-      body: jsonEncode({
-        "item_type": "messages",
-        "item_id": messageId,
-      }),
+      body: jsonEncode({"item_type": "messages", "item_id": messageId}),
     );
   }
 }
@@ -86,7 +84,7 @@ class MessageService {
 class StudentMessagesPage extends StatefulWidget {
   final int studentId;
   const StudentMessagesPage({Key? key, required this.studentId})
-      : super(key: key);
+    : super(key: key);
 
   @override
   State<StudentMessagesPage> createState() => _StudentMessagesPageState();
@@ -94,23 +92,72 @@ class StudentMessagesPage extends StatefulWidget {
 
 class _StudentMessagesPageState extends State<StudentMessagesPage> {
   late Future<List<StudentMessage>> _messagesFuture;
-  StudentMessage? _selectedMessage; // 🔹 For detail page
+  StudentMessage? _selectedMessage;
+  Timer? _timer;
+  List<StudentMessage> _messages = [];
 
   @override
   void initState() {
     super.initState();
     _messagesFuture = _loadMessages();
+    _messagesFuture.then((msgs) => _messages = msgs);
+
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted && _selectedMessage == null) {
+        _refreshMessages();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<List<StudentMessage>> _loadMessages() async {
     final messages = await MessageService.fetchMessages(widget.studentId);
 
-    // ✅ Mark all as viewed
+    // Mark all as viewed
     for (var msg in messages) {
-      MessageService.markMessageViewed(widget.studentId, msg.id);
+      await MessageService.markMessageViewed(widget.studentId, msg.id);
     }
 
     return messages;
+  }
+
+  void _refreshMessages() async {
+    final latestMessages = await MessageService.fetchMessages(widget.studentId);
+
+    // Check if there are new messages
+    bool hasNew = false;
+
+    if (latestMessages.length != _messages.length) {
+      hasNew = true;
+    } else {
+      // Compare IDs
+      for (int i = 0; i < latestMessages.length; i++) {
+        if (latestMessages[i].id != _messages[i].id) {
+          hasNew = true;
+          break;
+        }
+      }
+    }
+
+    if (hasNew) {
+      // Mark new messages as viewed
+      for (var msg in latestMessages) {
+        if (!_messages.any((m) => m.id == msg.id)) {
+          await MessageService.markMessageViewed(widget.studentId, msg.id);
+        }
+      }
+
+      // Update UI only if there are new messages
+      setState(() {
+        _messages = latestMessages;
+        _messagesFuture = Future.value(_messages);
+      });
+    }
   }
 
   @override
@@ -119,7 +166,6 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
       appBar: StudentAppBar(),
       drawer: StudentMenuDrawer(),
       backgroundColor: const Color(0xFFA3D3A7),
-
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -134,14 +180,19 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                   Navigator.pop(context);
                 }
               },
-              child: const Text("< Back",
-                  style: TextStyle(fontSize: 16, color: Colors.black87)),
+              child: const Text(
+                "< Back",
+                style: TextStyle(fontSize: 16, color: Colors.black87),
+              ),
             ),
           ),
 
           // Title
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 4.0,
+            ),
             child: Row(
               children: [
                 Container(
@@ -155,11 +206,14 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text("Messages",
-                    style: TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E3192))),
+                const Text(
+                  "Messages",
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
+                  ),
+                ),
               ],
             ),
           ),
@@ -183,8 +237,10 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                 if (_selectedMessage != null) {
                   final msg = _selectedMessage!;
                   return Container(
-                    margin:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -270,22 +326,19 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Icon
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: msg.isAppreciation
-                                    ? Colors.green
-                                    : const Color(0xFF2E3192),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                msg.isAppreciation
-                                    ? Icons.thumb_up_alt_rounded
-                                    : Icons.chat_bubble_outline,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            ),
+                           Container(
+  padding: const EdgeInsets.all(10),
+  decoration: const BoxDecoration(
+    color: Colors.green, // fixed color
+    shape: BoxShape.circle,
+  ),
+  child: const Icon(
+    Icons.thumb_up_alt_rounded, // fixed icon
+    color: Colors.white,
+    size: 22,
+  ),
+),
+
                             const SizedBox(width: 12),
 
                             // Details
@@ -297,15 +350,22 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(msg.senderName,
-                                          style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF2E3192))),
                                       Text(
-                                        "${msg.createdAt.toLocal()}".split(" ")[0],
+                                        msg.senderName,
                                         style: const TextStyle(
-                                            fontSize: 12, color: Colors.grey),
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF2E3192),
+                                        ),
+                                      ),
+                                      Text(
+                                        "${msg.createdAt.toLocal()}".split(
+                                          " ",
+                                        )[0],
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -315,9 +375,10 @@ class _StudentMessagesPageState extends State<StudentMessagesPage> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black87,
-                                        height: 1.4),
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                      height: 1.4,
+                                    ),
                                   ),
                                 ],
                               ),

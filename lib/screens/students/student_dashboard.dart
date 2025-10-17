@@ -176,15 +176,15 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                       color: const Color(0xFF8FD8E5),
                       badgeCount: counts.todo, // ✅ dynamic
                       onTap: () {
-                     Navigator.pushNamed(
-  context,
-  '/student-todo',
-  arguments: {
-    'studentId': child['id'],   // 👈 use id, not studentId
-    'child': child,
-  },
-);
-
+                        Navigator.pushNamed(
+                          context,
+                          '/student-todo',
+                          arguments: {
+                            'studentId':
+                                child['id'], // 👈 use id, not studentId
+                            'child': child,
+                          },
+                        );
                       },
                     ),
                   ],
@@ -517,35 +517,36 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   ),
                 const SizedBox(height: 12),
                 if (settings.showResources) ...[
-                 DashboardTile(
-  title: 'Teachers',
-  subtitle: 'You can interact with teachers',
-  icon: Icons.person,
-  color: const Color(0xFFFFD399),
-  onTap: () async {
-    final prefs = await SharedPreferences.getInstance();
-    final studentIdInt = prefs.getInt('student_id');
+                  DashboardTile(
+                    title: 'Teachers',
+                    subtitle: 'You can interact with teachers',
+                    icon: Icons.person,
+                    color: const Color(0xFFFFD399),
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      final studentIdInt = prefs.getInt('student_id');
 
-    if (studentIdInt != null) {
-      final studentId = studentIdInt.toString();
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StudentTeacherPage(studentId: studentId),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Student ID not found. Please log in again.'),
-        ),
-      );
-    }
-  },
-  onClose: () => settings.updateVisibility('Teachers', false),
-),
-
-
+                      if (studentIdInt != null) {
+                        final studentId = studentIdInt.toString();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                StudentTeacherPage(studentId: studentId),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Student ID not found. Please log in again.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    onClose: () => settings.updateVisibility('Teachers', false),
+                  ),
 
                   const SizedBox(height: 12),
                 ],
@@ -653,20 +654,19 @@ class DashboardTile extends StatelessWidget {
                 size: 36,
                 color: const Color(0xFF0D47A1),
               ),
-      if (badgeCount != null && badgeCount! > 0)
-  Positioned(
-    top: -6,
-    right: -6,
-    child: CircleAvatar(
-      radius: 9,
-      backgroundColor: const Color(0xFF9E005D),
-      child: Text(
-        badgeCount.toString(),
-        style: const TextStyle(color: Colors.white, fontSize: 10),
-      ),
-    ),
-  ),
-
+        if (badgeCount != null && badgeCount! > 0)
+          Positioned(
+            top: -6,
+            right: -6,
+            child: CircleAvatar(
+              radius: 9,
+              backgroundColor: const Color(0xFF9E005D),
+              child: Text(
+                badgeCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
+            ),
+          ),
       ],
     );
 
