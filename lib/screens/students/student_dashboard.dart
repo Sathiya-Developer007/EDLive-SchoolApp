@@ -170,7 +170,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                         },
                       ),
                     DashboardTile(
-                      title: 'My To-Do List',
+                      title: 'Home Work',
                       subtitle: 'Check your tasks',
                       iconPath: 'assets/icons/todo.svg',
                       color: const Color(0xFF8FD8E5),
