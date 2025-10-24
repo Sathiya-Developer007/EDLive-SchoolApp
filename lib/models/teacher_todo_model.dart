@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class Todo {
   final String? id;
   final String title;
@@ -8,7 +6,8 @@ class Todo {
   final bool completed;
   final int? classId;
   final String? className;
-  final String? fileUrl; // New: uploaded file URL
+  final String? fileUrl;
+  final int? subjectId;
 
   Todo({
     this.id,
@@ -19,6 +18,7 @@ class Todo {
     this.classId,
     this.className,
     this.fileUrl,
+    this.subjectId,
   });
 
   factory Todo.fromJson(Map<String, dynamic> json) {
@@ -29,57 +29,9 @@ class Todo {
       date: json['due_date'] ?? json['date'] ?? '',
       completed: json['completed'] ?? false,
       classId: json['class_id'],
-      className: _parseClassName(json),
-      fileUrl: json['file_url'], // new
+      subjectId: json['subject_id'],
+      className: json['class_name'] ?? json['className'] ?? json['class'] ?? null,
+      fileUrl: json['file_url'],
     );
-  }
-
-  static String? _parseClassName(Map<String, dynamic> json) {
-    if (json['class_name'] != null) return json['class_name'];
-    if (json['className'] != null) return json['className'];
-    if (json['class'] != null) return json['class'];
-    return null;
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      if (id != null) 'id': id,
-      'title': title,
-      'description': description,
-      'date': date,
-      'completed': completed,
-      if (classId != null) 'class_id': classId,
-      if (className != null) 'class_name': className,
-      if (fileUrl != null) 'file_url': fileUrl,
-    };
-  }
-
-  Todo copyWith({
-    String? id,
-    String? title,
-    String? description,
-    String? date,
-    bool? completed,
-    int? classId,
-    String? className,
-    String? fileUrl,
-  }) {
-    return Todo(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      date: date ?? this.date,
-      completed: completed ?? this.completed,
-      classId: classId ?? this.classId,
-      className: className ?? this.className,
-      fileUrl: fileUrl ?? this.fileUrl,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'Todo(id: $id, title: $title, description: $description, '
-        'date: $date, completed: $completed, classId: $classId, '
-        'className: $className, fileUrl: $fileUrl)';
   }
 }

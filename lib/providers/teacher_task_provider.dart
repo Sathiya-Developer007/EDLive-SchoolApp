@@ -86,40 +86,45 @@ class TeacherTaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateTodo({
-    required String id,
-    required String title,
-    required String date,
-    required String description,
-    required int classId,
-    required int subjectId,
-    File? file,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+Future<void> updateTodo({
+  required String id,
+  required String title,
+  required String date,
+  required String description,
+  required int classId,
+  required int subjectId,
+  File? file,
+  bool completed = true,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? '';
 
-    final uri = Uri.parse('$_baseUrl/$id');
-    var request = http.MultipartRequest('PUT', uri);
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['title'] = title;
-    request.fields['date'] = date;
-    request.fields['description'] = description;
-    request.fields['classid'] = classId.toString();
-    request.fields['subjectid'] = subjectId.toString();
+  final uri = Uri.parse('$_baseUrl/$id');
+  var request = http.MultipartRequest('PUT', uri);
+  request.headers['Authorization'] = 'Bearer $token';
 
-    if (file != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-        'todoFileUpload',
-        file.path,
-        contentType: MediaType('application', lookupMimeType(file.path)!.split('/')[1]),
-      ));
-    }
+  request.fields['title'] = title;
+  request.fields['date'] = date;
+  request.fields['description'] = description;
+  request.fields['classid'] = classId.toString();
+  request.fields['subjectid'] = subjectId.toString();
+  request.fields['completed'] = completed.toString();
 
-    final response = await request.send();
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update todo');
-    }
+  if (file != null) {
+    request.files.add(await http.MultipartFile.fromPath(
+      'todoFileUpload',
+      file.path,
+      contentType: MediaType('application', lookupMimeType(file.path)!.split('/')[1]),
+    ));
   }
+
+  final response = await request.send();
+  if (response.statusCode != 200) {
+    throw Exception('Failed to update todo');
+  }
+}
+
+
 
   Future<void> deleteTodo({required String id}) async {
     final url = '$_baseUrl/$id';

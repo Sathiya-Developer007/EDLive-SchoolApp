@@ -74,32 +74,35 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
     }
   }
 
-  Future<void> _loadStudentsForClass(int classId) async {
-    setState(() {
-      _loadingStudents = true;
-      _students = [];
-      _selectedStudentId = null;
-      _studentId = null;
-    });
+ Future<void> _loadStudentsForClass(int classId) async {
+  setState(() {
+    _loadingStudents = true;
+    _students = [];
+    _selectedStudentId = null;
+    _studentId = null;
+  });
 
-    try {
-      final service = StudentService();
-      final students = await service.fetchStudents();
-      final filtered = students; // Filter by classId if needed
-      setState(() {
-        _students = filtered;
-        if (_students.isNotEmpty) {
-          _selectedStudentId = _students.first.id;
-          _studentId = _students.first.id;
-        }
-        _loadingStudents = false;
-      });
-    } catch (e) {
-      setState(() => _loadingStudents = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error loading students: $e")));
-    }
+  try {
+    final service = StudentService();
+    final students = await service.fetchStudents();
+
+    // Since the student API does not provide classId, show all students
+    final filtered = students; 
+
+    setState(() {
+      _students = filtered;
+      if (_students.isNotEmpty) {
+        _selectedStudentId = _students.first.id;
+        _studentId = _students.first.id;
+      }
+      _loadingStudents = false;
+    });
+  } catch (e) {
+    setState(() => _loadingStudents = false);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text("Error loading students: $e")));
   }
+}
 
   Future<void> _submit(BuildContext context) async {
     if (!_formKey.currentState!.validate()) return;

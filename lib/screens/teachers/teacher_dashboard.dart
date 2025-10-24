@@ -98,7 +98,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage> {
                       ),
                     if (settings.showTodo)
                       DashboardTile(
-                        title: 'My to-do list',
+                        title: 'Home Work',
                         subtitle: 'Make your own list, set reminder.',
                         iconPath: 'assets/icons/todo.svg',
                         color: const Color(0xFF8FD8E5),

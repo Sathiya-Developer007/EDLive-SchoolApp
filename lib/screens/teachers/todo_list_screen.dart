@@ -181,27 +181,28 @@ final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
   }
 
   try {
-    if (_isEditMode && _editingTaskId != null) {
-      await provider.updateTodo(
-        id: _editingTaskId!,
-        title: title,
-        date: formattedDate,
-        description: description,
-        classId: classId,
-        subjectId: subjectId,
-        file: _selectedFile,
-      );
-    } else {
-    await provider.addTodo(
-  title: title,
-  date: formattedDate,
-  description: description,
-  classId: classId,
-  subjectId: subjectId,
-  file: _selectedFile,
-);
+  if (_isEditMode && _editingTaskId != null) {
+  await provider.updateTodo(
+    id: _editingTaskId!,
+    title: title,
+    date: formattedDate,
+    description: description,
+    classId: classId,
+    subjectId: subjectId,
+    file: _selectedFile,
+    completed: true, // optional
+  );
+} else {
+  await provider.addTodo(
+    title: title,
+    date: formattedDate,
+    description: description,
+    classId: classId,
+    subjectId: subjectId,
+    file: _selectedFile,
+  );
+}
 
-    }
 
     await provider.fetchTodos();
     _resetForm();
@@ -384,25 +385,64 @@ final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
                         ),
                         PopupMenuButton<String>(
                           onSelected: (value) async {
-                            if (value == 'edit') {
-                              setState(() {
-                                _isEditMode = true;
-                                _editingTaskId = task.id;
-                                _taskController.text = task.title;
-                                _descriptionController.text = task.description;
-                                _selectedDate = DateTime.tryParse(task.date);
-                                _selectedClass = _classList.firstWhere(
-  (c) => c['class_id'] == task.classId,
-  orElse: () => {}, // empty map instead of null
-);
+                     if (value == 'edit') {
+  setState(() {
+    _isEditMode = true;
+    _editingTaskId = task.id;
+    _taskController.text = task.title;
+    _descriptionController.text = task.description;
+    _selectedDate = DateTime.tryParse(task.date);
 
-if (_selectedClass!.isEmpty) {
-  _selectedClass = null; // optional: reset to null if not found
+    // Select the current class
+    _selectedClass = _classList.firstWhere(
+      (c) => c['class_id'] == task.classId,
+      orElse: () => {},
+    );
+    if (_selectedClass!.isEmpty) _selectedClass = null;
+
+    _showAddForm = true;
+    _selectedSubject = null; // reset subject until we fetch
+  });
+
+  // Fetch subjects for the selected class, then select the current subject
+ if (_selectedClass != null) {
+  _fetchSubjectsForClass().then((_) {
+    SubjectModel? selected;
+    try {
+      selected = _subjectList.firstWhere((s) => s.id == task.subjectId);
+    } catch (e) {
+      selected = null; // not found
+    }
+    setState(() {
+      _selectedSubject = selected;
+    });
+  });
 }
 
-                                _showAddForm = true;
-                              });
-                            } else if (value == 'delete') {
+} else if (value == 'delete') {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirm Delete'),
+      content: const Text('Are you sure you want to delete this task?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  if (confirm == true) {
+    await provider.deleteTodo(id: task.id!);
+  }
+}
+
+ else if (value == 'delete') {
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (context) => AlertDialog(

@@ -1,72 +1,53 @@
-// lib/services/todo_service.dart
-
-import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
 import '../models/teacher_todo_model.dart';
 
 class TodoService {
   final String baseUrl = 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/todos';
 
-  // GET /api/todos
-  Future<List<Todo>> fetchTodos() async {
-    final response = await http.get(Uri.parse(baseUrl));
+  // PUT /api/todos/{id} with multipart/form-data
+  Future<void> updateTodo(String id, {
+    required String title,
+    required String description,
+    required String date,
+    required int classId,
+    required int subjectId,
+    File? file,
+    bool completed = true,
+    String? authToken,
+  }) async {
+    final uri = Uri.parse('$baseUrl/$id');
+    var request = http.MultipartRequest('PUT', uri);
 
-    if (response.statusCode == 200) {
-      List jsonList = json.decode(response.body);
-      return jsonList.map((e) => Todo.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load todos');
+    if (authToken != null) {
+      request.headers['Authorization'] = 'Bearer $authToken';
     }
-  }
 
-  // POST /api/todos
-  Future<void> createTodo(Todo todo) async {
-    final response = await http.post(
-      Uri.parse(baseUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(todo.toJson()),
-    );
+    request.fields['title'] = title;
+    request.fields['description'] = description;
+    request.fields['date'] = date;
+    request.fields['classid'] = classId.toString();
+    request.fields['subjectid'] = subjectId.toString();
+    request.fields['completed'] = completed.toString();
 
-    if (response.statusCode != 201) {
-      throw Exception('Failed to create todo');
+    if (file != null) {
+      final mimeType = lookupMimeType(file.path)?.split('/');
+      if (mimeType != null && mimeType.length == 2) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'todoFileUpload',
+          file.path,
+          contentType: MediaType(mimeType[0], mimeType[1]),
+        ));
+      }
     }
-  }
 
-  // GET /api/todos/{id}
-  Future<Todo> getTodoById(int id) async {
-    final response = await http.get(Uri.parse('$baseUrl/$id'));
-
-    if (response.statusCode == 200) {
-      return Todo.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to fetch todo by ID');
-    }
-  }
-
-  // PUT /api/todos/{id}
-  Future<void> updateTodo(int id, Todo todo) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl/$id'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(todo.toJson()),
-    );
+    final response = await request.send();
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to update todo');
-    }
-  }
-
-  // DELETE /api/todos/{id}
-  Future<void> deleteTodo(int id) async {
-    final response = await http.delete(Uri.parse('$baseUrl/$id'));
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete todo');
+      final respStr = await response.stream.bytesToString();
+      throw Exception('Failed to update todo: $respStr');
     }
   }
 }
-
-
-
-
-
