@@ -1,14 +1,16 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 
 import 'package:school_app/models/achievement_model.dart';
 import 'package:school_app/models/class_section.dart';
 import 'package:school_app/models/teacher_student_classsection.dart';
-
 import 'package:school_app/providers/teacher_achievement_provider.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
-
 import 'package:school_app/services/class_section_service.dart';
 import 'package:school_app/services/teacher_student_classsection.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
@@ -27,12 +29,11 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _awardedByController = TextEditingController();
-  final TextEditingController _imageUrlController = TextEditingController();
+  final TextEditingController _academicYearController = TextEditingController();
 
   int? _categoryId = 1;
   int? _classId;
   int? _studentId;
-  final TextEditingController _academicYearController = TextEditingController();
   String _visibility = "school";
   DateTime? _selectedDate;
 
@@ -41,7 +42,12 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
   bool _loadingClasses = true;
   bool _loadingStudents = false;
 
-  int? _selectedStudentId; // selected dropdown student
+  int? _selectedStudentId;
+
+  // File upload variables
+  File? _selectedFile; // mobile
+  Uint8List? _selectedFileBytes; // web
+  String? _selectedFileName; // web
 
   @override
   void initState() {
@@ -57,15 +63,14 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
         _classSections = classes;
         if (_classSections.isNotEmpty) {
           _classId = _classSections.first.id;
-          _loadStudentsForClass(_classId!); // load students for first class
+          _loadStudentsForClass(_classId!);
         }
         _loadingClasses = false;
       });
     } catch (e) {
       setState(() => _loadingClasses = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error loading classes: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error loading classes: $e")));
     }
   }
 
@@ -80,9 +85,7 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
     try {
       final service = StudentService();
       final students = await service.fetchStudents();
-
-      final filtered = students; //where((s) => s.classId == classId).toList();
-
+      final filtered = students; // Filter by classId if needed
       setState(() {
         _students = filtered;
         if (_students.isNotEmpty) {
@@ -93,41 +96,24 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
       });
     } catch (e) {
       setState(() => _loadingStudents = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error loading students: $e")));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error loading students: $e")));
     }
   }
 
   Future<void> _submit(BuildContext context) async {
-    if (!_formKey.currentState!.validate()) {
-      print("Form validation failed");
-      return;
-    }
-
-    // Debug logging
-    print("Form values:");
-    print("Class ID: $_classId");
-    print("Student ID: $_studentId");
-    print("Title: ${_titleController.text}");
-    print("Description: ${_descController.text}");
-    print("Category ID: $_categoryId");
-    print("Date: $_selectedDate");
-    print("Awarded By: ${_awardedByController.text}");
-    print("Image URL: ${_imageUrlController.text}");
-    print("Visibility: $_visibility");
-    print("Academic Year: ${_academicYearController.text}");
-
-    // Ensure class and student are selected
+    if (!_formKey.currentState!.validate()) return;
     if (_classId == null || _studentId == null) {
-      print("Class or Student is null");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select both class and student")),
-      );
+          const SnackBar(content: Text("Please select class and student")));
+      return;
+    }
+    if (_selectedDate == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Please select a date")));
       return;
     }
 
-    // Map dropdown ID to API string
     final categoryMap = {
       1: "academic",
       2: "sports",
@@ -138,19 +124,8 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
 
     final categoryString = categoryMap[_categoryId];
     if (categoryString == null) {
-      print("Invalid category ID: $_categoryId");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid category selected")),
-      );
-      return;
-    }
-
-    // Check if date is selected
-    if (_selectedDate == null) {
-      print("Date is null");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please select a date")));
+          const SnackBar(content: Text("Invalid category selected")));
       return;
     }
 
@@ -161,24 +136,21 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
       categoryId: categoryString,
       achievementDate: _selectedDate!.toIso8601String().split("T").first,
       awardedBy: _awardedByController.text,
-      imageUrl: _imageUrlController.text,
+      evidenceUrl: "",
       isVisible: _visibility,
       classId: _classId!,
       academicYearId: int.tryParse(_academicYearController.text) ?? 2024,
     );
 
-    print("Achievement object created: ${achievement.toJson()}");
-
     try {
-      print("Calling addAchievement...");
-      await Provider.of<AchievementProvider>(
-        context,
-        listen: false,
-      ).addAchievement(achievement);
+      await Provider.of<AchievementProvider>(context, listen: false)
+          .addAchievement(
+        achievement,
+        file: _selectedFile,
+        webFileBytes: _selectedFileBytes,
+        webFileName: _selectedFileName,
+      );
 
-      print("Achievement added successfully");
-
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Achievement added successfully"),
@@ -186,56 +158,46 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
         ),
       );
 
-      // Reset form safely
       _resetForm();
-    } catch (e, stack) {
-      print("Error in _submit: $e");
-      print("Stack trace: $stack");
-
-      // Show error message to user
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Failed to add achievement: ${e.toString()}"),
+          content: Text("Failed to add achievement: $e"),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  // Separate method to safely reset the form
   void _resetForm() {
-    if (mounted) {
-      setState(() {
-        _titleController.clear();
-        _descController.clear();
-        _awardedByController.clear();
-        _imageUrlController.clear();
-        _academicYearController.clear();
-        _selectedDate = null;
-        _categoryId = 1;
-        _visibility = "school";
+    if (!mounted) return;
+    setState(() {
+      _titleController.clear();
+      _descController.clear();
+      _awardedByController.clear();
+      _academicYearController.clear();
+      _selectedDate = null;
+      _categoryId = 1;
+      _visibility = "school";
+      _selectedFile = null;
+      _selectedFileBytes = null;
+      _selectedFileName = null;
 
-        // Only reset dropdowns if lists are not empty
-        if (_classSections.isNotEmpty) {
-          _classId = _classSections.first.id;
-        }
-        if (_students.isNotEmpty) {
-          _selectedStudentId = _students.first.id;
-          _studentId = _students.first.id;
-        }
-      });
-    }
+      if (_classSections.isNotEmpty) _classId = _classSections.first.id;
+      if (_students.isNotEmpty) {
+        _selectedStudentId = _students.first.id;
+        _studentId = _students.first.id;
+      }
+    });
   }
 
-  
-  
   @override
   Widget build(BuildContext context) {
     final loading = context.watch<AchievementProvider>().loading;
 
     return Scaffold(
       appBar: TeacherAppBar(),
-      drawer: MenuDrawer(),
+      drawer: const MenuDrawer(),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : Container(
@@ -247,45 +209,37 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                   children: [
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Text(
-                        "< Back",
-                        style: TextStyle(fontSize: 16, color: Colors.black),
-                      ),
+                      child: const Text("< Back",
+                          style: TextStyle(fontSize: 16, color: Colors.black)),
                     ),
                     const SizedBox(height: 12),
-
-                    // 🔹 Add Achievement title with SVG icon
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF2E3192,
-                            ), // icon background color
+                            color: const Color(0xFF2E3192),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: SvgPicture.asset(
-                            'assets/icons/achievements.svg', // your SVG path
+                            'assets/icons/achievements.svg',
                             height: 24,
                             width: 24,
-                            color: Colors.white, // icon color
+                            color: Colors.white,
                           ),
                         ),
                         const SizedBox(width: 12),
                         const Text(
                           "Add Achievement",
                           style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2E3192), // text color
-                          ),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2E3192)),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(20),
@@ -305,24 +259,18 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                           key: _formKey,
                           child: ListView(
                             children: [
-                              // 🔹 Removed old "Add Achievement" text from inside
                               const Divider(),
                               const SizedBox(height: 12),
                               const Text(
                                 "🎓 Student Information",
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87),
                               ),
                               const SizedBox(height: 12),
-
-                              // Class Dropdown
                               _loadingClasses
-                                  ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
+                                  ? const Center(child: CircularProgressIndicator())
                                   : DropdownButtonFormField<int>(
                                       value: _classId,
                                       decoration: InputDecoration(
@@ -330,9 +278,7 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                         filled: true,
                                         fillColor: Colors.grey.shade50,
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
+                                          borderRadius: BorderRadius.circular(14),
                                           borderSide: BorderSide.none,
                                         ),
                                       ),
@@ -354,12 +300,8 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                           val == null ? "Select a class" : null,
                                     ),
                               const SizedBox(height: 12),
-
-                              // Student Dropdown
                               _loadingStudents
-                                  ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
+                                  ? const Center(child: CircularProgressIndicator())
                                   : DropdownButtonFormField<int>(
                                       value: _selectedStudentId,
                                       isExpanded: true,
@@ -368,49 +310,36 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                         filled: true,
                                         fillColor: Colors.grey.shade50,
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
+                                          borderRadius: BorderRadius.circular(14),
                                           borderSide: BorderSide.none,
                                         ),
                                       ),
-                                      items: _students.map((s) {
-                                        return DropdownMenuItem<int>(
-                                          value: s.id,
-                                          child: Text(s.name),
-                                        );
-                                      }).toList(),
+                                      items: _students
+                                          .map((s) => DropdownMenuItem<int>(
+                                                value: s.id,
+                                                child: Text(s.name),
+                                              ))
+                                          .toList(),
                                       onChanged: (val) {
                                         setState(() {
                                           _selectedStudentId = val;
-                                          _studentId =
-                                              val; // Ensure both are set
+                                          _studentId = val;
                                         });
-                                        print(
-                                          "Student selected: $val",
-                                        ); // Debug log
                                       },
-                                      validator: (val) => val == null
-                                          ? "Select a student"
-                                          : null,
+                                      validator: (val) =>
+                                          val == null ? "Select a student" : null,
                                     ),
                               const SizedBox(height: 20),
-
                               const Divider(),
                               const SizedBox(height: 12),
-
-                              // Achievement Details
                               const Text(
                                 "🏆 Achievement Details",
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87),
                               ),
-
                               const SizedBox(height: 12),
-
                               TextFormField(
                                 controller: _titleController,
                                 decoration: InputDecoration(
@@ -422,12 +351,10 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                     borderSide: BorderSide.none,
                                   ),
                                 ),
-                                validator: (val) => val!.isEmpty
-                                    ? "Enter achievement title"
-                                    : null,
+                                validator: (val) =>
+                                    val!.isEmpty ? "Enter achievement title" : null,
                               ),
                               const SizedBox(height: 12),
-
                               TextFormField(
                                 controller: _descController,
                                 maxLines: 3,
@@ -444,7 +371,6 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                     val!.isEmpty ? "Enter description" : null,
                               ),
                               const SizedBox(height: 12),
-
                               TextFormField(
                                 controller: _awardedByController,
                                 decoration: InputDecoration(
@@ -460,22 +386,41 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                     val!.isEmpty ? "Enter awarded by" : null,
                               ),
                               const SizedBox(height: 12),
-
-                           TextFormField(
-  controller: _imageUrlController,
-  decoration: InputDecoration(
-    labelText: "Image URL (optional)",
-    filled: true,
-    fillColor: Colors.grey.shade50,
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide.none,
-    ),
-  ),
-  // Remove required validation since it's optional
-  // validator: (val) => val!.isEmpty ? "Enter image url" : null,
-),   const SizedBox(height: 16),
-
+                              Text("Evidence Upload (Optional)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 6),
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  if (kIsWeb) {
+                                    final result = await FilePicker.platform.pickFiles(
+                                        type: FileType.image, withData: true);
+                                    if (result != null && result.files.isNotEmpty) {
+                                      setState(() {
+                                        _selectedFileBytes = result.files.first.bytes;
+                                        _selectedFileName = result.files.first.name;
+                                        _selectedFile = null;
+                                      });
+                                    }
+                                  } else {
+                                    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+                                    if (result != null && result.files.isNotEmpty) {
+                                      setState(() {
+                                        _selectedFile = File(result.files.first.path!);
+                                        _selectedFileBytes = null;
+                                        _selectedFileName = null;
+                                      });
+                                    }
+                                  }
+                                },
+                                icon: const Icon(Icons.upload_file),
+                                label: Text(
+                                  (_selectedFile != null
+                                      ? "Selected: ${_selectedFile!.path.split('/').last}"
+                                      : _selectedFileName != null
+                                          ? "Selected: $_selectedFileName"
+                                          : "Choose File"),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
                               TextFormField(
                                 controller: _academicYearController,
                                 keyboardType: TextInputType.number,
@@ -488,31 +433,21 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                     borderRadius: BorderRadius.circular(14),
                                     borderSide: BorderSide.none,
                                   ),
-                                  counterText: "", // hides maxLength counter
+                                  counterText: "",
                                 ),
                                 validator: (val) {
-                                  if (val == null || val.isEmpty)
-                                    return "Enter academic year";
-                                  if (int.tryParse(val) == null)
-                                    return "Enter a valid year";
+                                  if (val == null || val.isEmpty) return "Enter academic year";
+                                  if (int.tryParse(val) == null) return "Enter a valid year";
                                   return null;
                                 },
                               ),
-
                               const SizedBox(height: 16),
-
-                              // Date Picker
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 14,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade50,
                                   borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
-                                  ),
+                                  border: Border.all(color: Colors.grey.shade300),
                                 ),
                                 child: Row(
                                   children: [
@@ -520,15 +455,12 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                       child: Text(
                                         _selectedDate == null
                                             ? "Date not selected"
-                                            : "Date: ${_selectedDate!.toString().split(" ").first}",
+                                            : "Date: ${_selectedDate!.toString().split(' ').first}",
                                         style: const TextStyle(fontSize: 15),
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(
-                                        Icons.calendar_today,
-                                        color: Colors.black87,
-                                      ),
+                                      icon: const Icon(Icons.calendar_today, color: Colors.black87),
                                       onPressed: () async {
                                         final picked = await showDatePicker(
                                           context: context,
@@ -536,18 +468,13 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                           firstDate: DateTime(2000),
                                           lastDate: DateTime(2100),
                                         );
-                                        if (picked != null)
-                                          setState(
-                                            () => _selectedDate = picked,
-                                          );
+                                        if (picked != null) setState(() => _selectedDate = picked);
                                       },
                                     ),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 16),
-
-                              // Category
                               DropdownButtonFormField<int>(
                                 value: _categoryId,
                                 decoration: InputDecoration(
@@ -560,35 +487,16 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                   ),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(
-                                    value: 1,
-                                    child: Text("Academic"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 2,
-                                    child: Text("Sports"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 3,
-                                    child: Text("Arts"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 4,
-                                    child: Text("Leadership"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 5,
-                                    child: Text("Community Service"),
-                                  ),
+                                  DropdownMenuItem(value: 1, child: Text("Academic")),
+                                  DropdownMenuItem(value: 2, child: Text("Sports")),
+                                  DropdownMenuItem(value: 3, child: Text("Arts")),
+                                  DropdownMenuItem(value: 4, child: Text("Leadership")),
+                                  DropdownMenuItem(value: 5, child: Text("Community Service")),
                                 ],
-                                onChanged: (val) =>
-                                    setState(() => _categoryId = val),
-                                validator: (val) =>
-                                    val == null ? "Select a category" : null,
+                                onChanged: (val) => setState(() => _categoryId = val),
+                                validator: (val) => val == null ? "Select a category" : null,
                               ),
                               const SizedBox(height: 12),
-
-                              // Visibility
                               DropdownButtonFormField<String>(
                                 value: _visibility,
                                 decoration: InputDecoration(
@@ -601,51 +509,25 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                   ),
                                 ),
                                 items: const [
-                                  DropdownMenuItem(
-                                    value: "school",
-                                    child: Text("School (All Students)"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: "public",
-                                    child: Text("Public (Everyone)"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: "class",
-                                    child: Text("Class (Classmates)"),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: "private",
-                                    child: Text("Private (Only Admins)"),
-                                  ),
+                                  DropdownMenuItem(value: "school", child: Text("School (All Students)")),
+                                  DropdownMenuItem(value: "public", child: Text("Public (Everyone)")),
+                                  DropdownMenuItem(value: "class", child: Text("Class (Classmates)")),
+                                  DropdownMenuItem(value: "private", child: Text("Private (Only Admins)")),
                                 ],
-                                onChanged: (val) => setState(
-                                  () => _visibility = val ?? "school",
-                                ),
+                                onChanged: (val) => setState(() => _visibility = val ?? "school"),
                               ),
                               const SizedBox(height: 24),
-
-                              // Submit Button
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.indigo,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                     elevation: 3,
                                   ),
                                   onPressed: () => _submit(context),
-                                  child: const Text(
-                                    "Submit Achievement",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                                  child: const Text("Submit Achievement", style: TextStyle(fontSize: 16, color: Colors.white)),
                                 ),
                               ),
                             ],
