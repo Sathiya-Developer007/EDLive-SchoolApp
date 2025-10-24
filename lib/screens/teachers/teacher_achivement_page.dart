@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
@@ -347,29 +349,20 @@ class _TeacherAchievementPageState extends State<TeacherAchievementPage> {
 }
 
 // ----------------- DETAIL PAGE -----------------
+
+
 class AchievementDetailPage extends StatelessWidget {
   final Achievement achievement;
   const AchievementDetailPage({super.key, required this.achievement});
 
-Future<void> _openFile(String evidenceUrl) async {
-  if (evidenceUrl.isEmpty) return;
-
-  // ✅ URL join செய்யும்போது "/" சேர்க்கவும்
-  final baseUrl = "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000";
-  final fullUrl = evidenceUrl.startsWith("http")
-      ? evidenceUrl
-      : "$baseUrl/${evidenceUrl.replaceAll("\\", "/")}";
-
-  final uri = Uri.parse(fullUrl);
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } else {
-    throw 'Could not open file';
+  bool _isPdf(String url) {
+    return url.toLowerCase().endsWith('.pdf');
   }
-}
 
   @override
   Widget build(BuildContext context) {
+    final fullUrl = getFullImageUrl(achievement.evidenceUrl); // ✅ same logic as 1st page
+
     return Scaffold(
       appBar: TeacherAppBar(),
       drawer: MenuDrawer(),
@@ -383,100 +376,129 @@ Future<void> _openFile(String evidenceUrl) async {
               onTap: () => Navigator.pop(context),
               child: const Padding(
                 padding: EdgeInsets.only(bottom: 12),
-                child: Text("< Back", style: TextStyle(fontSize: 16, color: Colors.black)),
+                child: Text("< Back",
+                    style: TextStyle(fontSize: 16, color: Colors.black)),
               ),
             ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                margin: const EdgeInsets.only(bottom: 5),
-                decoration:
-                    BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      buildAchievementImage(achievement.evidenceUrl, height: 220),
-                      const SizedBox(height: 12),
-                      if (achievement.evidenceUrl.isNotEmpty)
-                        Center(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.indigo,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                           onPressed: () => _openFile(achievement.evidenceUrl),
+          Expanded(
+  child: Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ---------------- Evidence Section ----------------
+          Container(
+            height: 300, // fixed height
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: achievement.evidenceUrl.isNotEmpty
+                  ? (_isPdf(fullUrl)
+                      ? SfPdfViewer.network(fullUrl)
+                      : buildAchievementImage(achievement.evidenceUrl, height: 300))
+                  : const Center(
+                      child: Text(
+                        "No evidence file available",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+            ),
+          ),
 
-                            icon: const Icon(Icons.visibility, color: Colors.white),
-                            label: const Text("View File", style: TextStyle(color: Colors.white)),
-                          ),
-                        ),
-                      const SizedBox(height: 16),
-                      Text(achievement.title,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2E3192))),
-                      const SizedBox(height: 8),
-                      Text(achievement.description,
-                          style: const TextStyle(fontSize: 15, color: Colors.black87)),
-                      const Divider(height: 28),
-                      Row(
-                        children: [
-                          const Text("Teacher: ",
-                              style: TextStyle(fontSize: 14, color: Colors.black)),
-                          Text(achievement.fullName,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text("Category: ",
-                              style: TextStyle(fontSize: 14, color: Colors.black)),
-                          Text(achievement.category,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text("Awarded by: ",
-                              style: TextStyle(fontSize: 14, color: Colors.black)),
-                          Text(achievement.awardedBy,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text("Date: ",
-                              style: TextStyle(fontSize: 14, color: Colors.black)),
-                          Text(
-                              achievement.achievementDate.isNotEmpty
-                                  ? achievement.achievementDate.split('T').first
-                                  : 'N/A',
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text("Visibility: ",
-                              style: TextStyle(fontSize: 14, color: Colors.black)),
-                          Text(achievement.visibility,
-                              style: const TextStyle(
-                                  fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          const SizedBox(height: 16),
+
+          // ---------------- Achievement Info ----------------
+          Text(
+            achievement.title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2E3192),
             ),
-          ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            achievement.description,
+            style: const TextStyle(fontSize: 15, color: Colors.black87),
+          ),
+          const Divider(height: 28),
+
+          Row(
+            children: [
+              const Text("Teacher: ",
+                  style: TextStyle(fontSize: 14, color: Colors.black)),
+              Text(
+                achievement.fullName,
+                style: const TextStyle(
+                    fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text("Category: ",
+                  style: TextStyle(fontSize: 14, color: Colors.black)),
+              Text(
+                achievement.category,
+                style: const TextStyle(
+                    fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text("Awarded by: ",
+                  style: TextStyle(fontSize: 14, color: Colors.black)),
+              Text(
+                achievement.awardedBy,
+                style: const TextStyle(
+                    fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text("Date: ",
+                  style: TextStyle(fontSize: 14, color: Colors.black)),
+              Text(
+                achievement.achievementDate.isNotEmpty
+                    ? achievement.achievementDate.split('T').first
+                    : 'N/A',
+                style: const TextStyle(
+                    fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text("Visibility: ",
+                  style: TextStyle(fontSize: 14, color: Colors.black)),
+              Text(
+                achievement.visibility,
+                style: const TextStyle(
+                    fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ),
+),
+ ],
         ),
       ),
     );
