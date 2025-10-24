@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -5,11 +6,17 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../providers/teacher_task_provider.dart';
 import '../../models/teacher_todo_model.dart';
 import 'teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
+
+
+import 'package:school_app/services/teacher_syllabus_subject_service.dart';
+import 'package:school_app/models/teacher_syllabus_subject_model.dart';
+
 
 class ToDoListPage extends StatefulWidget {
   const ToDoListPage({Key? key}) : super(key: key);
@@ -20,19 +27,24 @@ class ToDoListPage extends StatefulWidget {
 
 class _ToDoListPageState extends State<ToDoListPage> {
   bool _isEditMode = false;
-  bool _isDeleteMode = false;
   String? _editingTaskId;
   bool _showAddForm = false;
   DateTime? _selectedDate;
+  File? _selectedFile;
+
   final TextEditingController _taskController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
   List<Map<String, dynamic>> _classList = [];
   Map<String, dynamic>? _selectedClass;
-  String? _authToken;
-  int? _selectedClassId;
   Map<int, String> _classDisplayNames = {};
-  Map<String, dynamic>? _selectedTask; // 🔹 for detail view toggle
+  String? _authToken;
+
+List<SubjectModel> _subjectList = [];
+SubjectModel? _selectedSubject;
+
+
+
 
   @override
   void initState() {
@@ -40,54 +52,16 @@ class _ToDoListPageState extends State<ToDoListPage> {
     _loadTokenAndData();
   }
 
-  Future<void> _markTodoViewed(String todoId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
-
-      final response = await http.post(
-        Uri.parse(
-          'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/dashboard/viewed',
-        ),
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          "item_type": "todo",
-          "item_id": todoId,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        print("✅ Marked todo $todoId as viewed");
-      } else {
-        print("❌ Failed: ${response.body}");
-      }
-    } catch (e) {
-      print("⚠️ Error: $e");
-    }
-  }
-
   Future<void> _loadTokenAndData() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-
-    Provider.of<TeacherTaskProvider>(context, listen: false).setAuthToken(token);
     setState(() => _authToken = token);
 
-    _fetchClassList();
-
     final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
-    await provider.fetchTodos();
+    provider.setAuthToken(token);
 
-    // ✅ Mark all fetched todos as viewed
-    for (var task in provider.tasks) {
-      if (task.id != null) {
-        _markTodoViewed(task.id!);
-      }
-    }
+    await _fetchClassList();
+    await provider.fetchTodos();
   }
 
   Future<void> _fetchClassList() async {
@@ -112,97 +86,142 @@ class _ToDoListPageState extends State<ToDoListPage> {
           _classDisplayNames = {};
           for (var classItem in _classList) {
             final classId = classItem['class_id'] as int;
-            final className = '${classItem['class']} ${classItem['section']}';
-            _classDisplayNames[classId] = className;
+            _classDisplayNames[classId] =
+                '${classItem['class']} ${classItem['section']}';
           }
         });
-      } else {
-        throw Exception('Failed to load class list');
       }
     } catch (e) {
       print('Error fetching classes: $e');
     }
   }
 
-Future<void> _pickDate() async {
-  final picked = await showDatePicker(
-    context: context,
-    initialDate: _selectedDate ?? DateTime.now(),
-    firstDate: DateTime.now(), // 👈 restricts to today onwards
-    lastDate: DateTime(2100),
-    helpText: 'Select a Date', // optional: custom title
-    cancelText: 'Cancel',
-    confirmText: 'Select',
-  );
-
-  if (picked != null) {
-    setState(() => _selectedDate = picked);
+Future<void> _fetchSubjects() async {
+  try {
+    final subjects = await SubjectService().fetchSubjects();
+    setState(() {
+      _subjectList = subjects;
+      _selectedSubject = null; // reset selected subject
+    });
+  } catch (e) {
+    print('Error fetching subjects: $e');
   }
 }
 
-  Future<void> _submitTask() async {
-    if (_authToken == null) {
+
+bool _isFetchingSubjects = false;
+
+Future<void> _fetchSubjectsForClass() async {
+  setState(() => _isFetchingSubjects = true); // start loading
+
+  try {
+    // Fetch all subjects from the new API
+    final subjects = await SubjectService().fetchSubjects();
+
+    setState(() {
+      _subjectList = subjects;
+      _selectedSubject = null; // reset selected subject on class change
+    });
+
+    if (_subjectList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Authentication required! Please login again')),
+        const SnackBar(content: Text('No subjects found')),
       );
-      return;
     }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error fetching subjects: $e')),
+    );
+  } finally {
+    setState(() => _isFetchingSubjects = false); // stop loading
+  }
+}
 
-    final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
-    final title = _taskController.text.trim();
-    final description = _descriptionController.text.trim();
 
-    if (title.isEmpty || _selectedDate == null || _selectedClass == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
-      return;
-    }
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
 
-    final classId = _selectedClass!['class_id'];
-    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-
-    try {
-      if (_isEditMode && _editingTaskId != null) {
-        await provider.updateTodo(
-          id: _editingTaskId!,
-          title: title,
-          date: formattedDate,
-          description: description,
-          completed: false,
-          classId: classId,
-        );
-      } else {
-        await provider.addTodo(
-          title: title,
-          date: formattedDate,
-          description: description,
-          classId: classId,
-        );
-      }
-
-      await provider.fetchTodos();
-      _resetForm();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Operation successful')),
-      );
-    } catch (e) {
-      print("Submit failed: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Operation failed: $e')),
-      );
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+    );
+    if (result != null && result.files.single.path != null) {
+      setState(() => _selectedFile = File(result.files.single.path!));
     }
   }
+
+Future<void> _submitTask() async {
+  if (_authToken == null || _selectedClass == null || _selectedDate == null || _selectedSubject == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select class, subject, and date')),
+    );
+    return;
+  }
+
+final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
+final title = _taskController.text.trim();
+final description = _descriptionController.text.trim();
+final classId = int.tryParse(_selectedClass!['class_id'].toString()) ?? 0;
+final subjectId = _selectedSubject!.id;
+final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
+
+  if (title.isEmpty || description.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please fill all fields')),
+    );
+    return;
+  }
+
+  try {
+    if (_isEditMode && _editingTaskId != null) {
+      await provider.updateTodo(
+        id: _editingTaskId!,
+        title: title,
+        date: formattedDate,
+        description: description,
+        classId: classId,
+        subjectId: subjectId,
+        file: _selectedFile,
+      );
+    } else {
+    await provider.addTodo(
+  title: title,
+  date: formattedDate,
+  description: description,
+  classId: classId,
+  subjectId: subjectId,
+  file: _selectedFile,
+);
+
+    }
+
+    await provider.fetchTodos();
+    _resetForm();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Operation successful')));
+  } catch (e) {
+    print('Submit failed: $e');
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Operation failed: $e')));
+  }
+}
 
   void _resetForm() {
     setState(() {
       _taskController.clear();
       _descriptionController.clear();
       _selectedDate = null;
+      _selectedFile = null;
       _showAddForm = false;
       _isEditMode = false;
-      _selectedClassId = null;
       _editingTaskId = null;
       _selectedClass = null;
     });
@@ -225,23 +244,17 @@ Future<void> _pickDate() async {
     final tasks = provider.tasks;
 
     return Scaffold(
-       resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF87CEEB),
       drawer: MenuDrawer(),
       appBar: TeacherAppBar(),
       body: Column(
         children: [
-          // 🔙 Back button
+          // Back button
           Padding(
             padding: const EdgeInsets.only(left: 16, top: 10),
             child: GestureDetector(
-              onTap: () {
-                if (_selectedTask != null) {
-                  setState(() => _selectedTask = null);
-                } else {
-                  Navigator.pop(context);
-                }
-              },
+              onTap: () => Navigator.pop(context),
               child: Row(
                 children: [
                   SvgPicture.asset('assets/icons/arrow_back.svg', height: 11, width: 11),
@@ -252,329 +265,306 @@ Future<void> _pickDate() async {
             ),
           ),
 
-          // 📘 Header
-        Padding(
-  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Row(
-        children: [
-          Icon(Icons.menu_book, color: Colors.indigo[900], size: 32),
-          const SizedBox(width: 8),
-          Text(
-            'Home Work',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.indigo[900],
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.menu_book, color: Colors.indigo[900], size: 32),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Home Work',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo[900],
+                      ),
+                    ),
+                  ],
+                ),
+                if (!_showAddForm)
+                  ElevatedButton.icon(
+                    onPressed: () => setState(() => _showAddForm = true),
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text('Add', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ],
-      ),
-      if (_selectedTask == null) // ✅ Show Add only on list page
-        ElevatedButton.icon(
-          onPressed: () => setState(() => _showAddForm = !_showAddForm),
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text('Add', style: TextStyle(color: Colors.white)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-        ),
-    ],
-  ),
-),
 
-          // ✏️ Add form
+          // Add Form
           if (_showAddForm) _buildAddForm(),
 
-          // 🔹 Task list OR Detail view
+          // Task List
           Expanded(
-            child: _selectedTask != null
-                ? _buildTaskDetail(_selectedTask!)
-                : ListView.builder(
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = tasks[index];
-                      final className =
-                          task.classId != null ? _classDisplayNames[task.classId] : null;
+            child: ListView.builder(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                final className =
+                    task.classId != null ? _classDisplayNames[task.classId] : null;
 
-                      return GestureDetector(
-                        onTap: () => setState(() => _selectedTask = task.toJson()),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 6,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
+                return GestureDetector(
+                  onTap: () {},
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(_formatDisplayDate(DateTime.parse(task.date))),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      task.title,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      task.description,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    if (className != null && className.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          'Class: $className',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.blue[700],
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                              Text(_formatDisplayDate(DateTime.parse(task.date))),
+                              const SizedBox(height: 4),
+                              Text(
+                                task.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                 ),
                               ),
-                              PopupMenuButton<String>(
-                                onSelected: (value) async {
-                                  if (value == 'edit') {
-                                    setState(() {
-                                      _isEditMode = true;
-                                      _selectedClassId = task.classId;
-                                      _editingTaskId = task.id;
-                                      _taskController.text = task.title;
-                                      _descriptionController.text = task.description;
-                                      _selectedDate = DateTime.tryParse(task.date);
-
-                                      if (task.classId != null) {
-                                        try {
-                                          _selectedClass = _classList.firstWhere(
-                                            (c) => c['class_id'] == task.classId,
-                                          );
-                                        } catch (_) {}
-                                      }
-                                      _showAddForm = true;
-                                    });
-                                  } else if (value == 'delete') {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Confirm Delete'),
-                                        content: const Text(
-                                            'Are you sure you want to delete this task?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, true),
-                                            child: const Text('Delete'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-
-                                    if (confirm == true) {
-                                      try {
-                                        await provider.deleteTodo(id: task.id!);
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Delete failed: $e')),
-                                        );
-                                      }
-                                    }
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text('Edit'),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('Delete'),
-                                  ),
-                                ],
+                              const SizedBox(height: 2),
+                              Text(
+                                task.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
                               ),
+                              if (className != null && className.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Class: $className',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ),
+                              if (task.fileUrl != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'File: ${task.fileUrl!.split('/').last}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.green[700],
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
-                      );
-                    },
+                        PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'edit') {
+                              setState(() {
+                                _isEditMode = true;
+                                _editingTaskId = task.id;
+                                _taskController.text = task.title;
+                                _descriptionController.text = task.description;
+                                _selectedDate = DateTime.tryParse(task.date);
+                                _selectedClass = _classList.firstWhere(
+  (c) => c['class_id'] == task.classId,
+  orElse: () => {}, // empty map instead of null
+);
+
+if (_selectedClass!.isEmpty) {
+  _selectedClass = null; // optional: reset to null if not found
+}
+
+                                _showAddForm = true;
+                              });
+                            } else if (value == 'delete') {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Confirm Delete'),
+                                  content: const Text('Are you sure you want to delete this task?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                await provider.deleteTodo(id: task.id!);
+                              }
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-Widget _buildAddForm() {
-  final bottomInset = MediaQuery.of(context).viewInsets.bottom; // keyboard height
-
-  return AnimatedContainer(
-    duration: const Duration(milliseconds: 200),
-    padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset > 0 ? bottomInset : 10),
-    // 👆 gives extra bottom padding when keyboard opens
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
-        ],
-      ),
-      child: SingleChildScrollView( // 👈 allows content to scroll inside
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Select Class"),
-            DropdownButton<Map<String, dynamic>>(
-              isExpanded: true,
-              value: _selectedClass,
-              hint: const Text("Choose Class"),
-              items: _classList
-                  .map<DropdownMenuItem<Map<String, dynamic>>>((classItem) {
-                return DropdownMenuItem<Map<String, dynamic>>(
-                  value: classItem,
-                  child: Text(classItem['class_name']),
-                );
-              }).toList(),
-              onChanged: (newValue) => setState(() => _selectedClass = newValue),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _selectedDate != null
-                        ? _formatDisplayDate(_selectedDate!)
-                        : 'Select Date',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: _pickDate,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text("Task Title"),
-            TextField(
-              controller: _taskController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter title...',
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text("Description"),
-            TextField(
-              controller: _descriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter description...',
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _resetForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      minimumSize: const Size.fromHeight(50),
-                    ),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _submitTask,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      minimumSize: const Size.fromHeight(50),
-                    ),
-                    child: const Text('Send', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildAddForm() {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset > 0 ? bottomInset : 10),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
           ],
         ),
-      ),
-    ),
-  );
-}
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Select Class"),
+           DropdownButton<Map<String, dynamic>>(
+  isExpanded: true,
+  value: _selectedClass,
+  hint: const Text("Choose Class"),
+  items: _classList.map<DropdownMenuItem<Map<String, dynamic>>>((classItem) {
+    return DropdownMenuItem<Map<String, dynamic>>(
+      value: classItem,
+      child: Text(classItem['class_name']),
+    );
+  }).toList(),
+onChanged: (newValue) {
+  setState(() => _selectedClass = newValue);
+  if (newValue != null) {
+    _fetchSubjectsForClass(); // populate subjects
+  }
+},
 
-  Widget _buildTaskDetail(Map<String, dynamic> task) {
-    final className =
-        task['classId'] != null ? _classDisplayNames[task['classId']] : null;
+),
 
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
-        ],
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Text(
-                task['title'] ?? 'No title',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2E3192),
+
+const Text("Select Subject"),
+DropdownButton<SubjectModel>(
+  isExpanded: true,
+  value: _selectedSubject,
+  hint: const Text("Choose Subject"),
+  items: _subjectList.map((subjectItem) {
+    return DropdownMenuItem<SubjectModel>(
+      value: subjectItem,
+      child: Text(subjectItem.name),
+    );
+  }).toList(),
+  onChanged: (newValue) => setState(() => _selectedSubject = newValue),
+),
+
+
+    const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _selectedDate != null
+                          ? _formatDisplayDate(_selectedDate!)
+                          : 'Select Date',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                  IconButton(icon: const Icon(Icons.calendar_today), onPressed: _pickDate),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text("Task Title"),
+              TextField(
+                controller: _taskController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter title...',
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text("Date: ${_formatDisplayDate(DateTime.parse(task['date']))}"),
-            const SizedBox(height: 8),
-            if (className != null) Text("Class: $className"),
-            const SizedBox(height: 8),
-            Text(task['description'] ?? 'No description',
-                style: const TextStyle(fontSize: 16)),
-          ],
+              const SizedBox(height: 12),
+              const Text("Description"),
+              TextField(
+                controller: _descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter description...',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _pickFile,
+                      icon: const Icon(Icons.attach_file),
+                      label: Text(_selectedFile != null
+                          ? 'Selected: ${_selectedFile!.path.split('/').last}'
+                          : 'Attach File'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _resetForm,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                      child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _submitTask,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                      child: const Text('Send', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

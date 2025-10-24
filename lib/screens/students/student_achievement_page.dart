@@ -6,6 +6,7 @@ import 'package:school_app/widgets/student_app_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 // ----------------- MODEL -----------------
 class Achievement {
@@ -53,7 +54,7 @@ class Achievement {
 }
 
 // ----------------- HELPERS -----------------
-String getFullImageUrl(String url) {
+String getFullFileUrl(String url) {
   if (url.isEmpty) return "";
   if (url.startsWith("http")) {
     return url;
@@ -62,29 +63,39 @@ String getFullImageUrl(String url) {
   }
 }
 
-Widget buildAchievementImage(String url, {double height = 180}) {
+/// Show image or PDF automatically
+Widget buildAchievementFile(String url, {double height = 200}) {
   if (url.isEmpty) {
     return SizedBox(
       height: height,
-      child: const Center(child: Text("No image available")),
+      child: const Center(child: Text("No file available")),
     );
   }
 
-  final fullUrl = getFullImageUrl(url);
+  final fullUrl = getFullFileUrl(url);
 
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(12),
-    child: Image.network(
-      fullUrl,
-      width: double.infinity,
+  if (fullUrl.toLowerCase().endsWith('.pdf')) {
+    // PDF view
+    return SizedBox(
       height: height,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => SizedBox(
+      child: SfPdfViewer.network(fullUrl),
+    );
+  } else {
+    // Image view
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        fullUrl,
+        width: double.infinity,
         height: height,
-        child: const Center(child: Text("Image not available")),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => SizedBox(
+          height: height,
+          child: const Center(child: Text("File not viewable")),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ----------------- MAIN PAGE -----------------
@@ -99,7 +110,7 @@ class StudentAchievementPage extends StatefulWidget {
 class _StudentAchievementPageState extends State<StudentAchievementPage> {
   late Future<List<Achievement>> futureAchievements;
   List<Achievement> _currentAchievements = [];
-  Set<int> _viewedIds = {}; // ✅ Track achievements already marked as viewed
+  Set<int> _viewedIds = {};
   Timer? _refreshTimer;
 
   @override
@@ -107,7 +118,6 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
     super.initState();
     futureAchievements = fetchAchievements();
 
-    // Auto-refresh every 10 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _checkForNewAchievements();
     });
@@ -123,11 +133,12 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token') ?? '';
-      if (token.isEmpty) return;
+      final studentId = prefs.getInt('student_id');
+      if (token.isEmpty || studentId == null) return;
 
       final response = await http.get(
         Uri.parse(
-          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible?classId=${widget.classId}",
+          "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible?studentId=$studentId",
         ),
         headers: {
           'accept': 'application/json',
@@ -167,11 +178,14 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
   Future<List<Achievement>> fetchAchievements() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
-    if (token.isEmpty) throw Exception("⚠️ Missing token");
+    final studentId = prefs.getInt('student_id');
+    if (token.isEmpty || studentId == null) {
+      throw Exception("⚠️ Missing token or student ID");
+    }
 
     final response = await http.get(
       Uri.parse(
-        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible?classId=${widget.classId}",
+        "http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/api/achievements/visible?studentId=$studentId",
       ),
       headers: {
         'accept': 'application/json',
@@ -197,7 +211,6 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
   }
 
   Future<void> _markAchievementViewed(int achievementId) async {
-    // ✅ Only mark if not already viewed
     if (_viewedIds.contains(achievementId)) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -220,7 +233,7 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
       );
 
       if (response.statusCode == 200) {
-        _viewedIds.add(achievementId); // ✅ Mark locally
+        _viewedIds.add(achievementId);
         debugPrint("✅ Achievement $achievementId marked as viewed");
       } else {
         debugPrint("❌ Failed to mark viewed: ${response.statusCode}");
@@ -249,36 +262,35 @@ class _StudentAchievementPageState extends State<StudentAchievementPage> {
               ),
             ),
           ),
-Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
-  child: Row(
-    children: [
-      Container(
-        padding: const EdgeInsets.all(8),
-        decoration: const BoxDecoration(
-          color: Color(0xFF2E3192),
-          borderRadius: BorderRadius.all(Radius.circular(8)), // optional
-        ),
-        child: SvgPicture.asset(
-          "assets/icons/achievements.svg",
-          width: 20,
-          height: 20,
-          color: Colors.white,
-        ),
-      ),
-      const SizedBox(width: 8),
-      const Text(
-        "Achievements",
-        style: TextStyle(
-          fontSize: 27,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF2E3192),
-        ),
-      ),
-    ],
-  ),
-),
-
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2E3192),
+                    borderRadius: BorderRadius.all(Radius.circular(8)),
+                  ),
+                  child: SvgPicture.asset(
+                    "assets/icons/achievements.svg",
+                    width: 20,
+                    height: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  "Achievements",
+                  style: TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: FutureBuilder<List<Achievement>>(
               future: futureAchievements,
@@ -301,7 +313,6 @@ Padding(
                   itemBuilder: (context, index) {
                     final item = achievements[index];
 
-                    // ✅ Call viewed API when item is first built in the list
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _markAchievementViewed(item.id);
                     });
@@ -325,7 +336,7 @@ Padding(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            buildAchievementImage(item.evidenceUrl, height: 150),
+                            buildAchievementFile(item.evidenceUrl, height: 180),
                             Padding(
                               padding: const EdgeInsets.all(12.0),
                               child: Column(
@@ -405,7 +416,7 @@ class AchievementDetailPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      buildAchievementImage(achievement.evidenceUrl, height: 220),
+                      buildAchievementFile(achievement.evidenceUrl, height: 350),
                       const SizedBox(height: 16),
                       Text(
                         achievement.title,
@@ -420,7 +431,7 @@ class AchievementDetailPage extends StatelessWidget {
                         achievement.description,
                         style: const TextStyle(fontSize: 15, color: Colors.black87),
                       ),
-                      const Divider(height: 28),
+                      const SizedBox(height: 20),
                       Row(
                         children: [
                           const Text("Student: ", style: TextStyle(fontSize: 14)),

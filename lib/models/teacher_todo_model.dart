@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Todo {
   final String? id;
   final String title;
@@ -6,6 +8,7 @@ class Todo {
   final bool completed;
   final int? classId;
   final String? className;
+  final String? fileUrl; // New: uploaded file URL
 
   Todo({
     this.id,
@@ -15,6 +18,7 @@ class Todo {
     required this.completed,
     this.classId,
     this.className,
+    this.fileUrl,
   });
 
   factory Todo.fromJson(Map<String, dynamic> json) {
@@ -26,13 +30,9 @@ class Todo {
       completed: json['completed'] ?? false,
       classId: json['class_id'],
       className: _parseClassName(json),
+      fileUrl: json['file_url'], // new
     );
   }
-
-  // static int? _parseClassId(Map<String, dynamic> json) {
-  //   if (json['class_id'] != null) return json['class_id'].toString();
-  //   return null;
-  // }
 
   static String? _parseClassName(Map<String, dynamic> json) {
     if (json['class_name'] != null) return json['class_name'];
@@ -50,14 +50,8 @@ class Todo {
       'completed': completed,
       if (classId != null) 'class_id': classId,
       if (className != null) 'class_name': className,
+      if (fileUrl != null) 'file_url': fileUrl,
     };
-  }
-
-  @override
-  String toString() {
-    return 'Todo(id: $id, title: $title, description: $description, '
-        'date: $date, completed: $completed, classId: $classId, '
-        'className: $className)';
   }
 
   Todo copyWith({
@@ -68,6 +62,7 @@ class Todo {
     bool? completed,
     int? classId,
     String? className,
+    String? fileUrl,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -77,6 +72,14 @@ class Todo {
       completed: completed ?? this.completed,
       classId: classId ?? this.classId,
       className: className ?? this.className,
+      fileUrl: fileUrl ?? this.fileUrl,
     );
+  }
+
+  @override
+  String toString() {
+    return 'Todo(id: $id, title: $title, description: $description, '
+        'date: $date, completed: $completed, classId: $classId, '
+        'className: $className, fileUrl: $fileUrl)';
   }
 }
