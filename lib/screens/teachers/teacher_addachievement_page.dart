@@ -9,8 +9,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:school_app/models/achievement_model.dart';
 import 'package:school_app/models/class_section.dart';
 import 'package:school_app/models/teacher_student_classsection.dart';
+
 import 'package:school_app/providers/teacher_achievement_provider.dart';
+
 import 'package:school_app/screens/teachers/teacher_menu_drawer.dart';
+
 import 'package:school_app/services/class_section_service.dart';
 import 'package:school_app/services/teacher_student_classsection.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
@@ -404,14 +407,22 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                                       });
                                     }
                                   } else {
-                                    final result = await FilePicker.platform.pickFiles(type: FileType.image);
-                                    if (result != null && result.files.isNotEmpty) {
-                                      setState(() {
-                                        _selectedFile = File(result.files.first.path!);
-                                        _selectedFileBytes = null;
-                                        _selectedFileName = null;
-                                      });
-                                    }
+                                   final result = await FilePicker.platform.pickFiles(
+  type: FileType.image,
+  allowMultiple: false,
+);
+
+if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+  setState(() {
+    _selectedFile = File(result.files.first.path!);
+    _selectedFileName = result.files.first.name;
+  });
+} else {
+  // Error handling
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text("File selection failed")),
+  );
+}
                                   }
                                 },
                                 icon: const Icon(Icons.upload_file),

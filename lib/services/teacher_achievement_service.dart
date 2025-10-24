@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:school_app/models/achievement_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart'; // kIsWeb
-import 'package:http_parser/http_parser.dart'; // for MediaType
+import 'package:http_parser/http_parser.dart'; // MediaType
 
 class AchievementService {
   final String baseUrl =
@@ -22,50 +22,71 @@ class AchievementService {
       final token = prefs.getString('auth_token') ?? '';
 
       final uri = Uri.parse("$baseUrl/achievements");
-      final request = http.MultipartRequest('POST', uri)
-        ..headers['Authorization'] = 'Bearer $token';
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
 
-      // ------------------- REQUIRED FIELDS -------------------
+      // Required fields
       request.fields['studentId'] = achievement.studentId.toString();
       request.fields['title'] = achievement.title;
       request.fields['description'] = achievement.description;
-      request.fields['categoryId'] = achievement.categoryId; // string! "academic"
+      request.fields['categoryId'] = achievement.categoryId;
       request.fields['achievementDate'] = achievement.achievementDate;
       request.fields['awardedBy'] = achievement.awardedBy;
-      request.fields['isVisible'] = achievement.isVisible; // string! "school"
+      request.fields['isVisible'] = achievement.isVisible;
       request.fields['classId'] = achievement.classId.toString();
       request.fields['academicYearId'] = achievement.academicYearId.toString();
 
-      // ------------------- FILE UPLOAD -------------------
+      // File upload
       if (file != null && !kIsWeb) {
+        if (!file.existsSync()) throw Exception("Selected file does not exist");
+
         final fileName = file.path.split('/').last;
+        final ext = fileName.split('.').last.toLowerCase();
+        final mimeType = switch (ext) {
+          'png' => 'image/png',
+          'jpg' => 'image/jpeg',
+          'jpeg' => 'image/jpeg',
+          'gif' => 'image/gif',
+          _ => 'application/octet-stream',
+        };
+
         request.files.add(await http.MultipartFile.fromPath(
-          'achievementFileUpload', // backend expects this
+          'achievementFileUpload',
           file.path,
           filename: fileName,
+          contentType: MediaType.parse(mimeType),
         ));
       } else if (webFileBytes != null && webFileName != null && kIsWeb) {
         final extension = webFileName.split('.').last.toLowerCase();
+        final webMimeType = switch (extension) {
+          'png' => 'image/png',
+          'jpg' => 'image/jpeg',
+          'jpeg' => 'image/jpeg',
+          'gif' => 'image/gif',
+          _ => 'application/octet-stream',
+        };
+
         request.files.add(http.MultipartFile.fromBytes(
           'achievementFileUpload',
           webFileBytes,
           filename: webFileName,
-          contentType: MediaType('image', extension), // optional but safe
+          contentType: MediaType.parse(webMimeType),
         ));
       }
 
-      // ------------------- SEND REQUEST -------------------
+      // Send request
+      print("📤 Sending Achievement Request...");
       final response = await request.send();
       final respStr = await response.stream.bytesToString();
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        print("✅ Achievement created successfully!");
-        print("Response: $respStr");
-      } else {
-        print("❌ Failed to create achievement: ${response.statusCode}");
-        print("Response: $respStr");
-        throw Exception(
-            "Failed to create achievement: ${response.statusCode}\n$respStr");
+      print("📥 Response Code: ${response.statusCode}");
+      print("📥 Response Body: $respStr");
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception("Failed to create achievement (${response.statusCode}): $respStr");
       }
     } catch (e) {
       print("❌ Error in createAchievement: $e");

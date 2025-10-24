@@ -11,11 +11,30 @@ class AchievementProvider with ChangeNotifier {
   bool get loading => _loading;
 
   Future<void> addAchievement(Achievement achievement, {File? file, Uint8List? webFileBytes, String? webFileName}) async {
+    // ✅ FIX: Check if already loading
+    if (_loading) {
+      print("⚠️ Provider is already loading, skipping duplicate request");
+      return;
+    }
+    
     _loading = true;
     notifyListeners();
 
     try {
-      await _service.createAchievement(achievement, file: file, webFileBytes: webFileBytes, webFileName: webFileName);
+      print("🔄 Provider: Starting achievement creation...");
+      
+      await _service.createAchievement(
+        achievement, 
+        file: file, 
+        webFileBytes: webFileBytes, 
+        webFileName: webFileName
+      );
+      
+      print("✅ Provider: Achievement created successfully!");
+      
+    } catch (e) {
+      print("🚨 PROVIDER ERROR: $e");
+      rethrow; // Important: rethrow the error
     } finally {
       _loading = false;
       notifyListeners();
