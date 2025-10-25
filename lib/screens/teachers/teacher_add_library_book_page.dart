@@ -840,7 +840,7 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2E3192),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 17),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1019,7 +1019,7 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
                     suffixIcon: IconButton(
                       icon: const Icon(
                         Icons.calendar_today,
-                  color: Color(0xFF2E3192),
+                        color: Color(0xFF2E3192),
                       ),
                       onPressed: _pickStartDate,
                     ),
@@ -1041,7 +1041,7 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
                     suffixIcon: IconButton(
                       icon: const Icon(
                         Icons.calendar_today,
-                  color: Color(0xFF2E3192),
+                        color: Color(0xFF2E3192),
                       ),
                       onPressed: _pickEndDate,
                     ),
@@ -1073,25 +1073,25 @@ class _AddLibraryBookPageState extends State<AddLibraryBookPage>
                 provider.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton.icon(
-  onPressed: _submitMember,
-  icon: const Icon(Icons.person_add),
-  label: const Text(
-    "Add Member",
-    style: TextStyle(
-      fontSize: 18, // Increase the font size here
-      fontWeight: FontWeight.bold, // optional: make it bold
-    ),
-  ),
-  style: ElevatedButton.styleFrom(
-    backgroundColor: Colors.orange,
-    foregroundColor: Colors.white,
-    padding: const EdgeInsets.symmetric(vertical: 24),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-    ),
-  ),
-),
-
+                        onPressed: _submitMember,
+                        icon: const Icon(Icons.person_add),
+                        label: const Text(
+                          "Add Member",
+                          style: TextStyle(
+                            fontSize: 18, // Increase the font size here
+                            fontWeight:
+                                FontWeight.bold, // optional: make it bold
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
               ],
             ),
           ),

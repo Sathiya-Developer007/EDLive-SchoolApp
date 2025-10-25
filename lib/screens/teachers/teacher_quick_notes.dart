@@ -76,7 +76,7 @@ int? expandedIndex;
                               builder: (context) => const AddQuickNotePage()),
                         );
                       },
-                      icon: const Icon(Icons.add_circle_outline,
+                      icon: const Icon(Icons.add,
                           color: Colors.white, size: 20),
                       label: const Text('Add',
                           style: TextStyle(color: Colors.white, fontSize: 16)),

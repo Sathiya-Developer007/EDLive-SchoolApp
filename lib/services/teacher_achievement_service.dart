@@ -41,25 +41,26 @@ class AchievementService {
 
       // File upload
       if (file != null && !kIsWeb) {
-        if (!file.existsSync()) throw Exception("Selected file does not exist");
+  if (!file.existsSync()) throw Exception("Selected file does not exist");
 
-        final fileName = file.path.split('/').last;
-        final ext = fileName.split('.').last.toLowerCase();
-        final mimeType = switch (ext) {
-          'png' => 'image/png',
-          'jpg' => 'image/jpeg',
-          'jpeg' => 'image/jpeg',
-          'gif' => 'image/gif',
-          _ => 'application/octet-stream',
-        };
+  final fileName = file.path.split('/').last;
+  final ext = fileName.split('.').last.toLowerCase();
+  final mimeType = switch (ext) {
+    'png' => 'image/png',
+    'jpg' => 'image/jpeg',
+    'jpeg' => 'image/jpeg',
+    'gif' => 'image/gif',
+    _ => 'application/octet-stream',
+  };
 
-        request.files.add(await http.MultipartFile.fromPath(
-          'achievementFileUpload',
-          file.path,
-          filename: fileName,
-          contentType: MediaType.parse(mimeType),
-        ));
-      } else if (webFileBytes != null && webFileName != null && kIsWeb) {
+  request.files.add(await http.MultipartFile.fromPath(
+    'achievementFileUpload',
+    file.path,
+    filename: fileName,
+    contentType: MediaType.parse(mimeType),
+  ));
+}
+ else if (webFileBytes != null && webFileName != null && kIsWeb) {
         final extension = webFileName.split('.').last.toLowerCase();
         final webMimeType = switch (extension) {
           'png' => 'image/png',
@@ -69,12 +70,14 @@ class AchievementService {
           _ => 'application/octet-stream',
         };
 
-        request.files.add(http.MultipartFile.fromBytes(
-          'achievementFileUpload',
-          webFileBytes,
-          filename: webFileName,
-          contentType: MediaType.parse(webMimeType),
-        ));
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'achievementFileUpload',
+            webFileBytes,
+            filename: webFileName,
+            contentType: MediaType.parse(webMimeType),
+          ),
+        );
       }
 
       // Send request
@@ -86,7 +89,9 @@ class AchievementService {
       print("📥 Response Body: $respStr");
 
       if (response.statusCode != 201 && response.statusCode != 200) {
-        throw Exception("Failed to create achievement (${response.statusCode}): $respStr");
+        throw Exception(
+          "Failed to create achievement (${response.statusCode}): $respStr",
+        );
       }
     } catch (e) {
       print("❌ Error in createAchievement: $e");

@@ -144,15 +144,15 @@ Future<void> loadSubjects() async {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 10),
         decoration: BoxDecoration(
           color: Color(0xFF29ABE2), // ✅ white background
-          borderRadius: BorderRadius.circular(20), // optional rounding
+          borderRadius: BorderRadius.circular(10), // optional rounding
         ),
         child: Row(
           children: const [
             Icon(
-              Icons.add_circle_outline,
+              Icons.add,
               color: Colors.white,
             ),
             SizedBox(width: 4),

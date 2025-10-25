@@ -237,7 +237,7 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                         ),
                         const SizedBox(width: 12),
                         const Text(
-                          "Add Achievement",
+                          "AddAchievement",
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,

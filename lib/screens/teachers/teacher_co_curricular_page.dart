@@ -59,9 +59,9 @@ class CoCurricularActivitiesPage extends StatelessWidget {
                           },
                           style: TextButton.styleFrom(
                             backgroundColor: Colors.blue,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                           child: Row(
