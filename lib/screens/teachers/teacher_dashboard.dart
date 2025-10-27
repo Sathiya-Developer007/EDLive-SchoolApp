@@ -364,7 +364,7 @@ onTap: () async {
                       ),
                     if (settings.showQuickNotes)
                       DashboardTile(
-                        title: 'Quick notes',
+                        title: 'Sticky notes',
                         subtitle: 'Note anything worth noting',
                         iconPath: 'assets/icons/quick_notes.svg',
                         color: const Color(0xFFE6E6E6),
