@@ -553,7 +553,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
 
                 // Quick Notes
                 DashboardTile(
-                  title: 'Quick Notes',
+                  title: 'Sticky Notes',
                   subtitle: 'View notes from your teachers',
                   iconPath: 'assets/icons/quick_notes.svg',
                   color: const Color(0xFFE6E6E6),

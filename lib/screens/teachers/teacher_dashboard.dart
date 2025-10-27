@@ -369,7 +369,7 @@ onTap: () async {
                         iconPath: 'assets/icons/quick_notes.svg',
                         color: const Color(0xFFE6E6E6),
                         onClose: () =>
-                            settings.updateVisibility('Quick notes', false),
+                            settings.updateVisibility('Quick Notes', false),
                         onTap: () {
                           Navigator.push(
                             context,
