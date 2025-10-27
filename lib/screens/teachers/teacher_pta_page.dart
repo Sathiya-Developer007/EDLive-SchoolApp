@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+
 
 import 'package:school_app/models/pta_next_meeting_model.dart';
 import 'package:school_app/services/pta_next_meeting_service.dart';
@@ -32,6 +34,22 @@ class _TeacherPTAPageState extends State<TeacherPTAPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
   }
+
+  String _formatTo12Hour(String time) {
+  try {
+    // Try parsing time like "18:30" or "18:30:00"
+    final parsed = DateFormat("HH:mm").parse(time, true);
+    return DateFormat("h:mm a").format(parsed);
+  } catch (_) {
+    try {
+      final parsed = DateFormat("HH:mm:ss").parse(time, true);
+      return DateFormat("h:mm a").format(parsed);
+    } catch (_) {
+      return time; // fallback if format unknown
+    }
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +212,7 @@ FutureBuilder<List<PTAMeeting>>(
               const SizedBox(height: 12),
               // Date & Time
               Text(
-                '${meeting.date.day}-${meeting.date.month}-${meeting.date.year}, ${meeting.time}',
+'${DateFormat('dd-MM-yyyy').format(meeting.date)}, ${_formatTo12Hour(meeting.time)}',
                 style: const TextStyle(
                     fontSize: 16, fontWeight: FontWeight.w500),
               ),
@@ -250,7 +268,7 @@ FutureBuilder<List<PTAMeeting>>(
               ),
               const SizedBox(height: 12),
               Text(
-                '${meeting.date.day}-${meeting.date.month}-${meeting.date.year}, ${meeting.time}',
+'${DateFormat('dd-MM-yyyy').format(meeting.date)}, ${_formatTo12Hour(meeting.time)}',
                 style: const TextStyle(
                     fontSize: 16, fontWeight: FontWeight.w500),
               ),
