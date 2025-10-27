@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import 'dart:typed_data';
+import 'package:url_launcher/url_launcher.dart';
+
 
 import '../../providers/teacher_task_provider.dart';
 import '../../models/teacher_todo_model.dart';
@@ -45,6 +47,9 @@ class _ToDoListPageState extends State<ToDoListPage> {
 
   List<SubjectModel> _subjectList = [];
   SubjectModel? _selectedSubject;
+
+  // New state variables for student-like UI
+  Todo? _selectedTask;
 
   @override
   void initState() {
@@ -225,11 +230,20 @@ class _ToDoListPageState extends State<ToDoListPage> {
       _editingTaskId = null;
       _selectedClass = null;
       _selectedSubject = null;
+      _selectedTask = null; // Reset selected task when form is reset
     });
   }
 
   String _formatDisplayDate(DateTime date) {
     return DateFormat('dd.MMM yyyy').format(date);
+  }
+
+  String _formatDisplayDateFromString(String dateString) {
+    try {
+      return DateFormat('dd.MMM yyyy').format(DateTime.parse(dateString));
+    } catch (_) {
+      return dateString;
+    }
   }
 
   @override
@@ -251,10 +265,19 @@ class _ToDoListPageState extends State<ToDoListPage> {
       appBar: TeacherAppBar(),
       body: Column(
         children: [
+          // Back Button - Updated to handle task detail navigation
           Padding(
             padding: const EdgeInsets.only(left: 16, top: 10),
             child: GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                if (_selectedTask != null) {
+                  setState(() => _selectedTask = null);
+                } else if (_showAddForm) {
+                  _resetForm();
+                } else {
+                  Navigator.pop(context);
+                }
+              },
               child: Row(
                 children: [
                   SvgPicture.asset(
@@ -271,6 +294,8 @@ class _ToDoListPageState extends State<ToDoListPage> {
               ),
             ),
           ),
+
+          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Row(
@@ -290,7 +315,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
                     ),
                   ],
                 ),
-                if (!_showAddForm)
+                if (!_showAddForm && _selectedTask == null)
                   ElevatedButton.icon(
                     onPressed: () => setState(() => _showAddForm = true),
                     icon: const Icon(Icons.add, color: Colors.white),
@@ -308,292 +333,298 @@ class _ToDoListPageState extends State<ToDoListPage> {
               ],
             ),
           ),
+
+          // Conditional rendering based on state
           if (_showAddForm) _buildAddForm(),
-          Expanded(
-            child: ListView.builder(
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                final className = task.classId != null
-                    ? _classDisplayNames[task.classId]
-                    : null;
-
-                return GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _formatDisplayDate(DateTime.parse(task.date)),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                task.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                task.description,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              if (className != null && className.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    'Class: $className',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.blue[700],
-                                    ),
-                                  ),
-                                ),
-                              if (task.fileUrl != null && task.fileUrl!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    'File: ${task.fileUrl!.split('/').last}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.green[700],
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuButton<String>(
-                          onSelected: (value) async {
-                            if (value == 'edit') {
-                              setState(() {
-                                _isEditMode = true;
-                                _editingTaskId = task.id;
-                                _taskController.text = task.title;
-                                _descriptionController.text = task.description;
-                                _selectedDate = DateTime.tryParse(task.date);
-
-                                _selectedClass = _classList.firstWhere(
-                                  (c) => c['class_id'] == task.classId,
-                                  orElse: () => {},
-                                );
-                                if (_selectedClass!.isEmpty) _selectedClass = null;
-
-                                _showAddForm = true;
-                                _selectedSubject = null;
-                              });
-
-                              if (_selectedClass != null) {
-                                _fetchSubjectsForClass().then((_) {
-                                  SubjectModel? selected;
-                                  try {
-                                    selected = _subjectList.firstWhere(
-                                      (s) => s.id == task.subjectId,
-                                    );
-                                  } catch (e) {
-                                    selected = null;
-                                  }
-                                  setState(() {
-                                    _selectedSubject = selected;
-                                  });
-                                });
-                              }
-                            } else if (value == 'delete') {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Confirm Delete'),
-                                  content: const Text(
-                                    'Are you sure you want to delete this task?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (confirm == true) {
-                                await provider.deleteTodo(id: task.id!);
-                              }
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: Text('Edit'),
-                            ),
-                            const PopupMenuItem(
-                              value: 'delete',
-                              child: Text('Delete'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
+          if (_selectedTask != null) _buildTaskDetail(_selectedTask!),
+          if (!_showAddForm && _selectedTask == null) _buildTaskList(tasks, provider),
         ],
       ),
     );
   }
 
-  Widget _buildAddForm() {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset > 0 ? bottomInset : 10),
+  Widget _buildTaskList(List<Todo> tasks, TeacherTaskProvider provider) {
+    return Expanded(
+      child: ListView.builder(
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          final task = tasks[index];
+          final className = task.classId != null
+              ? _classDisplayNames[task.classId]
+              : null;
+          final subjectName = _subjectList
+              .where((subject) => subject.id == task.subjectId)
+              .firstOrNull
+              ?.name;
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedTask = task),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 6,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _formatDisplayDateFromString(task.date),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    task.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    task.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  if (className != null && className.isNotEmpty)
+                    Text(
+                      'Class: $className',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  if (subjectName != null && subjectName.isNotEmpty)
+                    Text(
+                      'Subject: $subjectName',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF2E3192),
+                      ),
+                    ),
+                  if (task.fileUrl != null && task.fileUrl!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'File: ${task.fileUrl!.split('/').last}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTaskDetail(Todo task) {
+    final className = task.classId != null
+        ? _classDisplayNames[task.classId]
+        : null;
+    final subjectName = _subjectList
+        .where((subject) => subject.id == task.subjectId)
+        .firstOrNull
+        ?.name;
+
+    return Expanded(
       child: Container(
+        margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 3),
-            ),
+            BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
           ],
         ),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Select Class"),
-              DropdownButton<Map<String, dynamic>>(
-                isExpanded: true,
-                value: _selectedClass,
-                hint: const Text("Choose Class"),
-                items: _classList.map<DropdownMenuItem<Map<String, dynamic>>>((classItem) {
-                  return DropdownMenuItem<Map<String, dynamic>>(
-                    value: classItem,
-                    child: Text(classItem['class_name']),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() => _selectedClass = newValue);
-                  if (newValue != null) {
-                    _fetchSubjectsForClass();
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              const Text("Select Subject"),
-              DropdownButton<SubjectModel>(
-                isExpanded: true,
-                value: _selectedSubject,
-                hint: const Text("Choose Subject"),
-                items: _subjectList.map((subjectItem) {
-                  return DropdownMenuItem<SubjectModel>(
-                    value: subjectItem,
-                    child: Text(subjectItem.name),
-                  );
-                }).toList(),
-                onChanged: (newValue) => setState(() => _selectedSubject = newValue),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _selectedDate != null
-                          ? _formatDisplayDate(_selectedDate!)
-                          : 'Select Date',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+              // Task Title
+              Center(
+                child: Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E3192),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    onPressed: _pickDate,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text("Task Title"),
-              TextField(
-                controller: _taskController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter title...',
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text("Description"),
-              TextField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter description...',
-                ),
+              const SizedBox(height: 16),
+
+              // Task Details
+              Text(
+                'Date: ${_formatDisplayDateFromString(task.date)}',
+                style: const TextStyle(fontSize: 16),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _pickFile,
-                      icon: const Icon(Icons.attach_file),
-                      label: Text(
-                        _selectedFile != null
-                            ? 'Selected: ${_selectedFile!.name}'
-                            : 'Attach File',
-                      ),
-                    ),
+              const SizedBox(height: 8),
+
+              if (className != null && className.isNotEmpty)
+                Text(
+                  'Class: $className',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
+                ),
+
+              if (subjectName != null && subjectName.isNotEmpty)
+                Text(
+                  'Subject: $subjectName',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+
+              const SizedBox(height: 12),
+
+              // Description
+              Text(
+                task.description,
+                style: const TextStyle(fontSize: 16),
               ),
+
+              // File Attachment
+            if (task.fileUrl != null && task.fileUrl!.isNotEmpty) ...[
+  const SizedBox(height: 20),
+  ElevatedButton.icon(
+    onPressed: () async {
+      final url = task.fileUrl!.startsWith('http')
+          ? task.fileUrl!
+          : 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/${task.fileUrl!}';
+
+      try {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open the file')),
+          );
+        }
+      } catch (e) {
+        print('File open error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening file: $e')),
+        );
+      }
+    },
+    icon: const Icon(Icons.file_open),
+    label: Text("View File: ${task.fileUrl!.split('/').last}"),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: Colors.indigo[700],
+      foregroundColor: Colors.white,
+    ),
+  ),
+],
+
+              // Action Buttons for Teacher
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _resetForm,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
-                      child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isEditMode = true;
+                          _editingTaskId = task.id;
+                          _taskController.text = task.title;
+                          _descriptionController.text = task.description;
+                          _selectedDate = DateTime.tryParse(task.date);
+
+                          _selectedClass = _classList.firstWhere(
+                            (c) => c['class_id'] == task.classId,
+                            orElse: () => {},
+                          );
+                          if (_selectedClass!.isEmpty) _selectedClass = null;
+
+                          _showAddForm = true;
+                          _selectedTask = null;
+                          _selectedSubject = null;
+                        });
+
+                        if (_selectedClass != null) {
+                          _fetchSubjectsForClass().then((_) {
+                            SubjectModel? selected;
+                            try {
+                              selected = _subjectList.firstWhere(
+                                (s) => s.id == task.subjectId,
+                              );
+                            } catch (e) {
+                              selected = null;
+                            }
+                            setState(() {
+                              _selectedSubject = selected;
+                            });
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _submitTask,
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                      child: const Text('Send', style: TextStyle(color: Colors.white)),
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Confirm Delete'),
+                            content: const Text(
+                              'Are you sure you want to delete this task?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
+                          await provider.deleteTodo(id: task.id!);
+                          setState(() => _selectedTask = null);
+                        }
+                      },
+                      icon: const Icon(Icons.delete),
+                      label: const Text('Delete'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -604,4 +635,174 @@ class _ToDoListPageState extends State<ToDoListPage> {
       ),
     );
   }
+
+Widget _buildAddForm() {
+  final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+  return AnimatedContainer(
+    duration: const Duration(milliseconds: 200),
+    padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset > 0 ? bottomInset : 10),
+    child: Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // 🔹 Scrollable Form Content
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Select Class"),
+                  const SizedBox(height: 10),
+                  DropdownButton<Map<String, dynamic>>(
+                    isExpanded: true,
+                    value: _selectedClass,
+                    hint: const Text("Choose Class"),
+                    items: _classList.map<DropdownMenuItem<Map<String, dynamic>>>((classItem) {
+                      return DropdownMenuItem<Map<String, dynamic>>(
+                        value: classItem,
+                        child: Text(classItem['class_name']),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setState(() => _selectedClass = newValue);
+                      if (newValue != null) {
+                        _fetchSubjectsForClass();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  const Text("Select Subject"),
+                  const SizedBox(height: 10),
+                  DropdownButton<SubjectModel>(
+                    isExpanded: true,
+                    value: _selectedSubject,
+                    hint: const Text("Choose Subject"),
+                    items: _subjectList.map((subjectItem) {
+                      return DropdownMenuItem<SubjectModel>(
+                        value: subjectItem,
+                        child: Text(subjectItem.name),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) => setState(() => _selectedSubject = newValue),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedDate != null
+                              ? _formatDisplayDate(_selectedDate!)
+                              : 'Select Date',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.calendar_today),
+                        onPressed: _pickDate,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  const Text("Task Title"),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _taskController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter title...',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  const Text("Description"),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter description...',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _pickFile,
+                          icon: const Icon(Icons.attach_file),
+                          label: Text(
+                            _selectedFile != null
+                                ? 'Selected: ${_selectedFile!.name}'
+                                : 'Attach File',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ),
+
+          // 🔹 Fixed Bottom Buttons
+          Container(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _resetForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _submitTask,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text(
+                      'Send',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
+
 }
