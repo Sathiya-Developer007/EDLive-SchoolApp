@@ -8,10 +8,13 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-
+import 'package:flutter/foundation.dart';
+import 'package:http_parser/http_parser.dart';
+import 'dart:typed_data';
 
 import '../../providers/teacher_task_provider.dart';
 import '../../models/teacher_todo_model.dart';
+
 import 'teacher_menu_drawer.dart';
 import 'package:school_app/widgets/teacher_app_bar.dart';
 
@@ -30,7 +33,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
   String? _editingTaskId;
   bool _showAddForm = false;
   DateTime? _selectedDate;
-  File? _selectedFile;
+  PlatformFile? _selectedFile;
 
   final TextEditingController _taskController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -52,7 +55,7 @@ class _ToDoListPageState extends State<ToDoListPage> {
   Future<void> _loadTokenAndData() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    print('Auth token before addTodo: $token');
+    print('Auth token: $token');
 
     setState(() => _authToken = token);
 
@@ -95,43 +98,18 @@ class _ToDoListPageState extends State<ToDoListPage> {
     }
   }
 
-  Future<void> _fetchSubjects() async {
+  Future<void> _fetchSubjectsForClass() async {
     try {
       final subjects = await SubjectService().fetchSubjects();
       setState(() {
         _subjectList = subjects;
-        _selectedSubject = null; // reset selected subject
+        _selectedSubject = null;
       });
     } catch (e) {
       print('Error fetching subjects: $e');
-    }
-  }
-
-  bool _isFetchingSubjects = false;
-
-  Future<void> _fetchSubjectsForClass() async {
-    setState(() => _isFetchingSubjects = true); // start loading
-
-    try {
-      // Fetch all subjects from the new API
-      final subjects = await SubjectService().fetchSubjects();
-
-      setState(() {
-        _subjectList = subjects;
-        _selectedSubject = null; // reset selected subject on class change
-      });
-
-      if (_subjectList.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('No subjects found')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error fetching subjects: $e')));
-    } finally {
-      setState(() => _isFetchingSubjects = false); // stop loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching subjects: $e')),
+      );
     }
   }
 
@@ -146,26 +124,33 @@ class _ToDoListPageState extends State<ToDoListPage> {
   }
 
   Future<void> _pickFile() async {
-   final result = await FilePicker.platform.pickFiles(withData: true);
-if (result != null) {
-  if (result.files.single.path != null) {
-    _selectedFile = File(result.files.single.path!);
-  } else if (result.files.single.bytes != null) {
-    // handle web or mobile with bytes only
-    final temp = File('${(await getTemporaryDirectory()).path}/${result.files.single.name}');
-    await temp.writeAsBytes(result.files.single.bytes!);
-    _selectedFile = temp;
-  }
-  setState(() {});
-}
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        withData: true,
+      );
 
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _selectedFile = result.files.first;
+        });
+        print('✅ File selected: ${_selectedFile!.name}');
+      } else {
+        print('⚠️ File picking cancelled.');
+      }
+    } catch (e) {
+      print('❌ File picking failed: $e');
+    }
   }
 
   Future<void> _submitTask() async {
-    if (_authToken == null ||
-        _selectedClass == null ||
-        _selectedDate == null ||
-        _selectedSubject == null) {
+    if (_authToken == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication error: No token found')),
+      );
+      return;
+    }
+
+    if (_selectedClass == null || _selectedDate == null || _selectedSubject == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select class, subject, and date')),
       );
@@ -180,13 +165,21 @@ if (result != null) {
     final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
 
     if (title.isEmpty || description.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
       return;
     }
 
     try {
+      print('Uploading ToDo...');
+      print('Title: $title');
+      print('Date: $formattedDate');
+      print('ClassId: $classId');
+      print('SubjectId: $subjectId');
+      print('File: ${_selectedFile?.name ?? "none"}');
+      print('Auth Token: $_authToken');
+
       if (_isEditMode && _editingTaskId != null) {
         await provider.updateTodo(
           id: _editingTaskId!,
@@ -195,8 +188,7 @@ if (result != null) {
           description: description,
           classId: classId,
           subjectId: subjectId,
-          file: _selectedFile,
-          completed: true, // optional
+          pickedFile: _selectedFile,
         );
       } else {
         await provider.addTodo(
@@ -205,20 +197,20 @@ if (result != null) {
           description: description,
           classId: classId,
           subjectId: subjectId,
-          file: _selectedFile,
+          pickedFile: _selectedFile,
         );
       }
 
       await provider.fetchTodos();
       _resetForm();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Operation successful')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Operation successful')),
+      );
     } catch (e) {
       print('Submit failed: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Operation failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Operation failed: $e')),
+      );
     }
   }
 
@@ -232,6 +224,7 @@ if (result != null) {
       _isEditMode = false;
       _editingTaskId = null;
       _selectedClass = null;
+      _selectedSubject = null;
     });
   }
 
@@ -258,7 +251,6 @@ if (result != null) {
       appBar: TeacherAppBar(),
       body: Column(
         children: [
-          // Back button
           Padding(
             padding: const EdgeInsets.only(left: 16, top: 10),
             child: GestureDetector(
@@ -279,8 +271,6 @@ if (result != null) {
               ),
             ),
           ),
-
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Row(
@@ -318,11 +308,7 @@ if (result != null) {
               ],
             ),
           ),
-
-          // Add Form
           if (_showAddForm) _buildAddForm(),
-
-          // Task List
           Expanded(
             child: ListView.builder(
               itemCount: tasks.length,
@@ -335,10 +321,7 @@ if (result != null) {
                 return GestureDetector(
                   onTap: () {},
                   child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -391,7 +374,7 @@ if (result != null) {
                                     ),
                                   ),
                                 ),
-                              if (task.fileUrl != null)
+                              if (task.fileUrl != null && task.fileUrl!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
@@ -416,20 +399,16 @@ if (result != null) {
                                 _descriptionController.text = task.description;
                                 _selectedDate = DateTime.tryParse(task.date);
 
-                                // Select the current class
                                 _selectedClass = _classList.firstWhere(
                                   (c) => c['class_id'] == task.classId,
                                   orElse: () => {},
                                 );
-                                if (_selectedClass!.isEmpty)
-                                  _selectedClass = null;
+                                if (_selectedClass!.isEmpty) _selectedClass = null;
 
                                 _showAddForm = true;
-                                _selectedSubject =
-                                    null; // reset subject until we fetch
+                                _selectedSubject = null;
                               });
 
-                              // Fetch subjects for the selected class, then select the current subject
                               if (_selectedClass != null) {
                                 _fetchSubjectsForClass().then((_) {
                                   SubjectModel? selected;
@@ -438,7 +417,7 @@ if (result != null) {
                                       (s) => s.id == task.subjectId,
                                     );
                                   } catch (e) {
-                                    selected = null; // not found
+                                    selected = null;
                                   }
                                   setState(() {
                                     _selectedSubject = selected;
@@ -455,38 +434,11 @@ if (result != null) {
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
+                                      onPressed: () => Navigator.pop(context, false),
                                       child: const Text('Cancel'),
                                     ),
                                     TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text('Delete'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (confirm == true) {
-                                await provider.deleteTodo(id: task.id!);
-                              }
-                            } else if (value == 'delete') {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Confirm Delete'),
-                                  content: const Text(
-                                    'Are you sure you want to delete this task?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
+                                      onPressed: () => Navigator.pop(context, true),
                                       child: const Text('Delete'),
                                     ),
                                   ],
@@ -524,12 +476,7 @@ if (result != null) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        10,
-        16,
-        bottomInset > 0 ? bottomInset : 10,
-      ),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, bottomInset > 0 ? bottomInset : 10),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -552,9 +499,7 @@ if (result != null) {
                 isExpanded: true,
                 value: _selectedClass,
                 hint: const Text("Choose Class"),
-                items: _classList.map<DropdownMenuItem<Map<String, dynamic>>>((
-                  classItem,
-                ) {
+                items: _classList.map<DropdownMenuItem<Map<String, dynamic>>>((classItem) {
                   return DropdownMenuItem<Map<String, dynamic>>(
                     value: classItem,
                     child: Text(classItem['class_name']),
@@ -563,11 +508,11 @@ if (result != null) {
                 onChanged: (newValue) {
                   setState(() => _selectedClass = newValue);
                   if (newValue != null) {
-                    _fetchSubjectsForClass(); // populate subjects
+                    _fetchSubjectsForClass();
                   }
                 },
               ),
-
+              const SizedBox(height: 12),
               const Text("Select Subject"),
               DropdownButton<SubjectModel>(
                 isExpanded: true,
@@ -579,10 +524,8 @@ if (result != null) {
                     child: Text(subjectItem.name),
                   );
                 }).toList(),
-                onChanged: (newValue) =>
-                    setState(() => _selectedSubject = newValue),
+                onChanged: (newValue) => setState(() => _selectedSubject = newValue),
               ),
-
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -628,7 +571,7 @@ if (result != null) {
                       icon: const Icon(Icons.attach_file),
                       label: Text(
                         _selectedFile != null
-                            ? 'Selected: ${_selectedFile!.path.split('/').last}'
+                            ? 'Selected: ${_selectedFile!.name}'
                             : 'Attach File',
                       ),
                     ),
@@ -641,26 +584,16 @@ if (result != null) {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _resetForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey,
-                      ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                      child: const Text('Cancel', style: TextStyle(color: Colors.white)),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _submitTask,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                      ),
-                      child: const Text(
-                        'Send',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                      child: const Text('Send', style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],

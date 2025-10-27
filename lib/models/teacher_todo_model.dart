@@ -5,9 +5,9 @@ class Todo {
   final String date;
   final bool completed;
   final int? classId;
+  final int? subjectId;
   final String? className;
   final String? fileUrl;
-  final int? subjectId;
 
   Todo({
     this.id,
@@ -16,9 +16,9 @@ class Todo {
     required this.date,
     required this.completed,
     this.classId,
+    this.subjectId,
     this.className,
     this.fileUrl,
-    this.subjectId,
   });
 
   factory Todo.fromJson(Map<String, dynamic> json) {
@@ -30,8 +30,8 @@ class Todo {
       completed: json['completed'] ?? false,
       classId: json['class_id'],
       subjectId: json['subject_id'],
-      className: json['class_name'] ?? json['className'] ?? json['class'] ?? null,
-      fileUrl: json['file_url'],
+      className: json['class_name'] ?? json['className'] ?? json['class'],
+      fileUrl: json['todo_file'] ?? json['file_url'],
     );
   }
 }
