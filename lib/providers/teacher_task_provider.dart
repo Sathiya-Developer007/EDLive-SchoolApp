@@ -58,87 +58,105 @@ class TeacherTaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> addTodo({
-    required String title,
-    required String date,
-    required String description,
-    required int classId,
-    required int subjectId,
-    PlatformFile? pickedFile,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? _authToken ?? '';
+Future<void> addTodo({
+  required String title,
+  required String date,
+  required String description,
+  required int classId,
+  required int subjectId,
+  PlatformFile? pickedFile,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token') ?? _authToken ?? '';
 
-    if (token.isEmpty) {
-      throw Exception('No authentication token available');
-    }
+  if (token.isEmpty) {
+    throw Exception('No authentication token available');
+  }
 
-    final uri = Uri.parse(_baseUrl);
-    var request = http.MultipartRequest('POST', uri);
-    
-    // Add headers
-    request.headers['Authorization'] = 'Bearer $token';
-    
-    // Add form fields - using exact field names from API documentation
-    request.fields['date'] = date;
-    request.fields['title'] = title;
-    request.fields['description'] = description;
-    request.fields['classid'] = classId.toString();
-    request.fields['subjectid'] = subjectId.toString();
+  // ✅ 1. Create a temporary todo for instant UI update
+  final tempTodo = Todo(
+    id: DateTime.now().millisecondsSinceEpoch.toString(),
+    title: title,
+    description: description,
+    date: date,
+    completed: false, // required field
+    classId: classId,
+    subjectId: subjectId,
+    className: '', // optional placeholder
+    fileUrl: null,
+    userId: null,
+    createdAt: DateTime.now().toString(),
+    updatedAt: DateTime.now().toString(),
+  );
 
-    debugPrint('Sending fields: ${request.fields}');
+  _tasks.insert(0, tempTodo);
+  notifyListeners(); // instant UI update
 
-    // Add file if exists
-    if (pickedFile != null) {
+  final uri = Uri.parse(_baseUrl);
+  var request = http.MultipartRequest('POST', uri);
+  request.headers['Authorization'] = 'Bearer $token';
+
+  // ✅ Add form fields
+  request.fields['date'] = date;
+  request.fields['title'] = title;
+  request.fields['description'] = description;
+  request.fields['classid'] = classId.toString();
+  request.fields['subjectid'] = subjectId.toString();
+
+  debugPrint('Sending fields: ${request.fields}');
+
+  // ✅ Add file if exists
+  if (pickedFile != null) {
+    try {
       if (kIsWeb && pickedFile.bytes != null) {
-        // Web platform
         final mimeType = lookupMimeType(pickedFile.name) ?? 'application/octet-stream';
         final typeParts = mimeType.split('/');
-        
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'todoFileUpload',
-            pickedFile.bytes!,
-            filename: pickedFile.name,
-            contentType: MediaType(typeParts[0], typeParts[1]),
-          ),
-        );
+        request.files.add(http.MultipartFile.fromBytes(
+          'todoFileUpload',
+          pickedFile.bytes!,
+          filename: pickedFile.name,
+          contentType: MediaType(typeParts[0], typeParts[1]),
+        ));
       } else if (pickedFile.path != null && File(pickedFile.path!).existsSync()) {
-        // Mobile platform
-        final file = File(pickedFile.path!);
         final mimeType = lookupMimeType(pickedFile.path!) ?? 'application/octet-stream';
         final typeParts = mimeType.split('/');
-        
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'todoFileUpload',
-            pickedFile.path!,
-            filename: pickedFile.name,
-            contentType: MediaType(typeParts[0], typeParts[1]),
-          ),
-        );
+        request.files.add(await http.MultipartFile.fromPath(
+          'todoFileUpload',
+          pickedFile.path!,
+          filename: pickedFile.name,
+          contentType: MediaType(typeParts[0], typeParts[1]),
+        ));
       }
       debugPrint('Added file: ${pickedFile.name}');
-    }
-
-    try {
-      final response = await request.send();
-      final responseString = await response.stream.bytesToString();
-      
-      debugPrint('POST /todos → status: ${response.statusCode}');
-      debugPrint('Response: $responseString');
-
-      if (response.statusCode == 201) {
-        // Success
-        await fetchTodos();
-      } else {
-        throw Exception('Failed to add todo: $responseString');
-      }
     } catch (e) {
-      debugPrint('Error in addTodo: $e');
-      rethrow;
+      debugPrint('File attach error: $e');
     }
   }
+
+  try {
+    // ✅ 2. Upload to server
+    final response = await request.send();
+    final responseString = await response.stream.bytesToString();
+
+    debugPrint('POST /todos → status: ${response.statusCode}');
+    debugPrint('Response: $responseString');
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      // ✅ 3. Sync with latest server data
+      await fetchTodos();
+    } else {
+      // If failed → remove temp todo
+      _tasks.removeWhere((t) => t.id == tempTodo.id);
+      notifyListeners();
+      throw Exception('Failed to add todo: $responseString');
+    }
+  } catch (e) {
+    debugPrint('Error in addTodo: $e');
+    _tasks.removeWhere((t) => t.id == tempTodo.id); // rollback
+    notifyListeners();
+    rethrow;
+  }
+}
 
   Future<void> updateTodo({
     required String id,

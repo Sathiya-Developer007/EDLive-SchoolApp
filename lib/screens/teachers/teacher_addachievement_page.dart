@@ -394,47 +394,58 @@ class _TeacherAchievementPageState extends State<AddTeacherAchievementPage> {
                               const SizedBox(height: 12),
                               Text("Evidence Upload (Optional)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                               const SizedBox(height: 6),
-                              ElevatedButton.icon(
-                                onPressed: () async {
-                                  if (kIsWeb) {
-                                    final result = await FilePicker.platform.pickFiles(
-                                        type: FileType.image, withData: true);
-                                    if (result != null && result.files.isNotEmpty) {
-                                      setState(() {
-                                        _selectedFileBytes = result.files.first.bytes;
-                                        _selectedFileName = result.files.first.name;
-                                        _selectedFile = null;
-                                      });
-                                    }
-                                  } else {
-                                   final result = await FilePicker.platform.pickFiles(
-  type: FileType.image,
-  allowMultiple: false,
-);
+ElevatedButton.icon(
+  onPressed: () async {
+    if (kIsWeb) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'jpg', 'jpeg', 'png', 'gif', 'webp', // Images including WebP
+          'pdf', 'doc', 'docx', // Documents
+          'txt', // Text files
+        ],
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _selectedFileBytes = result.files.first.bytes;
+          _selectedFileName = result.files.first.name;
+          _selectedFile = null;
+        });
+      }
+    } else {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'jpg', 'jpeg', 'png', 'gif', 'webp', // WebP added here
+          'pdf', 'doc', 'docx',
+          'txt',
+        ],
+        allowMultiple: false,
+      );
 
-if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
-  setState(() {
-    _selectedFile = File(result.files.first.path!);
-    _selectedFileName = result.files.first.name;
-  });
-} else {
-  // Error handling
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text("File selection failed")),
-  );
-}
-                                  }
-                                },
-                                icon: const Icon(Icons.upload_file),
-                                label: Text(
-                                  (_selectedFile != null
-                                      ? "Selected: ${_selectedFile!.path.split('/').last}"
-                                      : _selectedFileName != null
-                                          ? "Selected: $_selectedFileName"
-                                          : "Choose File"),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
+      if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+        setState(() {
+          _selectedFile = File(result.files.first.path!);
+          _selectedFileName = result.files.first.name;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("File selection failed")),
+        );
+      }
+    }
+  },
+  icon: const Icon(Icons.upload_file),
+  label: Text(
+    (_selectedFile != null
+        ? "Selected: ${_selectedFile!.path.split('/').last}"
+        : _selectedFileName != null
+            ? "Selected: $_selectedFileName"
+            : "Choose File (Images, PDF, DOC, TXT)"),
+  ),
+),  const SizedBox(height: 16),
                               TextFormField(
                                 controller: _academicYearController,
                                 keyboardType: TextInputType.number,

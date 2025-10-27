@@ -57,19 +57,23 @@ class _ToDoListPageState extends State<ToDoListPage> {
     _loadTokenAndData();
   }
 
-  Future<void> _loadTokenAndData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    print('Auth token: $token');
+Future<void> _loadTokenAndData() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('auth_token');
+  print('Auth token: $token');
 
-    setState(() => _authToken = token);
+  setState(() => _authToken = token);
 
-    final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
-    provider.setAuthToken(token);
+  final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
+  provider.setAuthToken(token);
 
-    await _fetchClassList();
-    await provider.fetchTodos();
-  }
+  await _fetchClassList();
+
+  // ✅ Fetch all subjects right away so subject names appear
+  await _fetchSubjectsForClass();
+
+  await provider.fetchTodos();
+}
 
   Future<void> _fetchClassList() async {
     final url = Uri.parse(
@@ -343,72 +347,74 @@ class _ToDoListPageState extends State<ToDoListPage> {
     );
   }
 
-  Widget _buildTaskList(List<Todo> tasks, TeacherTaskProvider provider) {
-    return Expanded(
-      child: ListView.builder(
-        itemCount: tasks.length,
-        itemBuilder: (context, index) {
-          final task = tasks[index];
-          final className = task.classId != null
-              ? _classDisplayNames[task.classId]
-              : null;
-          final subjectName = _subjectList
-              .where((subject) => subject.id == task.subjectId)
-              .firstOrNull
-              ?.name;
+Widget _buildTaskList(List<Todo> tasks, TeacherTaskProvider provider) {
+  return Expanded(
+    child: ListView.builder(
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        final className = task.classId != null
+            ? _classDisplayNames[task.classId]
+            : null;
+        final subjectName = _subjectList
+            .where((subject) => subject.id == task.subjectId)
+            .firstOrNull
+            ?.name;
 
-          return GestureDetector(
-            onTap: () => setState(() => _selectedTask = task),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 6,
-                    offset: Offset(0, 3),
+        return GestureDetector(
+          onTap: () => setState(() => _selectedTask = task),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _formatDisplayDateFromString(task.date),
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _formatDisplayDateFromString(task.date),
-                    style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  task.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
                   ),
-                  const SizedBox(height: 4),
+                ),
+                if (className != null && className.isNotEmpty)
                   Text(
-                    task.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    task.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    'Class: $className',
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blue[700],
                     ),
                   ),
-                  if (className != null && className.isNotEmpty)
-                    Text(
-                      'Class: $className',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.blue[700],
-                      ),
-                    ),
-                  if (subjectName != null && subjectName.isNotEmpty)
-                    Text(
+                if (subjectName != null && subjectName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
                       'Subject: $subjectName',
                       style: const TextStyle(
                         fontSize: 14,
@@ -416,225 +422,210 @@ class _ToDoListPageState extends State<ToDoListPage> {
                         color: Color(0xFF2E3192),
                       ),
                     ),
-                  if (task.fileUrl != null && task.fileUrl!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'File: ${task.fileUrl!.split('/').last}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green[700],
-                        ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+ Widget _buildTaskDetail(Todo task) {
+  final className = task.classId != null ? _classDisplayNames[task.classId] : null;
+  final subjectName = _subjectList.where((subject) => subject.id == task.subjectId).firstOrNull?.name;
+
+  return Expanded(
+    child: Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🔹 Title
+                  Center(
+                    child: Text(
+                      task.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E3192),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 🔹 Details
+                  Text(
+                    'Date: ${_formatDisplayDateFromString(task.date)}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (className != null && className.isNotEmpty)
+                    Text(
+                      'Class: $className',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  if (subjectName != null && subjectName.isNotEmpty)
+                    Text(
+                      'Subject: $subjectName',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+
+                  // 🔹 Description
+                  Text(
+                    task.description,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+
+                  // 🔹 File Button
+                  if (task.fileUrl != null && task.fileUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final url = task.fileUrl!.startsWith('http')
+                            ? task.fileUrl!
+                            : 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/${task.fileUrl!}';
+
+                        try {
+                          final uri = Uri.parse(url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Could not open the file')),
+                            );
+                          }
+                        } catch (e) {
+                          print('File open error: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error opening file: $e')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.file_open),
+                      label: Text("View File: ${task.fileUrl!.split('/').last}"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo[700],
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
 
-  Widget _buildTaskDetail(Todo task) {
-    final className = task.classId != null
-        ? _classDisplayNames[task.classId]
-        : null;
-    final subjectName = _subjectList
-        .where((subject) => subject.id == task.subjectId)
-        .firstOrNull
-        ?.name;
-
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
-          ],
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // 🔹 Bottom-aligned Edit/Delete buttons
+          const SizedBox(height: 10),
+          Row(
             children: [
-              // Task Title
-              Center(
-                child: Text(
-                  task.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E3192),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _isEditMode = true;
+                      _editingTaskId = task.id;
+                      _taskController.text = task.title;
+                      _descriptionController.text = task.description;
+                      _selectedDate = DateTime.tryParse(task.date);
 
-              // Task Details
-              Text(
-                'Date: ${_formatDisplayDateFromString(task.date)}',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 8),
+                      _selectedClass = _classList.firstWhere(
+                        (c) => c['class_id'] == task.classId,
+                        orElse: () => {},
+                      );
+                      if (_selectedClass!.isEmpty) _selectedClass = null;
 
-              if (className != null && className.isNotEmpty)
-                Text(
-                  'Class: $className',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                      _showAddForm = true;
+                      _selectedTask = null;
+                      _selectedSubject = null;
+                    });
 
-              if (subjectName != null && subjectName.isNotEmpty)
-                Text(
-                  'Subject: $subjectName',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-
-              const SizedBox(height: 12),
-
-              // Description
-              Text(
-                task.description,
-                style: const TextStyle(fontSize: 16),
-              ),
-
-              // File Attachment
-            if (task.fileUrl != null && task.fileUrl!.isNotEmpty) ...[
-  const SizedBox(height: 20),
-  ElevatedButton.icon(
-    onPressed: () async {
-      final url = task.fileUrl!.startsWith('http')
-          ? task.fileUrl!
-          : 'http://schoolmanagement.canadacentral.cloudapp.azure.com:5000/${task.fileUrl!}';
-
-      try {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open the file')),
-          );
-        }
-      } catch (e) {
-        print('File open error: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening file: $e')),
-        );
-      }
-    },
-    icon: const Icon(Icons.file_open),
-    label: Text("View File: ${task.fileUrl!.split('/').last}"),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.indigo[700],
-      foregroundColor: Colors.white,
-    ),
-  ),
-],
-
-              // Action Buttons for Teacher
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _isEditMode = true;
-                          _editingTaskId = task.id;
-                          _taskController.text = task.title;
-                          _descriptionController.text = task.description;
-                          _selectedDate = DateTime.tryParse(task.date);
-
-                          _selectedClass = _classList.firstWhere(
-                            (c) => c['class_id'] == task.classId,
-                            orElse: () => {},
-                          );
-                          if (_selectedClass!.isEmpty) _selectedClass = null;
-
-                          _showAddForm = true;
-                          _selectedTask = null;
-                          _selectedSubject = null;
-                        });
-
-                        if (_selectedClass != null) {
-                          _fetchSubjectsForClass().then((_) {
-                            SubjectModel? selected;
-                            try {
-                              selected = _subjectList.firstWhere(
-                                (s) => s.id == task.subjectId,
-                              );
-                            } catch (e) {
-                              selected = null;
-                            }
-                            setState(() {
-                              _selectedSubject = selected;
-                            });
-                          });
+                    if (_selectedClass != null) {
+                      _fetchSubjectsForClass().then((_) {
+                        SubjectModel? selected;
+                        try {
+                          selected = _subjectList.firstWhere((s) => s.id == task.subjectId);
+                        } catch (_) {
+                          selected = null;
                         }
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Edit'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
+                        setState(() => _selectedSubject = selected);
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Edit'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Confirm Delete'),
-                            content: const Text(
-                              'Are you sure you want to delete this task?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Delete'),
-                              ),
-                            ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Confirm Delete'),
+                        content: const Text('Are you sure you want to delete this task?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
                           ),
-                        );
-                        if (confirm == true) {
-                          final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
-                          await provider.deleteTodo(id: task.id!);
-                          setState(() => _selectedTask = null);
-                        }
-                      },
-                      icon: const Icon(Icons.delete),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
                       ),
-                    ),
+                    );
+                    if (confirm == true) {
+                      final provider = Provider.of<TeacherTaskProvider>(context, listen: false);
+                      await provider.deleteTodo(id: task.id!);
+                      setState(() => _selectedTask = null);
+                    }
+                  },
+                  icon: const Icon(Icons.delete),
+                  label: const Text('Delete'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
 Widget _buildAddForm() {
   final bottomInset = MediaQuery.of(context).viewInsets.bottom;

@@ -40,16 +40,26 @@ class AchievementService {
       request.fields['academicYearId'] = achievement.academicYearId.toString();
 
       // File upload
-      if (file != null && !kIsWeb) {
+    // In your AchievementService - update both mobile and web file handling:
+
+// File upload - Mobile
+if (file != null && !kIsWeb) {
   if (!file.existsSync()) throw Exception("Selected file does not exist");
 
   final fileName = file.path.split('/').last;
   final ext = fileName.split('.').last.toLowerCase();
+  
+  // Support for multiple file types including WebP
   final mimeType = switch (ext) {
     'png' => 'image/png',
     'jpg' => 'image/jpeg',
     'jpeg' => 'image/jpeg',
     'gif' => 'image/gif',
+    'webp' => 'image/webp', // WebP MIME type added
+    'pdf' => 'application/pdf',
+    'doc' => 'application/msword',
+    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'txt' => 'text/plain',
     _ => 'application/octet-stream',
   };
 
@@ -59,26 +69,30 @@ class AchievementService {
     filename: fileName,
     contentType: MediaType.parse(mimeType),
   ));
-}
- else if (webFileBytes != null && webFileName != null && kIsWeb) {
-        final extension = webFileName.split('.').last.toLowerCase();
-        final webMimeType = switch (extension) {
-          'png' => 'image/png',
-          'jpg' => 'image/jpeg',
-          'jpeg' => 'image/jpeg',
-          'gif' => 'image/gif',
-          _ => 'application/octet-stream',
-        };
+} else if (webFileBytes != null && webFileName != null && kIsWeb) {
+  final extension = webFileName.split('.').last.toLowerCase();
+  final webMimeType = switch (extension) {
+    'png' => 'image/png',
+    'jpg' => 'image/jpeg',
+    'jpeg' => 'image/jpeg',
+    'gif' => 'image/gif',
+    'webp' => 'image/webp', // WebP MIME type added for web
+    'pdf' => 'application/pdf',
+    'doc' => 'application/msword',
+    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'txt' => 'text/plain',
+    _ => 'application/octet-stream',
+  };
 
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'achievementFileUpload',
-            webFileBytes,
-            filename: webFileName,
-            contentType: MediaType.parse(webMimeType),
-          ),
-        );
-      }
+  request.files.add(
+    http.MultipartFile.fromBytes(
+      'achievementFileUpload',
+      webFileBytes,
+      filename: webFileName,
+      contentType: MediaType.parse(webMimeType),
+    ),
+  );
+}
 
       // Send request
       print("📤 Sending Achievement Request...");
